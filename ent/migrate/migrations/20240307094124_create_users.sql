@@ -1,0 +1,2 @@
+-- Create "users" table
+CREATE TABLE `users` (`id` char(36) NOT NULL, `username` varchar(255) NOT NULL, `email` varchar(255) NOT NULL, `password` varchar(255) NOT NULL, `image` varchar(255) NOT NULL DEFAULT 'https://avatars.githubusercontent.com/u/32737308?v=4', `bio` varchar(255) NOT NULL DEFAULT '', `created_at` timestamp NOT NULL, `updated_at` timestamp NOT NULL, PRIMARY KEY (`id`), UNIQUE INDEX `username` (`username`), UNIQUE INDEX `email` (`email`), UNIQUE INDEX `user_username_email` (`username`, `email`)) CHARSET utf8mb4 COLLATE utf8mb4_bin;
