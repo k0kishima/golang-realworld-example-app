@@ -149,6 +149,61 @@ func GetCurrentUser(client *ent.Client) gin.HandlerFunc {
 	}
 }
 
+func UpdateUser(client *ent.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req struct {
+			User struct {
+				Username string `json:"username"`
+				Email    string `json:"email"`
+			} `json:"user"`
+		}
+		if err := c.BindJSON(&req); err != nil {
+			respondWithError(c, http.StatusBadRequest, "Invalid request payload")
+			return
+		}
+
+		token := c.GetHeader("Authorization")
+		if token == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"message": "missing authorization credentials"})
+			return
+		}
+
+		claims, err := auth.ParseToken(token)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"message": "invalid token"})
+			return
+		}
+
+		u, err := client.User.Query().Where(user.EmailEQ(claims.Email)).Only(c.Request.Context())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "error fetching user"})
+			return
+		}
+
+		u, err = u.Update().
+			SetUsername(req.User.Username).
+			SetEmail(req.User.Email).
+			Save(c.Request.Context())
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "error updating user"})
+			return
+		}
+
+		token, err = auth.CreateToken(u)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "error creating token"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"user": gin.H{
+			"username": u.Username,
+			"email":    u.Email,
+			"token":    token,
+		}})
+	}
+}
+
 func respondWithError(c *gin.Context, code int, message string) {
 	c.JSON(code, gin.H{"error": message})
 }
