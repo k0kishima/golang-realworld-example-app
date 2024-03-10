@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 	"strings"
 
@@ -9,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/auth"
 	"github.com/k0kishima/golang-realworld-example-app/ent"
+	"github.com/k0kishima/golang-realworld-example-app/ent/user"
 	"github.com/k0kishima/golang-realworld-example-app/utils"
 	"github.com/k0kishima/golang-realworld-example-app/validators"
 )
@@ -27,7 +27,7 @@ func RegisterUser(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		validationResult := validators.ValidateUser(&ent.User{
+		validationResult := validators.ValidateUserRegistration(&ent.User{
 			Username: req.User.Username,
 			Email:    req.User.Email,
 			Password: req.User.Password,
@@ -71,7 +71,6 @@ func RegisterUser(client *ent.Client) gin.HandlerFunc {
 		}
 
 		if err := tx.Commit(); err != nil {
-			log.Printf("Error committing transaction: %v", err)
 			respondWithError(c, http.StatusInternalServerError, "Error committing transaction")
 			return
 		}
@@ -84,8 +83,46 @@ func RegisterUser(client *ent.Client) gin.HandlerFunc {
 	}
 }
 
+func Login(client *ent.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req struct {
+			User struct {
+				Email    string `json:"email"`
+				Password string `json:"password"`
+			} `json:"user"`
+		}
+		if err := c.BindJSON(&req); err != nil {
+			respondWithError(c, http.StatusBadRequest, "Invalid request payload")
+			return
+		}
+
+		validationResult := validators.ValidateUserLogin(req.User.Email, req.User.Password)
+		if !validationResult.Valid {
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": validationResult.Errors})
+			return
+		}
+
+		u, err := client.User.Query().Where(user.EmailEQ(req.User.Email)).Only(c.Request.Context())
+		if err != nil || !utils.CheckPasswordHash(req.User.Password, u.Password) {
+			c.JSON(http.StatusForbidden, gin.H{"errors": gin.H{"email or password": []string{"is invalid"}}})
+			return
+		}
+
+		token, err := auth.CreateToken(u)
+		if err != nil {
+			respondWithError(c, http.StatusInternalServerError, "Error creating token")
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"user": gin.H{
+			"username": u.Username,
+			"email":    u.Email,
+			"token":    token,
+		}})
+	}
+}
+
 func respondWithError(c *gin.Context, code int, message string) {
-	log.Printf("Error: %s", message)
 	c.JSON(code, gin.H{"error": message})
 }
 
