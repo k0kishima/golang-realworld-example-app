@@ -5,12 +5,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/k0kishima/golang-realworld-example-app/config"
 	"github.com/k0kishima/golang-realworld-example-app/db"
 	"github.com/k0kishima/golang-realworld-example-app/ent"
 	"github.com/k0kishima/golang-realworld-example-app/handlers"
 )
 
 func main() {
+	config.LoadEnv()
+
 	r := gin.Default()
 
 	dataSourceName := db.GetDataSourceName()

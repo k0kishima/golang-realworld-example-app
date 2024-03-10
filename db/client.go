@@ -2,22 +2,17 @@ package db
 
 import (
 	"fmt"
-	"os"
+	"log"
+
+	"github.com/k0kishima/golang-realworld-example-app/config"
 )
 
 func GetDataSourceName() string {
-	dbUser := getEnv("DB_USER", "root")
-	dbPassword := getEnv("DB_PASSWORD", "password")
-	dbHost := getEnv("DB_HOST", "127.0.0.1:53306")
-	dbName := getEnv("DB_NAME", "golang_realworld")
-
-	return fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8&parseTime=True", dbUser, dbPassword, dbHost, dbName)
-}
-
-func getEnv(key, defaultValue string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue
+	// Environment variables are already loaded when the application is launched.
+	dbConfig, err := config.GetDBConfig()
+	if err != nil {
+		log.Fatalf("Error getting database configuration: %v", err)
 	}
-	return value
+
+	return fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8&parseTime=True", dbConfig.User, dbConfig.Password, dbConfig.Host, dbConfig.Name)
 }

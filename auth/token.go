@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/k0kishima/golang-realworld-example-app/config"
 	"github.com/k0kishima/golang-realworld-example-app/ent"
 )
 
@@ -16,6 +17,8 @@ type Claims struct {
 }
 
 func CreateToken(user *ent.User) (string, error) {
+	config.LoadEnv()
+
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		return "", errors.New("JWT_SECRET missing in environment")
