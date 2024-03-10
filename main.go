@@ -25,6 +25,7 @@ func main() {
 
 	r.POST("/users", handlers.RegisterUser(client))
 	r.POST("/users/login", handlers.Login(client))
+	r.GET("/user", handlers.GetCurrentUser(client))
 
 	if err := r.Run(":8080"); err != nil {
 		log.Fatal("failed to run server: ", err)

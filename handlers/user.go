@@ -122,6 +122,33 @@ func Login(client *ent.Client) gin.HandlerFunc {
 	}
 }
 
+func GetCurrentUser(client *ent.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		token := c.GetHeader("Authorization")
+		if token == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"message": "missing authorization credentials"})
+			return
+		}
+
+		claims, err := auth.ParseToken(token)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"message": "invalid token"})
+			return
+		}
+
+		u, err := client.User.Query().Where(user.EmailEQ(claims.Email)).Only(c.Request.Context())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "error fetching user"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"user": gin.H{
+			"username": u.Username,
+			"email":    u.Email,
+		}})
+	}
+}
+
 func respondWithError(c *gin.Context, code int, message string) {
 	c.JSON(code, gin.H{"error": message})
 }

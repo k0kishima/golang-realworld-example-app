@@ -2,7 +2,9 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -40,4 +42,32 @@ func CreateToken(user *ent.User) (string, error) {
 	}
 
 	return tokenString, nil
+}
+
+func ParseToken(tokenString string) (*Claims, error) {
+	config.LoadEnv()
+
+	tokenString = strings.TrimSpace(tokenString)
+	if len(tokenString) > 7 && strings.ToUpper(tokenString[0:7]) == "BEARER " {
+		tokenString = tokenString[7:]
+	}
+
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		return nil, fmt.Errorf("JWT_SECRET missing in environment")
+	}
+
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(secret), nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
+		return claims, nil
+	} else {
+		return nil, fmt.Errorf("invalid token")
+	}
 }
