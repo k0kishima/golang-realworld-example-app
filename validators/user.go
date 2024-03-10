@@ -9,7 +9,7 @@ type UserValidationResult struct {
 	Errors map[string][]string
 }
 
-func ValidateUser(user *ent.User) UserValidationResult {
+func ValidateUserRegistration(user *ent.User) UserValidationResult {
 	errors := make(map[string][]string)
 	if user.Username == "" {
 		errors["username"] = append(errors["username"], "can't be blank")
@@ -18,6 +18,20 @@ func ValidateUser(user *ent.User) UserValidationResult {
 		errors["email"] = append(errors["email"], "can't be blank")
 	}
 	if user.Password == "" {
+		errors["password"] = append(errors["password"], "can't be blank")
+	}
+	return UserValidationResult{
+		Valid:  len(errors) == 0,
+		Errors: errors,
+	}
+}
+
+func ValidateUserLogin(email, password string) UserValidationResult {
+	errors := make(map[string][]string)
+	if email == "" {
+		errors["email"] = append(errors["email"], "can't be blank")
+	}
+	if password == "" {
 		errors["password"] = append(errors["password"], "can't be blank")
 	}
 	return UserValidationResult{
