@@ -26,10 +26,13 @@ func main() {
 	}
 	defer client.Close()
 
-	r.POST("/users", handlers.RegisterUser(client))
-	r.POST("/users/login", handlers.Login(client))
-	r.GET("/user", handlers.GetCurrentUser(client))
-	r.PUT("/user", handlers.UpdateUser(client))
+	api := r.Group("/api")
+	{
+		api.POST("/users", handlers.RegisterUser(client))
+		api.POST("/users/login", handlers.Login(client))
+		api.GET("/user", handlers.GetCurrentUser(client))
+		api.PUT("/user", handlers.UpdateUser(client))
+	}
 
 	if err := r.Run(":8080"); err != nil {
 		log.Fatal("failed to run server: ", err)
