@@ -9,12 +9,15 @@ import (
 	"github.com/k0kishima/golang-realworld-example-app/db"
 	"github.com/k0kishima/golang-realworld-example-app/ent"
 	"github.com/k0kishima/golang-realworld-example-app/handlers"
+	"github.com/k0kishima/golang-realworld-example-app/middlewares"
 )
 
 func main() {
 	config.LoadEnv()
 
 	r := gin.Default()
+
+	r.Use(middlewares.CORSMiddleware())
 
 	dataSourceName := db.GetDataSourceName()
 	client, err := ent.Open("mysql", dataSourceName)
