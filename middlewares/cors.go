@@ -9,8 +9,8 @@ import (
 )
 
 func CORSMiddleware() gin.HandlerFunc {
+	allowedOrigins := getAllowedOrigins()
 	return func(c *gin.Context) {
-		allowedOrigins := strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",")
 		origin := c.Request.Header.Get("Origin")
 
 		if contains(allowedOrigins, origin) {
@@ -31,6 +31,10 @@ func CORSMiddleware() gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+func getAllowedOrigins() []string {
+	return strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",")
 }
 
 func contains(slice []string, item string) bool {
