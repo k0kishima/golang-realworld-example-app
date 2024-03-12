@@ -48,7 +48,9 @@ func ParseToken(tokenString string) (*Claims, error) {
 	config.LoadEnv()
 
 	tokenString = strings.TrimSpace(tokenString)
-	if len(tokenString) > 7 && strings.ToUpper(tokenString[0:7]) == "BEARER " {
+	if len(tokenString) > 6 && strings.ToUpper(tokenString[:6]) == "TOKEN " {
+		tokenString = tokenString[6:]
+	} else if len(tokenString) > 7 && strings.ToUpper(tokenString[:7]) == "BEARER " {
 		tokenString = tokenString[7:]
 	}
 
