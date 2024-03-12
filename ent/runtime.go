@@ -5,8 +5,10 @@ package ent
 import (
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/schema"
 	"github.com/k0kishima/golang-realworld-example-app/ent/user"
+	"github.com/k0kishima/golang-realworld-example-app/ent/userfollow"
 )
 
 // The init function reads all schema descriptors with runtime code
@@ -43,4 +45,14 @@ func init() {
 	userDescUpdatedAt := userFields[7].Descriptor()
 	// user.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	user.DefaultUpdatedAt = userDescUpdatedAt.Default.(func() time.Time)
+	userfollowFields := schema.UserFollow{}.Fields()
+	_ = userfollowFields
+	// userfollowDescCreatedAt is the schema descriptor for created_at field.
+	userfollowDescCreatedAt := userfollowFields[3].Descriptor()
+	// userfollow.DefaultCreatedAt holds the default value on creation for the created_at field.
+	userfollow.DefaultCreatedAt = userfollowDescCreatedAt.Default.(func() time.Time)
+	// userfollowDescID is the schema descriptor for id field.
+	userfollowDescID := userfollowFields[0].Descriptor()
+	// userfollow.DefaultID holds the default value on creation for the id field.
+	userfollow.DefaultID = userfollowDescID.Default.(func() uuid.UUID)
 }

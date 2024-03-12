@@ -32,9 +32,30 @@ var (
 			},
 		},
 	}
+	// UserFollowsColumns holds the columns for the "user_follows" table.
+	UserFollowsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "follower_id", Type: field.TypeUUID},
+		{Name: "followee_id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+	}
+	// UserFollowsTable holds the schema information for the "user_follows" table.
+	UserFollowsTable = &schema.Table{
+		Name:       "user_follows",
+		Columns:    UserFollowsColumns,
+		PrimaryKey: []*schema.Column{UserFollowsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "userfollow_follower_id_followee_id",
+				Unique:  true,
+				Columns: []*schema.Column{UserFollowsColumns[1], UserFollowsColumns[2]},
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		UsersTable,
+		UserFollowsTable,
 	}
 )
 
