@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/predicate"
+	"github.com/k0kishima/golang-realworld-example-app/ent/user"
 	"github.com/k0kishima/golang-realworld-example-app/ent/userfollow"
 )
 
@@ -71,9 +72,31 @@ func (ufu *UserFollowUpdate) SetNillableCreatedAt(t *time.Time) *UserFollowUpdat
 	return ufu
 }
 
+// SetFollower sets the "follower" edge to the User entity.
+func (ufu *UserFollowUpdate) SetFollower(u *User) *UserFollowUpdate {
+	return ufu.SetFollowerID(u.ID)
+}
+
+// SetFollowee sets the "followee" edge to the User entity.
+func (ufu *UserFollowUpdate) SetFollowee(u *User) *UserFollowUpdate {
+	return ufu.SetFolloweeID(u.ID)
+}
+
 // Mutation returns the UserFollowMutation object of the builder.
 func (ufu *UserFollowUpdate) Mutation() *UserFollowMutation {
 	return ufu.mutation
+}
+
+// ClearFollower clears the "follower" edge to the User entity.
+func (ufu *UserFollowUpdate) ClearFollower() *UserFollowUpdate {
+	ufu.mutation.ClearFollower()
+	return ufu
+}
+
+// ClearFollowee clears the "followee" edge to the User entity.
+func (ufu *UserFollowUpdate) ClearFollowee() *UserFollowUpdate {
+	ufu.mutation.ClearFollowee()
+	return ufu
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -103,7 +126,21 @@ func (ufu *UserFollowUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (ufu *UserFollowUpdate) check() error {
+	if _, ok := ufu.mutation.FollowerID(); ufu.mutation.FollowerCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "UserFollow.follower"`)
+	}
+	if _, ok := ufu.mutation.FolloweeID(); ufu.mutation.FolloweeCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "UserFollow.followee"`)
+	}
+	return nil
+}
+
 func (ufu *UserFollowUpdate) sqlSave(ctx context.Context) (n int, err error) {
+	if err := ufu.check(); err != nil {
+		return n, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(userfollow.Table, userfollow.Columns, sqlgraph.NewFieldSpec(userfollow.FieldID, field.TypeUUID))
 	if ps := ufu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -112,14 +149,66 @@ func (ufu *UserFollowUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
-	if value, ok := ufu.mutation.FollowerID(); ok {
-		_spec.SetField(userfollow.FieldFollowerID, field.TypeUUID, value)
-	}
-	if value, ok := ufu.mutation.FolloweeID(); ok {
-		_spec.SetField(userfollow.FieldFolloweeID, field.TypeUUID, value)
-	}
 	if value, ok := ufu.mutation.CreatedAt(); ok {
 		_spec.SetField(userfollow.FieldCreatedAt, field.TypeTime, value)
+	}
+	if ufu.mutation.FollowerCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   userfollow.FollowerTable,
+			Columns: []string{userfollow.FollowerColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ufu.mutation.FollowerIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   userfollow.FollowerTable,
+			Columns: []string{userfollow.FollowerColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if ufu.mutation.FolloweeCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   userfollow.FolloweeTable,
+			Columns: []string{userfollow.FolloweeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ufu.mutation.FolloweeIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   userfollow.FolloweeTable,
+			Columns: []string{userfollow.FolloweeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, ufu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -183,9 +272,31 @@ func (ufuo *UserFollowUpdateOne) SetNillableCreatedAt(t *time.Time) *UserFollowU
 	return ufuo
 }
 
+// SetFollower sets the "follower" edge to the User entity.
+func (ufuo *UserFollowUpdateOne) SetFollower(u *User) *UserFollowUpdateOne {
+	return ufuo.SetFollowerID(u.ID)
+}
+
+// SetFollowee sets the "followee" edge to the User entity.
+func (ufuo *UserFollowUpdateOne) SetFollowee(u *User) *UserFollowUpdateOne {
+	return ufuo.SetFolloweeID(u.ID)
+}
+
 // Mutation returns the UserFollowMutation object of the builder.
 func (ufuo *UserFollowUpdateOne) Mutation() *UserFollowMutation {
 	return ufuo.mutation
+}
+
+// ClearFollower clears the "follower" edge to the User entity.
+func (ufuo *UserFollowUpdateOne) ClearFollower() *UserFollowUpdateOne {
+	ufuo.mutation.ClearFollower()
+	return ufuo
+}
+
+// ClearFollowee clears the "followee" edge to the User entity.
+func (ufuo *UserFollowUpdateOne) ClearFollowee() *UserFollowUpdateOne {
+	ufuo.mutation.ClearFollowee()
+	return ufuo
 }
 
 // Where appends a list predicates to the UserFollowUpdate builder.
@@ -228,7 +339,21 @@ func (ufuo *UserFollowUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (ufuo *UserFollowUpdateOne) check() error {
+	if _, ok := ufuo.mutation.FollowerID(); ufuo.mutation.FollowerCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "UserFollow.follower"`)
+	}
+	if _, ok := ufuo.mutation.FolloweeID(); ufuo.mutation.FolloweeCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "UserFollow.followee"`)
+	}
+	return nil
+}
+
 func (ufuo *UserFollowUpdateOne) sqlSave(ctx context.Context) (_node *UserFollow, err error) {
+	if err := ufuo.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(userfollow.Table, userfollow.Columns, sqlgraph.NewFieldSpec(userfollow.FieldID, field.TypeUUID))
 	id, ok := ufuo.mutation.ID()
 	if !ok {
@@ -254,14 +379,66 @@ func (ufuo *UserFollowUpdateOne) sqlSave(ctx context.Context) (_node *UserFollow
 			}
 		}
 	}
-	if value, ok := ufuo.mutation.FollowerID(); ok {
-		_spec.SetField(userfollow.FieldFollowerID, field.TypeUUID, value)
-	}
-	if value, ok := ufuo.mutation.FolloweeID(); ok {
-		_spec.SetField(userfollow.FieldFolloweeID, field.TypeUUID, value)
-	}
 	if value, ok := ufuo.mutation.CreatedAt(); ok {
 		_spec.SetField(userfollow.FieldCreatedAt, field.TypeTime, value)
+	}
+	if ufuo.mutation.FollowerCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   userfollow.FollowerTable,
+			Columns: []string{userfollow.FollowerColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ufuo.mutation.FollowerIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   userfollow.FollowerTable,
+			Columns: []string{userfollow.FollowerColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if ufuo.mutation.FolloweeCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   userfollow.FolloweeTable,
+			Columns: []string{userfollow.FolloweeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ufuo.mutation.FolloweeIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   userfollow.FolloweeTable,
+			Columns: []string{userfollow.FolloweeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &UserFollow{config: ufuo.config}
 	_spec.Assign = _node.assignValues

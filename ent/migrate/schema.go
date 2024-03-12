@@ -35,20 +35,34 @@ var (
 	// UserFollowsColumns holds the columns for the "user_follows" table.
 	UserFollowsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "follower_id", Type: field.TypeUUID},
-		{Name: "followee_id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
+		{Name: "follower_id", Type: field.TypeUUID, Unique: true},
+		{Name: "followee_id", Type: field.TypeUUID},
 	}
 	// UserFollowsTable holds the schema information for the "user_follows" table.
 	UserFollowsTable = &schema.Table{
 		Name:       "user_follows",
 		Columns:    UserFollowsColumns,
 		PrimaryKey: []*schema.Column{UserFollowsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "user_follows_users_follows",
+				Columns:    []*schema.Column{UserFollowsColumns[2]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "user_follows_users_followee",
+				Columns:    []*schema.Column{UserFollowsColumns[3]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "userfollow_follower_id_followee_id",
 				Unique:  true,
-				Columns: []*schema.Column{UserFollowsColumns[1], UserFollowsColumns[2]},
+				Columns: []*schema.Column{UserFollowsColumns[2], UserFollowsColumns[3]},
 			},
 		},
 	}
@@ -60,4 +74,6 @@ var (
 )
 
 func init() {
+	UserFollowsTable.ForeignKeys[0].RefTable = UsersTable
+	UserFollowsTable.ForeignKeys[1].RefTable = UsersTable
 }

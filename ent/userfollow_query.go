@@ -12,16 +12,19 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/predicate"
+	"github.com/k0kishima/golang-realworld-example-app/ent/user"
 	"github.com/k0kishima/golang-realworld-example-app/ent/userfollow"
 )
 
 // UserFollowQuery is the builder for querying UserFollow entities.
 type UserFollowQuery struct {
 	config
-	ctx        *QueryContext
-	order      []userfollow.OrderOption
-	inters     []Interceptor
-	predicates []predicate.UserFollow
+	ctx          *QueryContext
+	order        []userfollow.OrderOption
+	inters       []Interceptor
+	predicates   []predicate.UserFollow
+	withFollower *UserQuery
+	withFollowee *UserQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -56,6 +59,50 @@ func (ufq *UserFollowQuery) Unique(unique bool) *UserFollowQuery {
 func (ufq *UserFollowQuery) Order(o ...userfollow.OrderOption) *UserFollowQuery {
 	ufq.order = append(ufq.order, o...)
 	return ufq
+}
+
+// QueryFollower chains the current query on the "follower" edge.
+func (ufq *UserFollowQuery) QueryFollower() *UserQuery {
+	query := (&UserClient{config: ufq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := ufq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := ufq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(userfollow.Table, userfollow.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, userfollow.FollowerTable, userfollow.FollowerColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(ufq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryFollowee chains the current query on the "followee" edge.
+func (ufq *UserFollowQuery) QueryFollowee() *UserQuery {
+	query := (&UserClient{config: ufq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := ufq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := ufq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(userfollow.Table, userfollow.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, userfollow.FolloweeTable, userfollow.FolloweeColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(ufq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first UserFollow entity from the query.
@@ -245,15 +292,39 @@ func (ufq *UserFollowQuery) Clone() *UserFollowQuery {
 		return nil
 	}
 	return &UserFollowQuery{
-		config:     ufq.config,
-		ctx:        ufq.ctx.Clone(),
-		order:      append([]userfollow.OrderOption{}, ufq.order...),
-		inters:     append([]Interceptor{}, ufq.inters...),
-		predicates: append([]predicate.UserFollow{}, ufq.predicates...),
+		config:       ufq.config,
+		ctx:          ufq.ctx.Clone(),
+		order:        append([]userfollow.OrderOption{}, ufq.order...),
+		inters:       append([]Interceptor{}, ufq.inters...),
+		predicates:   append([]predicate.UserFollow{}, ufq.predicates...),
+		withFollower: ufq.withFollower.Clone(),
+		withFollowee: ufq.withFollowee.Clone(),
 		// clone intermediate query.
 		sql:  ufq.sql.Clone(),
 		path: ufq.path,
 	}
+}
+
+// WithFollower tells the query-builder to eager-load the nodes that are connected to
+// the "follower" edge. The optional arguments are used to configure the query builder of the edge.
+func (ufq *UserFollowQuery) WithFollower(opts ...func(*UserQuery)) *UserFollowQuery {
+	query := (&UserClient{config: ufq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	ufq.withFollower = query
+	return ufq
+}
+
+// WithFollowee tells the query-builder to eager-load the nodes that are connected to
+// the "followee" edge. The optional arguments are used to configure the query builder of the edge.
+func (ufq *UserFollowQuery) WithFollowee(opts ...func(*UserQuery)) *UserFollowQuery {
+	query := (&UserClient{config: ufq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	ufq.withFollowee = query
+	return ufq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -332,8 +403,12 @@ func (ufq *UserFollowQuery) prepareQuery(ctx context.Context) error {
 
 func (ufq *UserFollowQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*UserFollow, error) {
 	var (
-		nodes = []*UserFollow{}
-		_spec = ufq.querySpec()
+		nodes       = []*UserFollow{}
+		_spec       = ufq.querySpec()
+		loadedTypes = [2]bool{
+			ufq.withFollower != nil,
+			ufq.withFollowee != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*UserFollow).scanValues(nil, columns)
@@ -341,6 +416,7 @@ func (ufq *UserFollowQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &UserFollow{config: ufq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -352,7 +428,78 @@ func (ufq *UserFollowQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := ufq.withFollower; query != nil {
+		if err := ufq.loadFollower(ctx, query, nodes, nil,
+			func(n *UserFollow, e *User) { n.Edges.Follower = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := ufq.withFollowee; query != nil {
+		if err := ufq.loadFollowee(ctx, query, nodes, nil,
+			func(n *UserFollow, e *User) { n.Edges.Followee = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (ufq *UserFollowQuery) loadFollower(ctx context.Context, query *UserQuery, nodes []*UserFollow, init func(*UserFollow), assign func(*UserFollow, *User)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*UserFollow)
+	for i := range nodes {
+		fk := nodes[i].FollowerID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(user.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "follower_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (ufq *UserFollowQuery) loadFollowee(ctx context.Context, query *UserQuery, nodes []*UserFollow, init func(*UserFollow), assign func(*UserFollow, *User)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*UserFollow)
+	for i := range nodes {
+		fk := nodes[i].FolloweeID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(user.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "followee_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (ufq *UserFollowQuery) sqlCount(ctx context.Context) (int, error) {
@@ -379,6 +526,12 @@ func (ufq *UserFollowQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != userfollow.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if ufq.withFollower != nil {
+			_spec.Node.AddColumnOnce(userfollow.FieldFollowerID)
+		}
+		if ufq.withFollowee != nil {
+			_spec.Node.AddColumnOnce(userfollow.FieldFolloweeID)
 		}
 	}
 	if ps := ufq.predicates; len(ps) > 0 {

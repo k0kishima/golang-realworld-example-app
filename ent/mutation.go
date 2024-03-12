@@ -33,20 +33,22 @@ const (
 // UserMutation represents an operation that mutates the User nodes in the graph.
 type UserMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	username      *string
-	email         *string
-	password      *string
-	image         *string
-	bio           *string
-	created_at    *time.Time
-	updated_at    *time.Time
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*User, error)
-	predicates    []predicate.User
+	op             Op
+	typ            string
+	id             *uuid.UUID
+	username       *string
+	email          *string
+	password       *string
+	image          *string
+	bio            *string
+	created_at     *time.Time
+	updated_at     *time.Time
+	clearedFields  map[string]struct{}
+	follows        *uuid.UUID
+	clearedfollows bool
+	done           bool
+	oldValue       func(context.Context) (*User, error)
+	predicates     []predicate.User
 }
 
 var _ ent.Mutation = (*UserMutation)(nil)
@@ -405,6 +407,45 @@ func (m *UserMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
+// SetFollowsID sets the "follows" edge to the UserFollow entity by id.
+func (m *UserMutation) SetFollowsID(id uuid.UUID) {
+	m.follows = &id
+}
+
+// ClearFollows clears the "follows" edge to the UserFollow entity.
+func (m *UserMutation) ClearFollows() {
+	m.clearedfollows = true
+}
+
+// FollowsCleared reports if the "follows" edge to the UserFollow entity was cleared.
+func (m *UserMutation) FollowsCleared() bool {
+	return m.clearedfollows
+}
+
+// FollowsID returns the "follows" edge ID in the mutation.
+func (m *UserMutation) FollowsID() (id uuid.UUID, exists bool) {
+	if m.follows != nil {
+		return *m.follows, true
+	}
+	return
+}
+
+// FollowsIDs returns the "follows" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// FollowsID instead. It exists only for internal usage by the builders.
+func (m *UserMutation) FollowsIDs() (ids []uuid.UUID) {
+	if id := m.follows; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetFollows resets all changes to the "follows" edge.
+func (m *UserMutation) ResetFollows() {
+	m.follows = nil
+	m.clearedfollows = false
+}
+
 // Where appends a list predicates to the UserMutation builder.
 func (m *UserMutation) Where(ps ...predicate.User) {
 	m.predicates = append(m.predicates, ps...)
@@ -640,19 +681,28 @@ func (m *UserMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.follows != nil {
+		edges = append(edges, user.EdgeFollows)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *UserMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case user.EdgeFollows:
+		if id := m.follows; id != nil {
+			return []ent.Value{*id}
+		}
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
 	return edges
 }
 
@@ -664,41 +714,60 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedfollows {
+		edges = append(edges, user.EdgeFollows)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *UserMutation) EdgeCleared(name string) bool {
+	switch name {
+	case user.EdgeFollows:
+		return m.clearedfollows
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *UserMutation) ClearEdge(name string) error {
+	switch name {
+	case user.EdgeFollows:
+		m.ClearFollows()
+		return nil
+	}
 	return fmt.Errorf("unknown User unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *UserMutation) ResetEdge(name string) error {
+	switch name {
+	case user.EdgeFollows:
+		m.ResetFollows()
+		return nil
+	}
 	return fmt.Errorf("unknown User edge %s", name)
 }
 
 // UserFollowMutation represents an operation that mutates the UserFollow nodes in the graph.
 type UserFollowMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	follower_id   *uuid.UUID
-	followee_id   *uuid.UUID
-	created_at    *time.Time
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*UserFollow, error)
-	predicates    []predicate.UserFollow
+	op              Op
+	typ             string
+	id              *uuid.UUID
+	created_at      *time.Time
+	clearedFields   map[string]struct{}
+	follower        *uuid.UUID
+	clearedfollower bool
+	followee        *uuid.UUID
+	clearedfollowee bool
+	done            bool
+	oldValue        func(context.Context) (*UserFollow, error)
+	predicates      []predicate.UserFollow
 }
 
 var _ ent.Mutation = (*UserFollowMutation)(nil)
@@ -807,12 +876,12 @@ func (m *UserFollowMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 
 // SetFollowerID sets the "follower_id" field.
 func (m *UserFollowMutation) SetFollowerID(u uuid.UUID) {
-	m.follower_id = &u
+	m.follower = &u
 }
 
 // FollowerID returns the value of the "follower_id" field in the mutation.
 func (m *UserFollowMutation) FollowerID() (r uuid.UUID, exists bool) {
-	v := m.follower_id
+	v := m.follower
 	if v == nil {
 		return
 	}
@@ -838,17 +907,17 @@ func (m *UserFollowMutation) OldFollowerID(ctx context.Context) (v uuid.UUID, er
 
 // ResetFollowerID resets all changes to the "follower_id" field.
 func (m *UserFollowMutation) ResetFollowerID() {
-	m.follower_id = nil
+	m.follower = nil
 }
 
 // SetFolloweeID sets the "followee_id" field.
 func (m *UserFollowMutation) SetFolloweeID(u uuid.UUID) {
-	m.followee_id = &u
+	m.followee = &u
 }
 
 // FolloweeID returns the value of the "followee_id" field in the mutation.
 func (m *UserFollowMutation) FolloweeID() (r uuid.UUID, exists bool) {
-	v := m.followee_id
+	v := m.followee
 	if v == nil {
 		return
 	}
@@ -874,7 +943,7 @@ func (m *UserFollowMutation) OldFolloweeID(ctx context.Context) (v uuid.UUID, er
 
 // ResetFolloweeID resets all changes to the "followee_id" field.
 func (m *UserFollowMutation) ResetFolloweeID() {
-	m.followee_id = nil
+	m.followee = nil
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -913,6 +982,60 @@ func (m *UserFollowMutation) ResetCreatedAt() {
 	m.created_at = nil
 }
 
+// ClearFollower clears the "follower" edge to the User entity.
+func (m *UserFollowMutation) ClearFollower() {
+	m.clearedfollower = true
+	m.clearedFields[userfollow.FieldFollowerID] = struct{}{}
+}
+
+// FollowerCleared reports if the "follower" edge to the User entity was cleared.
+func (m *UserFollowMutation) FollowerCleared() bool {
+	return m.clearedfollower
+}
+
+// FollowerIDs returns the "follower" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// FollowerID instead. It exists only for internal usage by the builders.
+func (m *UserFollowMutation) FollowerIDs() (ids []uuid.UUID) {
+	if id := m.follower; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetFollower resets all changes to the "follower" edge.
+func (m *UserFollowMutation) ResetFollower() {
+	m.follower = nil
+	m.clearedfollower = false
+}
+
+// ClearFollowee clears the "followee" edge to the User entity.
+func (m *UserFollowMutation) ClearFollowee() {
+	m.clearedfollowee = true
+	m.clearedFields[userfollow.FieldFolloweeID] = struct{}{}
+}
+
+// FolloweeCleared reports if the "followee" edge to the User entity was cleared.
+func (m *UserFollowMutation) FolloweeCleared() bool {
+	return m.clearedfollowee
+}
+
+// FolloweeIDs returns the "followee" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// FolloweeID instead. It exists only for internal usage by the builders.
+func (m *UserFollowMutation) FolloweeIDs() (ids []uuid.UUID) {
+	if id := m.followee; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetFollowee resets all changes to the "followee" edge.
+func (m *UserFollowMutation) ResetFollowee() {
+	m.followee = nil
+	m.clearedfollowee = false
+}
+
 // Where appends a list predicates to the UserFollowMutation builder.
 func (m *UserFollowMutation) Where(ps ...predicate.UserFollow) {
 	m.predicates = append(m.predicates, ps...)
@@ -948,10 +1071,10 @@ func (m *UserFollowMutation) Type() string {
 // AddedFields().
 func (m *UserFollowMutation) Fields() []string {
 	fields := make([]string, 0, 3)
-	if m.follower_id != nil {
+	if m.follower != nil {
 		fields = append(fields, userfollow.FieldFollowerID)
 	}
-	if m.followee_id != nil {
+	if m.followee != nil {
 		fields = append(fields, userfollow.FieldFolloweeID)
 	}
 	if m.created_at != nil {
@@ -1080,19 +1203,35 @@ func (m *UserFollowMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserFollowMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 2)
+	if m.follower != nil {
+		edges = append(edges, userfollow.EdgeFollower)
+	}
+	if m.followee != nil {
+		edges = append(edges, userfollow.EdgeFollowee)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *UserFollowMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case userfollow.EdgeFollower:
+		if id := m.follower; id != nil {
+			return []ent.Value{*id}
+		}
+	case userfollow.EdgeFollowee:
+		if id := m.followee; id != nil {
+			return []ent.Value{*id}
+		}
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserFollowMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 2)
 	return edges
 }
 
@@ -1104,24 +1243,52 @@ func (m *UserFollowMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserFollowMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 2)
+	if m.clearedfollower {
+		edges = append(edges, userfollow.EdgeFollower)
+	}
+	if m.clearedfollowee {
+		edges = append(edges, userfollow.EdgeFollowee)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *UserFollowMutation) EdgeCleared(name string) bool {
+	switch name {
+	case userfollow.EdgeFollower:
+		return m.clearedfollower
+	case userfollow.EdgeFollowee:
+		return m.clearedfollowee
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *UserFollowMutation) ClearEdge(name string) error {
+	switch name {
+	case userfollow.EdgeFollower:
+		m.ClearFollower()
+		return nil
+	case userfollow.EdgeFollowee:
+		m.ClearFollowee()
+		return nil
+	}
 	return fmt.Errorf("unknown UserFollow unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *UserFollowMutation) ResetEdge(name string) error {
+	switch name {
+	case userfollow.EdgeFollower:
+		m.ResetFollower()
+		return nil
+	case userfollow.EdgeFollowee:
+		m.ResetFollowee()
+		return nil
+	}
 	return fmt.Errorf("unknown UserFollow edge %s", name)
 }

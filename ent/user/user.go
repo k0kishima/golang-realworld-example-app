@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 )
 
 const (
@@ -27,8 +28,17 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeFollows holds the string denoting the follows edge name in mutations.
+	EdgeFollows = "follows"
 	// Table holds the table name of the user in the database.
 	Table = "users"
+	// FollowsTable is the table that holds the follows relation/edge.
+	FollowsTable = "user_follows"
+	// FollowsInverseTable is the table name for the UserFollow entity.
+	// It exists in this package in order to avoid circular dependency with the "userfollow" package.
+	FollowsInverseTable = "user_follows"
+	// FollowsColumn is the table column denoting the follows relation/edge.
+	FollowsColumn = "follower_id"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -111,4 +121,18 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByFollowsField orders the results by follows field.
+func ByFollowsField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newFollowsStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newFollowsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(FollowsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, false, FollowsTable, FollowsColumn),
+	)
 }

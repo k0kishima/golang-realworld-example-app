@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -20,8 +21,26 @@ const (
 	FieldFolloweeID = "followee_id"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
+	// EdgeFollower holds the string denoting the follower edge name in mutations.
+	EdgeFollower = "follower"
+	// EdgeFollowee holds the string denoting the followee edge name in mutations.
+	EdgeFollowee = "followee"
 	// Table holds the table name of the userfollow in the database.
 	Table = "user_follows"
+	// FollowerTable is the table that holds the follower relation/edge.
+	FollowerTable = "user_follows"
+	// FollowerInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	FollowerInverseTable = "users"
+	// FollowerColumn is the table column denoting the follower relation/edge.
+	FollowerColumn = "follower_id"
+	// FolloweeTable is the table that holds the followee relation/edge.
+	FolloweeTable = "user_follows"
+	// FolloweeInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	FolloweeInverseTable = "users"
+	// FolloweeColumn is the table column denoting the followee relation/edge.
+	FolloweeColumn = "followee_id"
 )
 
 // Columns holds all SQL columns for userfollow fields.
@@ -70,4 +89,32 @@ func ByFolloweeID(opts ...sql.OrderTermOption) OrderOption {
 // ByCreatedAt orders the results by the created_at field.
 func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
+}
+
+// ByFollowerField orders the results by follower field.
+func ByFollowerField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newFollowerStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByFolloweeField orders the results by followee field.
+func ByFolloweeField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newFolloweeStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newFollowerStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(FollowerInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, true, FollowerTable, FollowerColumn),
+	)
+}
+func newFolloweeStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(FolloweeInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, FolloweeTable, FolloweeColumn),
+	)
 }

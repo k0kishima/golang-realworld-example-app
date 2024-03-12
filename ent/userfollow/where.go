@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/predicate"
 )
@@ -90,26 +91,6 @@ func FollowerIDNotIn(vs ...uuid.UUID) predicate.UserFollow {
 	return predicate.UserFollow(sql.FieldNotIn(FieldFollowerID, vs...))
 }
 
-// FollowerIDGT applies the GT predicate on the "follower_id" field.
-func FollowerIDGT(v uuid.UUID) predicate.UserFollow {
-	return predicate.UserFollow(sql.FieldGT(FieldFollowerID, v))
-}
-
-// FollowerIDGTE applies the GTE predicate on the "follower_id" field.
-func FollowerIDGTE(v uuid.UUID) predicate.UserFollow {
-	return predicate.UserFollow(sql.FieldGTE(FieldFollowerID, v))
-}
-
-// FollowerIDLT applies the LT predicate on the "follower_id" field.
-func FollowerIDLT(v uuid.UUID) predicate.UserFollow {
-	return predicate.UserFollow(sql.FieldLT(FieldFollowerID, v))
-}
-
-// FollowerIDLTE applies the LTE predicate on the "follower_id" field.
-func FollowerIDLTE(v uuid.UUID) predicate.UserFollow {
-	return predicate.UserFollow(sql.FieldLTE(FieldFollowerID, v))
-}
-
 // FolloweeIDEQ applies the EQ predicate on the "followee_id" field.
 func FolloweeIDEQ(v uuid.UUID) predicate.UserFollow {
 	return predicate.UserFollow(sql.FieldEQ(FieldFolloweeID, v))
@@ -128,26 +109,6 @@ func FolloweeIDIn(vs ...uuid.UUID) predicate.UserFollow {
 // FolloweeIDNotIn applies the NotIn predicate on the "followee_id" field.
 func FolloweeIDNotIn(vs ...uuid.UUID) predicate.UserFollow {
 	return predicate.UserFollow(sql.FieldNotIn(FieldFolloweeID, vs...))
-}
-
-// FolloweeIDGT applies the GT predicate on the "followee_id" field.
-func FolloweeIDGT(v uuid.UUID) predicate.UserFollow {
-	return predicate.UserFollow(sql.FieldGT(FieldFolloweeID, v))
-}
-
-// FolloweeIDGTE applies the GTE predicate on the "followee_id" field.
-func FolloweeIDGTE(v uuid.UUID) predicate.UserFollow {
-	return predicate.UserFollow(sql.FieldGTE(FieldFolloweeID, v))
-}
-
-// FolloweeIDLT applies the LT predicate on the "followee_id" field.
-func FolloweeIDLT(v uuid.UUID) predicate.UserFollow {
-	return predicate.UserFollow(sql.FieldLT(FieldFolloweeID, v))
-}
-
-// FolloweeIDLTE applies the LTE predicate on the "followee_id" field.
-func FolloweeIDLTE(v uuid.UUID) predicate.UserFollow {
-	return predicate.UserFollow(sql.FieldLTE(FieldFolloweeID, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
@@ -188,6 +149,52 @@ func CreatedAtLT(v time.Time) predicate.UserFollow {
 // CreatedAtLTE applies the LTE predicate on the "created_at" field.
 func CreatedAtLTE(v time.Time) predicate.UserFollow {
 	return predicate.UserFollow(sql.FieldLTE(FieldCreatedAt, v))
+}
+
+// HasFollower applies the HasEdge predicate on the "follower" edge.
+func HasFollower() predicate.UserFollow {
+	return predicate.UserFollow(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, FollowerTable, FollowerColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasFollowerWith applies the HasEdge predicate on the "follower" edge with a given conditions (other predicates).
+func HasFollowerWith(preds ...predicate.User) predicate.UserFollow {
+	return predicate.UserFollow(func(s *sql.Selector) {
+		step := newFollowerStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasFollowee applies the HasEdge predicate on the "followee" edge.
+func HasFollowee() predicate.UserFollow {
+	return predicate.UserFollow(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, FolloweeTable, FolloweeColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasFolloweeWith applies the HasEdge predicate on the "followee" edge with a given conditions (other predicates).
+func HasFolloweeWith(preds ...predicate.User) predicate.UserFollow {
+	return predicate.UserFollow(func(s *sql.Selector) {
+		step := newFolloweeStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.
