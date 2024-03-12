@@ -32,7 +32,6 @@ func AuthMiddleware(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		// Store the user in the context for later retrieval
 		c.Set("user", u)
 		c.Next()
 	}
