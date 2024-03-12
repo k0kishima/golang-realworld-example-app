@@ -186,7 +186,7 @@ func UpdateUser(client *ent.Client) gin.HandlerFunc {
 			Save(c.Request.Context())
 
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": "error updating user"})
+			handleUserUpdateError(c, err)
 			return
 		}
 
@@ -218,5 +218,20 @@ func handleUserCreationError(c *gin.Context, err error) {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": errors})
 	} else {
 		respondWithError(c, http.StatusInternalServerError, "Error creating user")
+	}
+}
+
+func handleUserUpdateError(c *gin.Context, err error) {
+	if ent.IsConstraintError(err) {
+		errors := make(map[string][]string)
+		if strings.Contains(err.Error(), "users.username") {
+			errors["username"] = []string{"has already been taken"}
+		}
+		if strings.Contains(err.Error(), "users.email") {
+			errors["email"] = []string{"has already been taken"}
+		}
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": errors})
+	} else {
+		respondWithError(c, http.StatusInternalServerError, "Error updating user")
 	}
 }
