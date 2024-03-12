@@ -186,7 +186,7 @@ func UpdateUser(client *ent.Client) gin.HandlerFunc {
 			Save(c.Request.Context())
 
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": "error updating user"})
+			handleUserUpdateError(c, err)
 			return
 		}
 
@@ -211,14 +211,27 @@ func respondWithError(c *gin.Context, code int, message string) {
 func handleUserCreationError(c *gin.Context, err error) {
 	if ent.IsConstraintError(err) {
 		errors := make(map[string][]string)
-		if strings.Contains(err.Error(), "users.username") {
-			errors["username"] = append(errors["username"], "has already been taken")
-		}
-		if strings.Contains(err.Error(), "users.email") {
-			errors["email"] = append(errors["email"], "has already been taken")
+		if strings.Contains(err.Error(), "users.username") || strings.Contains(err.Error(), "users.email") {
+			errors["username"] = []string{"has already been taken"}
+			errors["email"] = []string{"has already been taken"}
 		}
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": errors})
 	} else {
 		respondWithError(c, http.StatusInternalServerError, "Error creating user")
+	}
+}
+
+func handleUserUpdateError(c *gin.Context, err error) {
+	if ent.IsConstraintError(err) {
+		errors := make(map[string][]string)
+		if strings.Contains(err.Error(), "users.username") {
+			errors["username"] = []string{"has already been taken"}
+		}
+		if strings.Contains(err.Error(), "users.email") {
+			errors["email"] = []string{"has already been taken"}
+		}
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": errors})
+	} else {
+		respondWithError(c, http.StatusInternalServerError, "Error updating user")
 	}
 }
