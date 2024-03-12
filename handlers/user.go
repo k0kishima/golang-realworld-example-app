@@ -124,23 +124,8 @@ func Login(client *ent.Client) gin.HandlerFunc {
 
 func GetCurrentUser(client *ent.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		token := c.GetHeader("Authorization")
-		if token == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"message": "missing authorization credentials"})
-			return
-		}
-
-		claims, err := auth.ParseToken(token)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"message": "invalid token"})
-			return
-		}
-
-		u, err := client.User.Query().Where(user.EmailEQ(claims.Email)).Only(c.Request.Context())
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": "error fetching user"})
-			return
-		}
+		user, _ := c.Get("user")
+		u := user.(*ent.User)
 
 		c.JSON(http.StatusOK, gin.H{"user": gin.H{
 			"username": u.Username,
@@ -162,25 +147,10 @@ func UpdateUser(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		token := c.GetHeader("Authorization")
-		if token == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"message": "missing authorization credentials"})
-			return
-		}
+		user, _ := c.Get("user")
+		u := user.(*ent.User)
 
-		claims, err := auth.ParseToken(token)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"message": "invalid token"})
-			return
-		}
-
-		u, err := client.User.Query().Where(user.EmailEQ(claims.Email)).Only(c.Request.Context())
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": "error fetching user"})
-			return
-		}
-
-		u, err = u.Update().
+		u, err := u.Update().
 			SetUsername(req.User.Username).
 			SetEmail(req.User.Email).
 			Save(c.Request.Context())
@@ -190,7 +160,7 @@ func UpdateUser(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		token, err = auth.CreateToken(u)
+		token, err := auth.CreateToken(u)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "error creating token"})
 			return
