@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/user"
+	"github.com/k0kishima/golang-realworld-example-app/ent/userfollow"
 )
 
 // UserCreate is the builder for creating a User entity.
@@ -99,6 +100,25 @@ func (uc *UserCreate) SetNillableUpdatedAt(t *time.Time) *UserCreate {
 func (uc *UserCreate) SetID(u uuid.UUID) *UserCreate {
 	uc.mutation.SetID(u)
 	return uc
+}
+
+// SetFollowsID sets the "follows" edge to the UserFollow entity by ID.
+func (uc *UserCreate) SetFollowsID(id uuid.UUID) *UserCreate {
+	uc.mutation.SetFollowsID(id)
+	return uc
+}
+
+// SetNillableFollowsID sets the "follows" edge to the UserFollow entity by ID if the given value is not nil.
+func (uc *UserCreate) SetNillableFollowsID(id *uuid.UUID) *UserCreate {
+	if id != nil {
+		uc = uc.SetFollowsID(*id)
+	}
+	return uc
+}
+
+// SetFollows sets the "follows" edge to the UserFollow entity.
+func (uc *UserCreate) SetFollows(u *UserFollow) *UserCreate {
+	return uc.SetFollowsID(u.ID)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -254,6 +274,22 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := uc.mutation.UpdatedAt(); ok {
 		_spec.SetField(user.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := uc.mutation.FollowsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.FollowsTable,
+			Columns: []string{user.FollowsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userfollow.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

@@ -15,6 +15,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/k0kishima/golang-realworld-example-app/ent/user"
 	"github.com/k0kishima/golang-realworld-example-app/ent/userfollow"
 )
@@ -315,6 +316,22 @@ func (c *UserClient) GetX(ctx context.Context, id uuid.UUID) *User {
 	return obj
 }
 
+// QueryFollows queries the follows edge of a User.
+func (c *UserClient) QueryFollows(u *User) *UserFollowQuery {
+	query := (&UserFollowClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := u.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(userfollow.Table, userfollow.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, user.FollowsTable, user.FollowsColumn),
+		)
+		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *UserClient) Hooks() []Hook {
 	return c.hooks.User
@@ -446,6 +463,38 @@ func (c *UserFollowClient) GetX(ctx context.Context, id uuid.UUID) *UserFollow {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryFollower queries the follower edge of a UserFollow.
+func (c *UserFollowClient) QueryFollower(uf *UserFollow) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := uf.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(userfollow.Table, userfollow.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, userfollow.FollowerTable, userfollow.FollowerColumn),
+		)
+		fromV = sqlgraph.Neighbors(uf.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryFollowee queries the followee edge of a UserFollow.
+func (c *UserFollowClient) QueryFollowee(uf *UserFollow) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := uf.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(userfollow.Table, userfollow.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, userfollow.FolloweeTable, userfollow.FolloweeColumn),
+		)
+		fromV = sqlgraph.Neighbors(uf.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.

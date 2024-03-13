@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -25,5 +26,19 @@ func (UserFollow) Fields() []ent.Field {
 func (UserFollow) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("follower_id", "followee_id").Unique(),
+	}
+}
+
+func (UserFollow) Edges() []ent.Edge {
+	return []ent.Edge{
+		edge.From("follower", User.Type).
+			Ref("follows").
+			Unique().
+			Required().
+			Field("follower_id"),
+		edge.To("followee", User.Type).
+			Unique().
+			Required().
+			Field("followee_id"),
 	}
 }

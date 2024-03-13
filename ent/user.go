@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/user"
+	"github.com/k0kishima/golang-realworld-example-app/ent/userfollow"
 )
 
 // User is the model entity for the User schema.
@@ -31,8 +32,31 @@ type User struct {
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the UserQuery when eager-loading is set.
+	Edges        UserEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// UserEdges holds the relations/edges for other nodes in the graph.
+type UserEdges struct {
+	// Follows holds the value of the follows edge.
+	Follows *UserFollow `json:"follows,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// FollowsOrErr returns the Follows value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e UserEdges) FollowsOrErr() (*UserFollow, error) {
+	if e.Follows != nil {
+		return e.Follows, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: userfollow.Label}
+	}
+	return nil, &NotLoadedError{edge: "follows"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -120,6 +144,11 @@ func (u *User) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (u *User) Value(name string) (ent.Value, error) {
 	return u.selectValues.Get(name)
+}
+
+// QueryFollows queries the "follows" edge of the User entity.
+func (u *User) QueryFollows() *UserFollowQuery {
+	return NewUserClient(u.config).QueryFollows(u)
 }
 
 // Update returns a builder for updating this User.

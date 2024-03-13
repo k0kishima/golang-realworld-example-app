@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
+	"github.com/k0kishima/golang-realworld-example-app/ent/user"
 	"github.com/k0kishima/golang-realworld-example-app/ent/userfollow"
 )
 
@@ -23,8 +24,44 @@ type UserFollow struct {
 	// FolloweeID holds the value of the "followee_id" field.
 	FolloweeID uuid.UUID `json:"followee_id,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
-	CreatedAt    time.Time `json:"created_at,omitempty"`
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the UserFollowQuery when eager-loading is set.
+	Edges        UserFollowEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// UserFollowEdges holds the relations/edges for other nodes in the graph.
+type UserFollowEdges struct {
+	// Follower holds the value of the follower edge.
+	Follower *User `json:"follower,omitempty"`
+	// Followee holds the value of the followee edge.
+	Followee *User `json:"followee,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [2]bool
+}
+
+// FollowerOrErr returns the Follower value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e UserFollowEdges) FollowerOrErr() (*User, error) {
+	if e.Follower != nil {
+		return e.Follower, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: user.Label}
+	}
+	return nil, &NotLoadedError{edge: "follower"}
+}
+
+// FolloweeOrErr returns the Followee value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e UserFollowEdges) FolloweeOrErr() (*User, error) {
+	if e.Followee != nil {
+		return e.Followee, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: user.Label}
+	}
+	return nil, &NotLoadedError{edge: "followee"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -86,6 +123,16 @@ func (uf *UserFollow) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (uf *UserFollow) Value(name string) (ent.Value, error) {
 	return uf.selectValues.Get(name)
+}
+
+// QueryFollower queries the "follower" edge of the UserFollow entity.
+func (uf *UserFollow) QueryFollower() *UserQuery {
+	return NewUserFollowClient(uf.config).QueryFollower(uf)
+}
+
+// QueryFollowee queries the "followee" edge of the UserFollow entity.
+func (uf *UserFollow) QueryFollowee() *UserQuery {
+	return NewUserFollowClient(uf.config).QueryFollowee(uf)
 }
 
 // Update returns a builder for updating this UserFollow.

@@ -30,6 +30,8 @@ func main() {
 	{
 		api.POST("/users", handlers.RegisterUser(client))
 		api.POST("/users/login", handlers.Login(client))
+		api.GET("/profiles/:username", handlers.GetProfile(client))
+
 		api.Use(middlewares.AuthMiddleware(client))
 		{
 			api.GET("/user", handlers.GetCurrentUser(client))

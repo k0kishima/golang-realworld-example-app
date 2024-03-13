@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/k0kishima/golang-realworld-example-app/ent/user"
 	"github.com/k0kishima/golang-realworld-example-app/ent/userfollow"
 )
 
@@ -59,6 +60,16 @@ func (ufc *UserFollowCreate) SetNillableID(u *uuid.UUID) *UserFollowCreate {
 		ufc.SetID(*u)
 	}
 	return ufc
+}
+
+// SetFollower sets the "follower" edge to the User entity.
+func (ufc *UserFollowCreate) SetFollower(u *User) *UserFollowCreate {
+	return ufc.SetFollowerID(u.ID)
+}
+
+// SetFollowee sets the "followee" edge to the User entity.
+func (ufc *UserFollowCreate) SetFollowee(u *User) *UserFollowCreate {
+	return ufc.SetFolloweeID(u.ID)
 }
 
 // Mutation returns the UserFollowMutation object of the builder.
@@ -117,6 +128,12 @@ func (ufc *UserFollowCreate) check() error {
 	if _, ok := ufc.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "UserFollow.created_at"`)}
 	}
+	if _, ok := ufc.mutation.FollowerID(); !ok {
+		return &ValidationError{Name: "follower", err: errors.New(`ent: missing required edge "UserFollow.follower"`)}
+	}
+	if _, ok := ufc.mutation.FolloweeID(); !ok {
+		return &ValidationError{Name: "followee", err: errors.New(`ent: missing required edge "UserFollow.followee"`)}
+	}
 	return nil
 }
 
@@ -152,17 +169,43 @@ func (ufc *UserFollowCreate) createSpec() (*UserFollow, *sqlgraph.CreateSpec) {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := ufc.mutation.FollowerID(); ok {
-		_spec.SetField(userfollow.FieldFollowerID, field.TypeUUID, value)
-		_node.FollowerID = value
-	}
-	if value, ok := ufc.mutation.FolloweeID(); ok {
-		_spec.SetField(userfollow.FieldFolloweeID, field.TypeUUID, value)
-		_node.FolloweeID = value
-	}
 	if value, ok := ufc.mutation.CreatedAt(); ok {
 		_spec.SetField(userfollow.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
+	}
+	if nodes := ufc.mutation.FollowerIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   userfollow.FollowerTable,
+			Columns: []string{userfollow.FollowerColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.FollowerID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := ufc.mutation.FolloweeIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   userfollow.FolloweeTable,
+			Columns: []string{userfollow.FolloweeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.FolloweeID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }
