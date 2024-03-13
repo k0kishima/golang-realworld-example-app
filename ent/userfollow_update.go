@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -54,20 +53,6 @@ func (ufu *UserFollowUpdate) SetFolloweeID(u uuid.UUID) *UserFollowUpdate {
 func (ufu *UserFollowUpdate) SetNillableFolloweeID(u *uuid.UUID) *UserFollowUpdate {
 	if u != nil {
 		ufu.SetFolloweeID(*u)
-	}
-	return ufu
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (ufu *UserFollowUpdate) SetCreatedAt(t time.Time) *UserFollowUpdate {
-	ufu.mutation.SetCreatedAt(t)
-	return ufu
-}
-
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (ufu *UserFollowUpdate) SetNillableCreatedAt(t *time.Time) *UserFollowUpdate {
-	if t != nil {
-		ufu.SetCreatedAt(*t)
 	}
 	return ufu
 }
@@ -148,9 +133,6 @@ func (ufu *UserFollowUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				ps[i](selector)
 			}
 		}
-	}
-	if value, ok := ufu.mutation.CreatedAt(); ok {
-		_spec.SetField(userfollow.FieldCreatedAt, field.TypeTime, value)
 	}
 	if ufu.mutation.FollowerCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -254,20 +236,6 @@ func (ufuo *UserFollowUpdateOne) SetFolloweeID(u uuid.UUID) *UserFollowUpdateOne
 func (ufuo *UserFollowUpdateOne) SetNillableFolloweeID(u *uuid.UUID) *UserFollowUpdateOne {
 	if u != nil {
 		ufuo.SetFolloweeID(*u)
-	}
-	return ufuo
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (ufuo *UserFollowUpdateOne) SetCreatedAt(t time.Time) *UserFollowUpdateOne {
-	ufuo.mutation.SetCreatedAt(t)
-	return ufuo
-}
-
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (ufuo *UserFollowUpdateOne) SetNillableCreatedAt(t *time.Time) *UserFollowUpdateOne {
-	if t != nil {
-		ufuo.SetCreatedAt(*t)
 	}
 	return ufuo
 }
@@ -378,9 +346,6 @@ func (ufuo *UserFollowUpdateOne) sqlSave(ctx context.Context) (_node *UserFollow
 				ps[i](selector)
 			}
 		}
-	}
-	if value, ok := ufuo.mutation.CreatedAt(); ok {
-		_spec.SetField(userfollow.FieldCreatedAt, field.TypeTime, value)
 	}
 	if ufuo.mutation.FollowerCleared() {
 		edge := &sqlgraph.EdgeSpec{

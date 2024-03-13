@@ -22,8 +22,8 @@ func (User) Fields() []ent.Field {
 		field.String("password").NotEmpty(),
 		field.String("image").Default("https://api.realworld.io/images/smiley-cyrus.jpeg"),
 		field.String("bio").Default(""),
-		field.Time("created_at").Default(time.Now),
-		field.Time("updated_at").Default(time.Now),
+		field.Time("created_at").Default(time.Now).Immutable(),
+		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
 	}
 }
 
