@@ -14,6 +14,8 @@ type Tx struct {
 	config
 	// Article is the client for interacting with the Article builders.
 	Article *ArticleClient
+	// Comment is the client for interacting with the Comment builders.
+	Comment *CommentClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 	// UserFollow is the client for interacting with the UserFollow builders.
@@ -150,6 +152,7 @@ func (tx *Tx) Client() *Client {
 
 func (tx *Tx) init() {
 	tx.Article = NewArticleClient(tx.config)
+	tx.Comment = NewCommentClient(tx.config)
 	tx.User = NewUserClient(tx.config)
 	tx.UserFollow = NewUserFollowClient(tx.config)
 }
