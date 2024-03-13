@@ -37,6 +37,7 @@ func main() {
 			api.GET("/user", handlers.GetCurrentUser(client))
 			api.PUT("/user", handlers.UpdateUser(client))
 			api.POST("/profiles/:username/follow", handlers.FollowUser(client))
+			api.DELETE("/profiles/:username/follow", handlers.UnfollowUser(client))
 		}
 	}
 
