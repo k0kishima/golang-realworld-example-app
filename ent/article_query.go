@@ -13,15 +13,18 @@ import (
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/article"
 	"github.com/k0kishima/golang-realworld-example-app/ent/predicate"
+	"github.com/k0kishima/golang-realworld-example-app/ent/user"
 )
 
 // ArticleQuery is the builder for querying Article entities.
 type ArticleQuery struct {
 	config
-	ctx        *QueryContext
-	order      []article.OrderOption
-	inters     []Interceptor
-	predicates []predicate.Article
+	ctx               *QueryContext
+	order             []article.OrderOption
+	inters            []Interceptor
+	predicates        []predicate.Article
+	withArticleAuthor *UserQuery
+	withFKs           bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -56,6 +59,28 @@ func (aq *ArticleQuery) Unique(unique bool) *ArticleQuery {
 func (aq *ArticleQuery) Order(o ...article.OrderOption) *ArticleQuery {
 	aq.order = append(aq.order, o...)
 	return aq
+}
+
+// QueryArticleAuthor chains the current query on the "articleAuthor" edge.
+func (aq *ArticleQuery) QueryArticleAuthor() *UserQuery {
+	query := (&UserClient{config: aq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := aq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := aq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(article.Table, article.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, article.ArticleAuthorTable, article.ArticleAuthorColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(aq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first Article entity from the query.
@@ -245,15 +270,27 @@ func (aq *ArticleQuery) Clone() *ArticleQuery {
 		return nil
 	}
 	return &ArticleQuery{
-		config:     aq.config,
-		ctx:        aq.ctx.Clone(),
-		order:      append([]article.OrderOption{}, aq.order...),
-		inters:     append([]Interceptor{}, aq.inters...),
-		predicates: append([]predicate.Article{}, aq.predicates...),
+		config:            aq.config,
+		ctx:               aq.ctx.Clone(),
+		order:             append([]article.OrderOption{}, aq.order...),
+		inters:            append([]Interceptor{}, aq.inters...),
+		predicates:        append([]predicate.Article{}, aq.predicates...),
+		withArticleAuthor: aq.withArticleAuthor.Clone(),
 		// clone intermediate query.
 		sql:  aq.sql.Clone(),
 		path: aq.path,
 	}
+}
+
+// WithArticleAuthor tells the query-builder to eager-load the nodes that are connected to
+// the "articleAuthor" edge. The optional arguments are used to configure the query builder of the edge.
+func (aq *ArticleQuery) WithArticleAuthor(opts ...func(*UserQuery)) *ArticleQuery {
+	query := (&UserClient{config: aq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	aq.withArticleAuthor = query
+	return aq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -332,15 +369,26 @@ func (aq *ArticleQuery) prepareQuery(ctx context.Context) error {
 
 func (aq *ArticleQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Article, error) {
 	var (
-		nodes = []*Article{}
-		_spec = aq.querySpec()
+		nodes       = []*Article{}
+		withFKs     = aq.withFKs
+		_spec       = aq.querySpec()
+		loadedTypes = [1]bool{
+			aq.withArticleAuthor != nil,
+		}
 	)
+	if aq.withArticleAuthor != nil {
+		withFKs = true
+	}
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, article.ForeignKeys...)
+	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Article).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Article{config: aq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -352,7 +400,46 @@ func (aq *ArticleQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Arti
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := aq.withArticleAuthor; query != nil {
+		if err := aq.loadArticleAuthor(ctx, query, nodes, nil,
+			func(n *Article, e *User) { n.Edges.ArticleAuthor = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (aq *ArticleQuery) loadArticleAuthor(ctx context.Context, query *UserQuery, nodes []*Article, init func(*Article), assign func(*Article, *User)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Article)
+	for i := range nodes {
+		if nodes[i].user_articles == nil {
+			continue
+		}
+		fk := *nodes[i].user_articles
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(user.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "user_articles" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (aq *ArticleQuery) sqlCount(ctx context.Context) (int, error) {

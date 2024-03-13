@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -28,8 +29,17 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeArticleAuthor holds the string denoting the articleauthor edge name in mutations.
+	EdgeArticleAuthor = "articleAuthor"
 	// Table holds the table name of the article in the database.
 	Table = "articles"
+	// ArticleAuthorTable is the table that holds the articleAuthor relation/edge.
+	ArticleAuthorTable = "articles"
+	// ArticleAuthorInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	ArticleAuthorInverseTable = "users"
+	// ArticleAuthorColumn is the table column denoting the articleAuthor relation/edge.
+	ArticleAuthorColumn = "user_articles"
 )
 
 // Columns holds all SQL columns for article fields.
@@ -44,10 +54,21 @@ var Columns = []string{
 	FieldUpdatedAt,
 }
 
+// ForeignKeys holds the SQL foreign-keys that are owned by the "articles"
+// table and are not defined as standalone fields in the schema.
+var ForeignKeys = []string{
+	"user_articles",
+}
+
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
+			return true
+		}
+	}
+	for i := range ForeignKeys {
+		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -114,4 +135,18 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByArticleAuthorField orders the results by articleAuthor field.
+func ByArticleAuthorField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newArticleAuthorStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newArticleAuthorStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ArticleAuthorInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, ArticleAuthorTable, ArticleAuthorColumn),
+	)
 }

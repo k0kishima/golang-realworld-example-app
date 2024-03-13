@@ -153,6 +153,9 @@ func (au *ArticleUpdate) check() error {
 			return &ValidationError{Name: "body", err: fmt.Errorf(`ent: validator failed for field "Article.body": %w`, err)}
 		}
 	}
+	if _, ok := au.mutation.ArticleAuthorID(); au.mutation.ArticleAuthorCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "Article.articleAuthor"`)
+	}
 	return nil
 }
 
@@ -340,6 +343,9 @@ func (auo *ArticleUpdateOne) check() error {
 		if err := article.BodyValidator(v); err != nil {
 			return &ValidationError{Name: "body", err: fmt.Errorf(`ent: validator failed for field "Article.body": %w`, err)}
 		}
+	}
+	if _, ok := auo.mutation.ArticleAuthorID(); auo.mutation.ArticleAuthorCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "Article.articleAuthor"`)
 	}
 	return nil
 }

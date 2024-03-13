@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -24,8 +25,17 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeCommentAuthor holds the string denoting the commentauthor edge name in mutations.
+	EdgeCommentAuthor = "commentAuthor"
 	// Table holds the table name of the comment in the database.
 	Table = "comments"
+	// CommentAuthorTable is the table that holds the commentAuthor relation/edge.
+	CommentAuthorTable = "comments"
+	// CommentAuthorInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	CommentAuthorInverseTable = "users"
+	// CommentAuthorColumn is the table column denoting the commentAuthor relation/edge.
+	CommentAuthorColumn = "user_comments"
 )
 
 // Columns holds all SQL columns for comment fields.
@@ -38,10 +48,21 @@ var Columns = []string{
 	FieldUpdatedAt,
 }
 
+// ForeignKeys holds the SQL foreign-keys that are owned by the "comments"
+// table and are not defined as standalone fields in the schema.
+var ForeignKeys = []string{
+	"user_comments",
+}
+
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
+			return true
+		}
+	}
+	for i := range ForeignKeys {
+		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -92,4 +113,18 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByCommentAuthorField orders the results by commentAuthor field.
+func ByCommentAuthorField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCommentAuthorStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newCommentAuthorStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CommentAuthorInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, CommentAuthorTable, CommentAuthorColumn),
+	)
 }

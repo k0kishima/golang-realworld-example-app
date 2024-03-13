@@ -362,6 +362,22 @@ func (c *ArticleClient) GetX(ctx context.Context, id uuid.UUID) *Article {
 	return obj
 }
 
+// QueryArticleAuthor queries the articleAuthor edge of a Article.
+func (c *ArticleClient) QueryArticleAuthor(a *Article) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := a.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(article.Table, article.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, article.ArticleAuthorTable, article.ArticleAuthorColumn),
+		)
+		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *ArticleClient) Hooks() []Hook {
 	return c.hooks.Article
@@ -626,6 +642,22 @@ func (c *CommentClient) GetX(ctx context.Context, id uuid.UUID) *Comment {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryCommentAuthor queries the commentAuthor edge of a Comment.
+func (c *CommentClient) QueryCommentAuthor(co *Comment) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := co.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(comment.Table, comment.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, comment.CommentAuthorTable, comment.CommentAuthorColumn),
+		)
+		fromV = sqlgraph.Neighbors(co.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
@@ -903,6 +935,38 @@ func (c *UserClient) QueryFollows(u *User) *UserFollowQuery {
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(userfollow.Table, userfollow.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, user.FollowsTable, user.FollowsColumn),
+		)
+		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryArticles queries the articles edge of a User.
+func (c *UserClient) QueryArticles(u *User) *ArticleQuery {
+	query := (&ArticleClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := u.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(article.Table, article.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.ArticlesTable, user.ArticlesColumn),
+		)
+		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryComments queries the comments edge of a User.
+func (c *UserClient) QueryComments(u *User) *CommentQuery {
+	query := (&CommentClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := u.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(comment.Table, comment.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.CommentsTable, user.CommentsColumn),
 		)
 		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
 		return fromV, nil

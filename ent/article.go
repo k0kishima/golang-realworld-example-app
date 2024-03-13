@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/article"
+	"github.com/k0kishima/golang-realworld-example-app/ent/user"
 )
 
 // Article is the model entity for the Article schema.
@@ -31,8 +32,32 @@ type Article struct {
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
-	selectValues sql.SelectValues
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the ArticleQuery when eager-loading is set.
+	Edges         ArticleEdges `json:"edges"`
+	user_articles *uuid.UUID
+	selectValues  sql.SelectValues
+}
+
+// ArticleEdges holds the relations/edges for other nodes in the graph.
+type ArticleEdges struct {
+	// ArticleAuthor holds the value of the articleAuthor edge.
+	ArticleAuthor *User `json:"articleAuthor,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// ArticleAuthorOrErr returns the ArticleAuthor value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ArticleEdges) ArticleAuthorOrErr() (*User, error) {
+	if e.ArticleAuthor != nil {
+		return e.ArticleAuthor, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: user.Label}
+	}
+	return nil, &NotLoadedError{edge: "articleAuthor"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -46,6 +71,8 @@ func (*Article) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullTime)
 		case article.FieldID, article.FieldAuthorID:
 			values[i] = new(uuid.UUID)
+		case article.ForeignKeys[0]: // user_articles
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -109,6 +136,13 @@ func (a *Article) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				a.UpdatedAt = value.Time
 			}
+		case article.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field user_articles", values[i])
+			} else if value.Valid {
+				a.user_articles = new(uuid.UUID)
+				*a.user_articles = *value.S.(*uuid.UUID)
+			}
 		default:
 			a.selectValues.Set(columns[i], values[i])
 		}
@@ -120,6 +154,11 @@ func (a *Article) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (a *Article) Value(name string) (ent.Value, error) {
 	return a.selectValues.Get(name)
+}
+
+// QueryArticleAuthor queries the "articleAuthor" edge of the Article entity.
+func (a *Article) QueryArticleAuthor() *UserQuery {
+	return NewArticleClient(a.config).QueryArticleAuthor(a)
 }
 
 // Update returns a builder for updating this Article.

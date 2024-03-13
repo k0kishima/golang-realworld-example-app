@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/predicate"
 )
@@ -468,6 +469,29 @@ func UpdatedAtLT(v time.Time) predicate.Article {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.Article {
 	return predicate.Article(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasArticleAuthor applies the HasEdge predicate on the "articleAuthor" edge.
+func HasArticleAuthor() predicate.Article {
+	return predicate.Article(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ArticleAuthorTable, ArticleAuthorColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasArticleAuthorWith applies the HasEdge predicate on the "articleAuthor" edge with a given conditions (other predicates).
+func HasArticleAuthorWith(preds ...predicate.User) predicate.Article {
+	return predicate.Article(func(s *sql.Selector) {
+		step := newArticleAuthorStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

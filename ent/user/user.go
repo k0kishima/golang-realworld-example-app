@@ -31,6 +31,10 @@ const (
 	FieldUpdatedAt = "updated_at"
 	// EdgeFollows holds the string denoting the follows edge name in mutations.
 	EdgeFollows = "follows"
+	// EdgeArticles holds the string denoting the articles edge name in mutations.
+	EdgeArticles = "articles"
+	// EdgeComments holds the string denoting the comments edge name in mutations.
+	EdgeComments = "comments"
 	// Table holds the table name of the user in the database.
 	Table = "users"
 	// FollowsTable is the table that holds the follows relation/edge.
@@ -40,6 +44,20 @@ const (
 	FollowsInverseTable = "user_follows"
 	// FollowsColumn is the table column denoting the follows relation/edge.
 	FollowsColumn = "follower_id"
+	// ArticlesTable is the table that holds the articles relation/edge.
+	ArticlesTable = "articles"
+	// ArticlesInverseTable is the table name for the Article entity.
+	// It exists in this package in order to avoid circular dependency with the "article" package.
+	ArticlesInverseTable = "articles"
+	// ArticlesColumn is the table column denoting the articles relation/edge.
+	ArticlesColumn = "user_articles"
+	// CommentsTable is the table that holds the comments relation/edge.
+	CommentsTable = "comments"
+	// CommentsInverseTable is the table name for the Comment entity.
+	// It exists in this package in order to avoid circular dependency with the "comment" package.
+	CommentsInverseTable = "comments"
+	// CommentsColumn is the table column denoting the comments relation/edge.
+	CommentsColumn = "user_comments"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -134,10 +152,52 @@ func ByFollowsField(field string, opts ...sql.OrderTermOption) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newFollowsStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByArticlesCount orders the results by articles count.
+func ByArticlesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newArticlesStep(), opts...)
+	}
+}
+
+// ByArticles orders the results by articles terms.
+func ByArticles(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newArticlesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByCommentsCount orders the results by comments count.
+func ByCommentsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newCommentsStep(), opts...)
+	}
+}
+
+// ByComments orders the results by comments terms.
+func ByComments(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCommentsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newFollowsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(FollowsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2O, false, FollowsTable, FollowsColumn),
+	)
+}
+func newArticlesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ArticlesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ArticlesTable, ArticlesColumn),
+	)
+}
+func newCommentsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CommentsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, CommentsTable, CommentsColumn),
 	)
 }

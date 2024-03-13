@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/comment"
+	"github.com/k0kishima/golang-realworld-example-app/ent/user"
 )
 
 // CommentCreate is the builder for creating a Comment entity.
@@ -79,6 +80,17 @@ func (cc *CommentCreate) SetNillableID(u *uuid.UUID) *CommentCreate {
 		cc.SetID(*u)
 	}
 	return cc
+}
+
+// SetCommentAuthorID sets the "commentAuthor" edge to the User entity by ID.
+func (cc *CommentCreate) SetCommentAuthorID(id uuid.UUID) *CommentCreate {
+	cc.mutation.SetCommentAuthorID(id)
+	return cc
+}
+
+// SetCommentAuthor sets the "commentAuthor" edge to the User entity.
+func (cc *CommentCreate) SetCommentAuthor(u *User) *CommentCreate {
+	return cc.SetCommentAuthorID(u.ID)
 }
 
 // Mutation returns the CommentMutation object of the builder.
@@ -152,6 +164,9 @@ func (cc *CommentCreate) check() error {
 	if _, ok := cc.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "Comment.updated_at"`)}
 	}
+	if _, ok := cc.mutation.CommentAuthorID(); !ok {
+		return &ValidationError{Name: "commentAuthor", err: errors.New(`ent: missing required edge "Comment.commentAuthor"`)}
+	}
 	return nil
 }
 
@@ -206,6 +221,23 @@ func (cc *CommentCreate) createSpec() (*Comment, *sqlgraph.CreateSpec) {
 	if value, ok := cc.mutation.UpdatedAt(); ok {
 		_spec.SetField(comment.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := cc.mutation.CommentAuthorIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   comment.CommentAuthorTable,
+			Columns: []string{comment.CommentAuthorColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.user_comments = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

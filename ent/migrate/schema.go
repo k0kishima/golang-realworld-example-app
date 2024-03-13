@@ -18,12 +18,21 @@ var (
 		{Name: "body", Type: field.TypeString, Size: 4096},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "user_articles", Type: field.TypeUUID},
 	}
 	// ArticlesTable holds the schema information for the "articles" table.
 	ArticlesTable = &schema.Table{
 		Name:       "articles",
 		Columns:    ArticlesColumns,
 		PrimaryKey: []*schema.Column{ArticlesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "articles_users_articles",
+				Columns:    []*schema.Column{ArticlesColumns[8]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "article_slug",
@@ -60,12 +69,21 @@ var (
 		{Name: "body", Type: field.TypeString, Size: 4096},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "user_comments", Type: field.TypeUUID},
 	}
 	// CommentsTable holds the schema information for the "comments" table.
 	CommentsTable = &schema.Table{
 		Name:       "comments",
 		Columns:    CommentsColumns,
 		PrimaryKey: []*schema.Column{CommentsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "comments_users_comments",
+				Columns:    []*schema.Column{CommentsColumns[6]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
 	}
 	// TagsColumns holds the columns for the "tags" table.
 	TagsColumns = []*schema.Column{
@@ -170,6 +188,8 @@ var (
 )
 
 func init() {
+	ArticlesTable.ForeignKeys[0].RefTable = UsersTable
+	CommentsTable.ForeignKeys[0].RefTable = UsersTable
 	UserFollowsTable.ForeignKeys[0].RefTable = UsersTable
 	UserFollowsTable.ForeignKeys[1].RefTable = UsersTable
 }
