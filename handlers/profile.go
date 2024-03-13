@@ -89,3 +89,46 @@ func FollowUser(client *ent.Client) gin.HandlerFunc {
 		})
 	}
 }
+
+func UnfollowUser(client *ent.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		currentUser, _ := c.Get("user")
+		currentUserEntity, ok := currentUser.(*ent.User)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "error asserting user type"})
+			return
+		}
+
+		username := c.Param("username")
+		targetUser, err := client.User.Query().Where(user.UsernameEQ(username)).Only(c.Request.Context())
+		if err != nil {
+			if ent.IsNotFound(err) {
+				c.JSON(http.StatusNotFound, gin.H{"message": "User not found"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
+			}
+			return
+		}
+
+		_, err = client.UserFollow.Delete().Where(
+			userfollow.And(
+				userfollow.FollowerIDEQ(currentUserEntity.ID),
+				userfollow.FolloweeIDEQ(targetUser.ID),
+			),
+		).Exec(c.Request.Context())
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "error unfollowing user"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"profile": gin.H{
+				"username":  targetUser.Username,
+				"bio":       targetUser.Bio,
+				"image":     targetUser.Image,
+				"following": false,
+			},
+		})
+	}
+}
