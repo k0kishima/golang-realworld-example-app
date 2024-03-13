@@ -11,7 +11,6 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/comment"
 	"github.com/k0kishima/golang-realworld-example-app/ent/predicate"
 )
@@ -26,34 +25,6 @@ type CommentUpdate struct {
 // Where appends a list predicates to the CommentUpdate builder.
 func (cu *CommentUpdate) Where(ps ...predicate.Comment) *CommentUpdate {
 	cu.mutation.Where(ps...)
-	return cu
-}
-
-// SetAuthorID sets the "author_id" field.
-func (cu *CommentUpdate) SetAuthorID(u uuid.UUID) *CommentUpdate {
-	cu.mutation.SetAuthorID(u)
-	return cu
-}
-
-// SetNillableAuthorID sets the "author_id" field if the given value is not nil.
-func (cu *CommentUpdate) SetNillableAuthorID(u *uuid.UUID) *CommentUpdate {
-	if u != nil {
-		cu.SetAuthorID(*u)
-	}
-	return cu
-}
-
-// SetArticleID sets the "article_id" field.
-func (cu *CommentUpdate) SetArticleID(u uuid.UUID) *CommentUpdate {
-	cu.mutation.SetArticleID(u)
-	return cu
-}
-
-// SetNillableArticleID sets the "article_id" field if the given value is not nil.
-func (cu *CommentUpdate) SetNillableArticleID(u *uuid.UUID) *CommentUpdate {
-	if u != nil {
-		cu.SetArticleID(*u)
-	}
 	return cu
 }
 
@@ -140,12 +111,6 @@ func (cu *CommentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
-	if value, ok := cu.mutation.AuthorID(); ok {
-		_spec.SetField(comment.FieldAuthorID, field.TypeUUID, value)
-	}
-	if value, ok := cu.mutation.ArticleID(); ok {
-		_spec.SetField(comment.FieldArticleID, field.TypeUUID, value)
-	}
 	if value, ok := cu.mutation.Body(); ok {
 		_spec.SetField(comment.FieldBody, field.TypeString, value)
 	}
@@ -170,34 +135,6 @@ type CommentUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *CommentMutation
-}
-
-// SetAuthorID sets the "author_id" field.
-func (cuo *CommentUpdateOne) SetAuthorID(u uuid.UUID) *CommentUpdateOne {
-	cuo.mutation.SetAuthorID(u)
-	return cuo
-}
-
-// SetNillableAuthorID sets the "author_id" field if the given value is not nil.
-func (cuo *CommentUpdateOne) SetNillableAuthorID(u *uuid.UUID) *CommentUpdateOne {
-	if u != nil {
-		cuo.SetAuthorID(*u)
-	}
-	return cuo
-}
-
-// SetArticleID sets the "article_id" field.
-func (cuo *CommentUpdateOne) SetArticleID(u uuid.UUID) *CommentUpdateOne {
-	cuo.mutation.SetArticleID(u)
-	return cuo
-}
-
-// SetNillableArticleID sets the "article_id" field if the given value is not nil.
-func (cuo *CommentUpdateOne) SetNillableArticleID(u *uuid.UUID) *CommentUpdateOne {
-	if u != nil {
-		cuo.SetArticleID(*u)
-	}
-	return cuo
 }
 
 // SetBody sets the "body" field.
@@ -312,12 +249,6 @@ func (cuo *CommentUpdateOne) sqlSave(ctx context.Context) (_node *Comment, err e
 				ps[i](selector)
 			}
 		}
-	}
-	if value, ok := cuo.mutation.AuthorID(); ok {
-		_spec.SetField(comment.FieldAuthorID, field.TypeUUID, value)
-	}
-	if value, ok := cuo.mutation.ArticleID(); ok {
-		_spec.SetField(comment.FieldArticleID, field.TypeUUID, value)
 	}
 	if value, ok := cuo.mutation.Body(); ok {
 		_spec.SetField(comment.FieldBody, field.TypeString, value)

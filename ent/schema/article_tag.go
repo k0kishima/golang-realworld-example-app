@@ -15,9 +15,9 @@ type ArticleTag struct {
 
 func (ArticleTag) Fields() []ent.Field {
 	return []ent.Field{
-		field.UUID("id", uuid.UUID{}).Default(uuid.New),
-		field.UUID("article_id", uuid.UUID{}),
-		field.UUID("tag_id", uuid.UUID{}),
+		field.UUID("id", uuid.UUID{}).Default(uuid.New).Immutable(),
+		field.UUID("article_id", uuid.UUID{}).Immutable(),
+		field.UUID("tag_id", uuid.UUID{}).Immutable(),
 		field.Time("created_at").Default(time.Now).Immutable(),
 	}
 }

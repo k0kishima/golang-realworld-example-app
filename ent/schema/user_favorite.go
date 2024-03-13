@@ -15,9 +15,9 @@ type UserFavorite struct {
 
 func (UserFavorite) Fields() []ent.Field {
 	return []ent.Field{
-		field.UUID("id", uuid.UUID{}).Default(uuid.New),
-		field.UUID("user_id", uuid.UUID{}),
-		field.UUID("article_id", uuid.UUID{}),
+		field.UUID("id", uuid.UUID{}).Default(uuid.New).Immutable(),
+		field.UUID("user_id", uuid.UUID{}).Immutable(),
+		field.UUID("article_id", uuid.UUID{}).Immutable(),
 		field.Time("created_at").Default(time.Now).Immutable(),
 	}
 }

@@ -10,7 +10,6 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/predicate"
 	"github.com/k0kishima/golang-realworld-example-app/ent/userfavorite"
 )
@@ -25,34 +24,6 @@ type UserFavoriteUpdate struct {
 // Where appends a list predicates to the UserFavoriteUpdate builder.
 func (ufu *UserFavoriteUpdate) Where(ps ...predicate.UserFavorite) *UserFavoriteUpdate {
 	ufu.mutation.Where(ps...)
-	return ufu
-}
-
-// SetUserID sets the "user_id" field.
-func (ufu *UserFavoriteUpdate) SetUserID(u uuid.UUID) *UserFavoriteUpdate {
-	ufu.mutation.SetUserID(u)
-	return ufu
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (ufu *UserFavoriteUpdate) SetNillableUserID(u *uuid.UUID) *UserFavoriteUpdate {
-	if u != nil {
-		ufu.SetUserID(*u)
-	}
-	return ufu
-}
-
-// SetArticleID sets the "article_id" field.
-func (ufu *UserFavoriteUpdate) SetArticleID(u uuid.UUID) *UserFavoriteUpdate {
-	ufu.mutation.SetArticleID(u)
-	return ufu
-}
-
-// SetNillableArticleID sets the "article_id" field if the given value is not nil.
-func (ufu *UserFavoriteUpdate) SetNillableArticleID(u *uuid.UUID) *UserFavoriteUpdate {
-	if u != nil {
-		ufu.SetArticleID(*u)
-	}
 	return ufu
 }
 
@@ -97,12 +68,6 @@ func (ufu *UserFavoriteUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
-	if value, ok := ufu.mutation.UserID(); ok {
-		_spec.SetField(userfavorite.FieldUserID, field.TypeUUID, value)
-	}
-	if value, ok := ufu.mutation.ArticleID(); ok {
-		_spec.SetField(userfavorite.FieldArticleID, field.TypeUUID, value)
-	}
 	if n, err = sqlgraph.UpdateNodes(ctx, ufu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{userfavorite.Label}
@@ -121,34 +86,6 @@ type UserFavoriteUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *UserFavoriteMutation
-}
-
-// SetUserID sets the "user_id" field.
-func (ufuo *UserFavoriteUpdateOne) SetUserID(u uuid.UUID) *UserFavoriteUpdateOne {
-	ufuo.mutation.SetUserID(u)
-	return ufuo
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (ufuo *UserFavoriteUpdateOne) SetNillableUserID(u *uuid.UUID) *UserFavoriteUpdateOne {
-	if u != nil {
-		ufuo.SetUserID(*u)
-	}
-	return ufuo
-}
-
-// SetArticleID sets the "article_id" field.
-func (ufuo *UserFavoriteUpdateOne) SetArticleID(u uuid.UUID) *UserFavoriteUpdateOne {
-	ufuo.mutation.SetArticleID(u)
-	return ufuo
-}
-
-// SetNillableArticleID sets the "article_id" field if the given value is not nil.
-func (ufuo *UserFavoriteUpdateOne) SetNillableArticleID(u *uuid.UUID) *UserFavoriteUpdateOne {
-	if u != nil {
-		ufuo.SetArticleID(*u)
-	}
-	return ufuo
 }
 
 // Mutation returns the UserFavoriteMutation object of the builder.
@@ -221,12 +158,6 @@ func (ufuo *UserFavoriteUpdateOne) sqlSave(ctx context.Context) (_node *UserFavo
 				ps[i](selector)
 			}
 		}
-	}
-	if value, ok := ufuo.mutation.UserID(); ok {
-		_spec.SetField(userfavorite.FieldUserID, field.TypeUUID, value)
-	}
-	if value, ok := ufuo.mutation.ArticleID(); ok {
-		_spec.SetField(userfavorite.FieldArticleID, field.TypeUUID, value)
 	}
 	_node = &UserFavorite{config: ufuo.config}
 	_spec.Assign = _node.assignValues

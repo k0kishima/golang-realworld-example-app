@@ -15,8 +15,8 @@ type Article struct {
 
 func (Article) Fields() []ent.Field {
 	return []ent.Field{
-		field.UUID("id", uuid.UUID{}).Default(uuid.New).Immutable().StorageKey("id"),
-		field.UUID("author_id", uuid.UUID{}).Immutable().StorageKey("author_id"),
+		field.UUID("id", uuid.UUID{}).Default(uuid.New).Immutable(),
+		field.UUID("author_id", uuid.UUID{}).Immutable(),
 		field.String("slug").Unique().NotEmpty().MaxLen(255),
 		field.String("title").NotEmpty().MaxLen(255),
 		field.String("description").NotEmpty().MaxLen(255),
