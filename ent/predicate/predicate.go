@@ -21,5 +21,8 @@ type Tag func(*sql.Selector)
 // User is the predicate function for user builders.
 type User func(*sql.Selector)
 
+// UserFavorite is the predicate function for userfavorite builders.
+type UserFavorite func(*sql.Selector)
+
 // UserFollow is the predicate function for userfollow builders.
 type UserFollow func(*sql.Selector)

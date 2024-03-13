@@ -103,6 +103,26 @@ var (
 			},
 		},
 	}
+	// UserFavoritesColumns holds the columns for the "user_favorites" table.
+	UserFavoritesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "user_id", Type: field.TypeUUID},
+		{Name: "article_id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+	}
+	// UserFavoritesTable holds the schema information for the "user_favorites" table.
+	UserFavoritesTable = &schema.Table{
+		Name:       "user_favorites",
+		Columns:    UserFavoritesColumns,
+		PrimaryKey: []*schema.Column{UserFavoritesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "userfavorite_user_id_article_id",
+				Unique:  true,
+				Columns: []*schema.Column{UserFavoritesColumns[1], UserFavoritesColumns[2]},
+			},
+		},
+	}
 	// UserFollowsColumns holds the columns for the "user_follows" table.
 	UserFollowsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -144,6 +164,7 @@ var (
 		CommentsTable,
 		TagsTable,
 		UsersTable,
+		UserFavoritesTable,
 		UserFollowsTable,
 	}
 )

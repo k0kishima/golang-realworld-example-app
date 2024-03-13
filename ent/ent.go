@@ -17,6 +17,7 @@ import (
 	"github.com/k0kishima/golang-realworld-example-app/ent/comment"
 	"github.com/k0kishima/golang-realworld-example-app/ent/tag"
 	"github.com/k0kishima/golang-realworld-example-app/ent/user"
+	"github.com/k0kishima/golang-realworld-example-app/ent/userfavorite"
 	"github.com/k0kishima/golang-realworld-example-app/ent/userfollow"
 )
 
@@ -78,12 +79,13 @@ var (
 func checkColumn(table, column string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			article.Table:    article.ValidColumn,
-			articletag.Table: articletag.ValidColumn,
-			comment.Table:    comment.ValidColumn,
-			tag.Table:        tag.ValidColumn,
-			user.Table:       user.ValidColumn,
-			userfollow.Table: userfollow.ValidColumn,
+			article.Table:      article.ValidColumn,
+			articletag.Table:   articletag.ValidColumn,
+			comment.Table:      comment.ValidColumn,
+			tag.Table:          tag.ValidColumn,
+			user.Table:         user.ValidColumn,
+			userfavorite.Table: userfavorite.ValidColumn,
+			userfollow.Table:   userfollow.ValidColumn,
 		})
 	})
 	return columnCheck(table, column)

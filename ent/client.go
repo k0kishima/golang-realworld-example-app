@@ -21,6 +21,7 @@ import (
 	"github.com/k0kishima/golang-realworld-example-app/ent/comment"
 	"github.com/k0kishima/golang-realworld-example-app/ent/tag"
 	"github.com/k0kishima/golang-realworld-example-app/ent/user"
+	"github.com/k0kishima/golang-realworld-example-app/ent/userfavorite"
 	"github.com/k0kishima/golang-realworld-example-app/ent/userfollow"
 )
 
@@ -39,6 +40,8 @@ type Client struct {
 	Tag *TagClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
+	// UserFavorite is the client for interacting with the UserFavorite builders.
+	UserFavorite *UserFavoriteClient
 	// UserFollow is the client for interacting with the UserFollow builders.
 	UserFollow *UserFollowClient
 }
@@ -57,6 +60,7 @@ func (c *Client) init() {
 	c.Comment = NewCommentClient(c.config)
 	c.Tag = NewTagClient(c.config)
 	c.User = NewUserClient(c.config)
+	c.UserFavorite = NewUserFavoriteClient(c.config)
 	c.UserFollow = NewUserFollowClient(c.config)
 }
 
@@ -148,14 +152,15 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:        ctx,
-		config:     cfg,
-		Article:    NewArticleClient(cfg),
-		ArticleTag: NewArticleTagClient(cfg),
-		Comment:    NewCommentClient(cfg),
-		Tag:        NewTagClient(cfg),
-		User:       NewUserClient(cfg),
-		UserFollow: NewUserFollowClient(cfg),
+		ctx:          ctx,
+		config:       cfg,
+		Article:      NewArticleClient(cfg),
+		ArticleTag:   NewArticleTagClient(cfg),
+		Comment:      NewCommentClient(cfg),
+		Tag:          NewTagClient(cfg),
+		User:         NewUserClient(cfg),
+		UserFavorite: NewUserFavoriteClient(cfg),
+		UserFollow:   NewUserFollowClient(cfg),
 	}, nil
 }
 
@@ -173,14 +178,15 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:        ctx,
-		config:     cfg,
-		Article:    NewArticleClient(cfg),
-		ArticleTag: NewArticleTagClient(cfg),
-		Comment:    NewCommentClient(cfg),
-		Tag:        NewTagClient(cfg),
-		User:       NewUserClient(cfg),
-		UserFollow: NewUserFollowClient(cfg),
+		ctx:          ctx,
+		config:       cfg,
+		Article:      NewArticleClient(cfg),
+		ArticleTag:   NewArticleTagClient(cfg),
+		Comment:      NewCommentClient(cfg),
+		Tag:          NewTagClient(cfg),
+		User:         NewUserClient(cfg),
+		UserFavorite: NewUserFavoriteClient(cfg),
+		UserFollow:   NewUserFollowClient(cfg),
 	}, nil
 }
 
@@ -210,7 +216,7 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.Article, c.ArticleTag, c.Comment, c.Tag, c.User, c.UserFollow,
+		c.Article, c.ArticleTag, c.Comment, c.Tag, c.User, c.UserFavorite, c.UserFollow,
 	} {
 		n.Use(hooks...)
 	}
@@ -220,7 +226,7 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.Article, c.ArticleTag, c.Comment, c.Tag, c.User, c.UserFollow,
+		c.Article, c.ArticleTag, c.Comment, c.Tag, c.User, c.UserFavorite, c.UserFollow,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -239,6 +245,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Tag.mutate(ctx, m)
 	case *UserMutation:
 		return c.User.mutate(ctx, m)
+	case *UserFavoriteMutation:
+		return c.UserFavorite.mutate(ctx, m)
 	case *UserFollowMutation:
 		return c.UserFollow.mutate(ctx, m)
 	default:
@@ -927,6 +935,139 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 	}
 }
 
+// UserFavoriteClient is a client for the UserFavorite schema.
+type UserFavoriteClient struct {
+	config
+}
+
+// NewUserFavoriteClient returns a client for the UserFavorite from the given config.
+func NewUserFavoriteClient(c config) *UserFavoriteClient {
+	return &UserFavoriteClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `userfavorite.Hooks(f(g(h())))`.
+func (c *UserFavoriteClient) Use(hooks ...Hook) {
+	c.hooks.UserFavorite = append(c.hooks.UserFavorite, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `userfavorite.Intercept(f(g(h())))`.
+func (c *UserFavoriteClient) Intercept(interceptors ...Interceptor) {
+	c.inters.UserFavorite = append(c.inters.UserFavorite, interceptors...)
+}
+
+// Create returns a builder for creating a UserFavorite entity.
+func (c *UserFavoriteClient) Create() *UserFavoriteCreate {
+	mutation := newUserFavoriteMutation(c.config, OpCreate)
+	return &UserFavoriteCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of UserFavorite entities.
+func (c *UserFavoriteClient) CreateBulk(builders ...*UserFavoriteCreate) *UserFavoriteCreateBulk {
+	return &UserFavoriteCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *UserFavoriteClient) MapCreateBulk(slice any, setFunc func(*UserFavoriteCreate, int)) *UserFavoriteCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &UserFavoriteCreateBulk{err: fmt.Errorf("calling to UserFavoriteClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*UserFavoriteCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &UserFavoriteCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for UserFavorite.
+func (c *UserFavoriteClient) Update() *UserFavoriteUpdate {
+	mutation := newUserFavoriteMutation(c.config, OpUpdate)
+	return &UserFavoriteUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *UserFavoriteClient) UpdateOne(uf *UserFavorite) *UserFavoriteUpdateOne {
+	mutation := newUserFavoriteMutation(c.config, OpUpdateOne, withUserFavorite(uf))
+	return &UserFavoriteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *UserFavoriteClient) UpdateOneID(id uuid.UUID) *UserFavoriteUpdateOne {
+	mutation := newUserFavoriteMutation(c.config, OpUpdateOne, withUserFavoriteID(id))
+	return &UserFavoriteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for UserFavorite.
+func (c *UserFavoriteClient) Delete() *UserFavoriteDelete {
+	mutation := newUserFavoriteMutation(c.config, OpDelete)
+	return &UserFavoriteDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *UserFavoriteClient) DeleteOne(uf *UserFavorite) *UserFavoriteDeleteOne {
+	return c.DeleteOneID(uf.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *UserFavoriteClient) DeleteOneID(id uuid.UUID) *UserFavoriteDeleteOne {
+	builder := c.Delete().Where(userfavorite.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &UserFavoriteDeleteOne{builder}
+}
+
+// Query returns a query builder for UserFavorite.
+func (c *UserFavoriteClient) Query() *UserFavoriteQuery {
+	return &UserFavoriteQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeUserFavorite},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a UserFavorite entity by its id.
+func (c *UserFavoriteClient) Get(ctx context.Context, id uuid.UUID) (*UserFavorite, error) {
+	return c.Query().Where(userfavorite.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *UserFavoriteClient) GetX(ctx context.Context, id uuid.UUID) *UserFavorite {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *UserFavoriteClient) Hooks() []Hook {
+	return c.hooks.UserFavorite
+}
+
+// Interceptors returns the client interceptors.
+func (c *UserFavoriteClient) Interceptors() []Interceptor {
+	return c.inters.UserFavorite
+}
+
+func (c *UserFavoriteClient) mutate(ctx context.Context, m *UserFavoriteMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&UserFavoriteCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&UserFavoriteUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&UserFavoriteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&UserFavoriteDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown UserFavorite mutation op: %q", m.Op())
+	}
+}
+
 // UserFollowClient is a client for the UserFollow schema.
 type UserFollowClient struct {
 	config
@@ -1095,9 +1236,10 @@ func (c *UserFollowClient) mutate(ctx context.Context, m *UserFollowMutation) (V
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Article, ArticleTag, Comment, Tag, User, UserFollow []ent.Hook
+		Article, ArticleTag, Comment, Tag, User, UserFavorite, UserFollow []ent.Hook
 	}
 	inters struct {
-		Article, ArticleTag, Comment, Tag, User, UserFollow []ent.Interceptor
+		Article, ArticleTag, Comment, Tag, User, UserFavorite,
+		UserFollow []ent.Interceptor
 	}
 )
