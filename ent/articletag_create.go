@@ -11,7 +11,9 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/k0kishima/golang-realworld-example-app/ent/article"
 	"github.com/k0kishima/golang-realworld-example-app/ent/articletag"
+	"github.com/k0kishima/golang-realworld-example-app/ent/tag"
 )
 
 // ArticleTagCreate is the builder for creating a ArticleTag entity.
@@ -59,6 +61,16 @@ func (atc *ArticleTagCreate) SetNillableID(u *uuid.UUID) *ArticleTagCreate {
 		atc.SetID(*u)
 	}
 	return atc
+}
+
+// SetArticle sets the "article" edge to the Article entity.
+func (atc *ArticleTagCreate) SetArticle(a *Article) *ArticleTagCreate {
+	return atc.SetArticleID(a.ID)
+}
+
+// SetTag sets the "tag" edge to the Tag entity.
+func (atc *ArticleTagCreate) SetTag(t *Tag) *ArticleTagCreate {
+	return atc.SetTagID(t.ID)
 }
 
 // Mutation returns the ArticleTagMutation object of the builder.
@@ -117,6 +129,12 @@ func (atc *ArticleTagCreate) check() error {
 	if _, ok := atc.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "ArticleTag.created_at"`)}
 	}
+	if _, ok := atc.mutation.ArticleID(); !ok {
+		return &ValidationError{Name: "article", err: errors.New(`ent: missing required edge "ArticleTag.article"`)}
+	}
+	if _, ok := atc.mutation.TagID(); !ok {
+		return &ValidationError{Name: "tag", err: errors.New(`ent: missing required edge "ArticleTag.tag"`)}
+	}
 	return nil
 }
 
@@ -152,17 +170,43 @@ func (atc *ArticleTagCreate) createSpec() (*ArticleTag, *sqlgraph.CreateSpec) {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := atc.mutation.ArticleID(); ok {
-		_spec.SetField(articletag.FieldArticleID, field.TypeUUID, value)
-		_node.ArticleID = value
-	}
-	if value, ok := atc.mutation.TagID(); ok {
-		_spec.SetField(articletag.FieldTagID, field.TypeUUID, value)
-		_node.TagID = value
-	}
 	if value, ok := atc.mutation.CreatedAt(); ok {
 		_spec.SetField(articletag.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
+	}
+	if nodes := atc.mutation.ArticleIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   articletag.ArticleTable,
+			Columns: []string{articletag.ArticleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(article.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.ArticleID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := atc.mutation.TagIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   articletag.TagTable,
+			Columns: []string{articletag.TagColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(tag.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.TagID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

@@ -40,5 +40,7 @@ func (Article) Edges() []ent.Edge {
 			Unique().
 			Required().
 			Immutable(),
+		edge.To("tags", Tag.Type).
+			Through("article_tags", ArticleTag.Type),
 	}
 }

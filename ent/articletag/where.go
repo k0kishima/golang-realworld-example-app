@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/predicate"
 )
@@ -90,26 +91,6 @@ func ArticleIDNotIn(vs ...uuid.UUID) predicate.ArticleTag {
 	return predicate.ArticleTag(sql.FieldNotIn(FieldArticleID, vs...))
 }
 
-// ArticleIDGT applies the GT predicate on the "article_id" field.
-func ArticleIDGT(v uuid.UUID) predicate.ArticleTag {
-	return predicate.ArticleTag(sql.FieldGT(FieldArticleID, v))
-}
-
-// ArticleIDGTE applies the GTE predicate on the "article_id" field.
-func ArticleIDGTE(v uuid.UUID) predicate.ArticleTag {
-	return predicate.ArticleTag(sql.FieldGTE(FieldArticleID, v))
-}
-
-// ArticleIDLT applies the LT predicate on the "article_id" field.
-func ArticleIDLT(v uuid.UUID) predicate.ArticleTag {
-	return predicate.ArticleTag(sql.FieldLT(FieldArticleID, v))
-}
-
-// ArticleIDLTE applies the LTE predicate on the "article_id" field.
-func ArticleIDLTE(v uuid.UUID) predicate.ArticleTag {
-	return predicate.ArticleTag(sql.FieldLTE(FieldArticleID, v))
-}
-
 // TagIDEQ applies the EQ predicate on the "tag_id" field.
 func TagIDEQ(v uuid.UUID) predicate.ArticleTag {
 	return predicate.ArticleTag(sql.FieldEQ(FieldTagID, v))
@@ -128,26 +109,6 @@ func TagIDIn(vs ...uuid.UUID) predicate.ArticleTag {
 // TagIDNotIn applies the NotIn predicate on the "tag_id" field.
 func TagIDNotIn(vs ...uuid.UUID) predicate.ArticleTag {
 	return predicate.ArticleTag(sql.FieldNotIn(FieldTagID, vs...))
-}
-
-// TagIDGT applies the GT predicate on the "tag_id" field.
-func TagIDGT(v uuid.UUID) predicate.ArticleTag {
-	return predicate.ArticleTag(sql.FieldGT(FieldTagID, v))
-}
-
-// TagIDGTE applies the GTE predicate on the "tag_id" field.
-func TagIDGTE(v uuid.UUID) predicate.ArticleTag {
-	return predicate.ArticleTag(sql.FieldGTE(FieldTagID, v))
-}
-
-// TagIDLT applies the LT predicate on the "tag_id" field.
-func TagIDLT(v uuid.UUID) predicate.ArticleTag {
-	return predicate.ArticleTag(sql.FieldLT(FieldTagID, v))
-}
-
-// TagIDLTE applies the LTE predicate on the "tag_id" field.
-func TagIDLTE(v uuid.UUID) predicate.ArticleTag {
-	return predicate.ArticleTag(sql.FieldLTE(FieldTagID, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
@@ -188,6 +149,52 @@ func CreatedAtLT(v time.Time) predicate.ArticleTag {
 // CreatedAtLTE applies the LTE predicate on the "created_at" field.
 func CreatedAtLTE(v time.Time) predicate.ArticleTag {
 	return predicate.ArticleTag(sql.FieldLTE(FieldCreatedAt, v))
+}
+
+// HasArticle applies the HasEdge predicate on the "article" edge.
+func HasArticle() predicate.ArticleTag {
+	return predicate.ArticleTag(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, ArticleTable, ArticleColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasArticleWith applies the HasEdge predicate on the "article" edge with a given conditions (other predicates).
+func HasArticleWith(preds ...predicate.Article) predicate.ArticleTag {
+	return predicate.ArticleTag(func(s *sql.Selector) {
+		step := newArticleStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasTag applies the HasEdge predicate on the "tag" edge.
+func HasTag() predicate.ArticleTag {
+	return predicate.ArticleTag(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, TagTable, TagColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasTagWith applies the HasEdge predicate on the "tag" edge with a given conditions (other predicates).
+func HasTagWith(preds ...predicate.Tag) predicate.ArticleTag {
+	return predicate.ArticleTag(func(s *sql.Selector) {
+		step := newTagStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

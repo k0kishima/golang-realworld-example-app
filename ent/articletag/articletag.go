@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -20,8 +21,26 @@ const (
 	FieldTagID = "tag_id"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
+	// EdgeArticle holds the string denoting the article edge name in mutations.
+	EdgeArticle = "article"
+	// EdgeTag holds the string denoting the tag edge name in mutations.
+	EdgeTag = "tag"
 	// Table holds the table name of the articletag in the database.
 	Table = "article_tags"
+	// ArticleTable is the table that holds the article relation/edge.
+	ArticleTable = "article_tags"
+	// ArticleInverseTable is the table name for the Article entity.
+	// It exists in this package in order to avoid circular dependency with the "article" package.
+	ArticleInverseTable = "articles"
+	// ArticleColumn is the table column denoting the article relation/edge.
+	ArticleColumn = "article_id"
+	// TagTable is the table that holds the tag relation/edge.
+	TagTable = "article_tags"
+	// TagInverseTable is the table name for the Tag entity.
+	// It exists in this package in order to avoid circular dependency with the "tag" package.
+	TagInverseTable = "tags"
+	// TagColumn is the table column denoting the tag relation/edge.
+	TagColumn = "tag_id"
 )
 
 // Columns holds all SQL columns for articletag fields.
@@ -70,4 +89,32 @@ func ByTagID(opts ...sql.OrderTermOption) OrderOption {
 // ByCreatedAt orders the results by the created_at field.
 func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
+}
+
+// ByArticleField orders the results by article field.
+func ByArticleField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newArticleStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByTagField orders the results by tag field.
+func ByTagField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTagStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newArticleStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ArticleInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, ArticleTable, ArticleColumn),
+	)
+}
+func newTagStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TagInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, false, TagTable, TagColumn),
+	)
 }

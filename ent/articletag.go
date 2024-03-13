@@ -10,7 +10,9 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
+	"github.com/k0kishima/golang-realworld-example-app/ent/article"
 	"github.com/k0kishima/golang-realworld-example-app/ent/articletag"
+	"github.com/k0kishima/golang-realworld-example-app/ent/tag"
 )
 
 // ArticleTag is the model entity for the ArticleTag schema.
@@ -23,8 +25,44 @@ type ArticleTag struct {
 	// TagID holds the value of the "tag_id" field.
 	TagID uuid.UUID `json:"tag_id,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
-	CreatedAt    time.Time `json:"created_at,omitempty"`
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the ArticleTagQuery when eager-loading is set.
+	Edges        ArticleTagEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// ArticleTagEdges holds the relations/edges for other nodes in the graph.
+type ArticleTagEdges struct {
+	// Article holds the value of the article edge.
+	Article *Article `json:"article,omitempty"`
+	// Tag holds the value of the tag edge.
+	Tag *Tag `json:"tag,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [2]bool
+}
+
+// ArticleOrErr returns the Article value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ArticleTagEdges) ArticleOrErr() (*Article, error) {
+	if e.Article != nil {
+		return e.Article, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: article.Label}
+	}
+	return nil, &NotLoadedError{edge: "article"}
+}
+
+// TagOrErr returns the Tag value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ArticleTagEdges) TagOrErr() (*Tag, error) {
+	if e.Tag != nil {
+		return e.Tag, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: tag.Label}
+	}
+	return nil, &NotLoadedError{edge: "tag"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -86,6 +124,16 @@ func (at *ArticleTag) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (at *ArticleTag) Value(name string) (ent.Value, error) {
 	return at.selectValues.Get(name)
+}
+
+// QueryArticle queries the "article" edge of the ArticleTag entity.
+func (at *ArticleTag) QueryArticle() *ArticleQuery {
+	return NewArticleTagClient(at.config).QueryArticle(at)
+}
+
+// QueryTag queries the "tag" edge of the ArticleTag entity.
+func (at *ArticleTag) QueryTag() *TagQuery {
+	return NewArticleTagClient(at.config).QueryTag(at)
 }
 
 // Update returns a builder for updating this ArticleTag.

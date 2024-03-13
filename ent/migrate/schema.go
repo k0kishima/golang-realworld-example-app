@@ -44,20 +44,34 @@ var (
 	// ArticleTagsColumns holds the columns for the "article_tags" table.
 	ArticleTagsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
 		{Name: "article_id", Type: field.TypeUUID},
 		{Name: "tag_id", Type: field.TypeUUID},
-		{Name: "created_at", Type: field.TypeTime},
 	}
 	// ArticleTagsTable holds the schema information for the "article_tags" table.
 	ArticleTagsTable = &schema.Table{
 		Name:       "article_tags",
 		Columns:    ArticleTagsColumns,
 		PrimaryKey: []*schema.Column{ArticleTagsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "article_tags_articles_article",
+				Columns:    []*schema.Column{ArticleTagsColumns[2]},
+				RefColumns: []*schema.Column{ArticlesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "article_tags_tags_tag",
+				Columns:    []*schema.Column{ArticleTagsColumns[3]},
+				RefColumns: []*schema.Column{TagsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "articletag_article_id_tag_id",
 				Unique:  true,
-				Columns: []*schema.Column{ArticleTagsColumns[1], ArticleTagsColumns[2]},
+				Columns: []*schema.Column{ArticleTagsColumns[2], ArticleTagsColumns[3]},
 			},
 		},
 	}
@@ -189,6 +203,8 @@ var (
 
 func init() {
 	ArticlesTable.ForeignKeys[0].RefTable = UsersTable
+	ArticleTagsTable.ForeignKeys[0].RefTable = ArticlesTable
+	ArticleTagsTable.ForeignKeys[1].RefTable = TagsTable
 	CommentsTable.ForeignKeys[0].RefTable = UsersTable
 	UserFollowsTable.ForeignKeys[0].RefTable = UsersTable
 	UserFollowsTable.ForeignKeys[1].RefTable = UsersTable

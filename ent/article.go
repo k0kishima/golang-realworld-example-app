@@ -44,9 +44,13 @@ type Article struct {
 type ArticleEdges struct {
 	// ArticleAuthor holds the value of the articleAuthor edge.
 	ArticleAuthor *User `json:"articleAuthor,omitempty"`
+	// Tags holds the value of the tags edge.
+	Tags []*Tag `json:"tags,omitempty"`
+	// ArticleTags holds the value of the article_tags edge.
+	ArticleTags []*ArticleTag `json:"article_tags,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [3]bool
 }
 
 // ArticleAuthorOrErr returns the ArticleAuthor value or an error if the edge
@@ -58,6 +62,24 @@ func (e ArticleEdges) ArticleAuthorOrErr() (*User, error) {
 		return nil, &NotFoundError{label: user.Label}
 	}
 	return nil, &NotLoadedError{edge: "articleAuthor"}
+}
+
+// TagsOrErr returns the Tags value or an error if the edge
+// was not loaded in eager-loading.
+func (e ArticleEdges) TagsOrErr() ([]*Tag, error) {
+	if e.loadedTypes[1] {
+		return e.Tags, nil
+	}
+	return nil, &NotLoadedError{edge: "tags"}
+}
+
+// ArticleTagsOrErr returns the ArticleTags value or an error if the edge
+// was not loaded in eager-loading.
+func (e ArticleEdges) ArticleTagsOrErr() ([]*ArticleTag, error) {
+	if e.loadedTypes[2] {
+		return e.ArticleTags, nil
+	}
+	return nil, &NotLoadedError{edge: "article_tags"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -159,6 +181,16 @@ func (a *Article) Value(name string) (ent.Value, error) {
 // QueryArticleAuthor queries the "articleAuthor" edge of the Article entity.
 func (a *Article) QueryArticleAuthor() *UserQuery {
 	return NewArticleClient(a.config).QueryArticleAuthor(a)
+}
+
+// QueryTags queries the "tags" edge of the Article entity.
+func (a *Article) QueryTags() *TagQuery {
+	return NewArticleClient(a.config).QueryTags(a)
+}
+
+// QueryArticleTags queries the "article_tags" edge of the Article entity.
+func (a *Article) QueryArticleTags() *ArticleTagQuery {
+	return NewArticleClient(a.config).QueryArticleTags(a)
 }
 
 // Update returns a builder for updating this Article.

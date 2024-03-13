@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/predicate"
 )
@@ -168,6 +169,52 @@ func CreatedAtLT(v time.Time) predicate.Tag {
 // CreatedAtLTE applies the LTE predicate on the "created_at" field.
 func CreatedAtLTE(v time.Time) predicate.Tag {
 	return predicate.Tag(sql.FieldLTE(FieldCreatedAt, v))
+}
+
+// HasArticle applies the HasEdge predicate on the "article" edge.
+func HasArticle() predicate.Tag {
+	return predicate.Tag(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, ArticleTable, ArticlePrimaryKey...),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasArticleWith applies the HasEdge predicate on the "article" edge with a given conditions (other predicates).
+func HasArticleWith(preds ...predicate.Article) predicate.Tag {
+	return predicate.Tag(func(s *sql.Selector) {
+		step := newArticleStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasTagArticle applies the HasEdge predicate on the "tag_article" edge.
+func HasTagArticle() predicate.Tag {
+	return predicate.Tag(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, TagArticleTable, TagArticleColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasTagArticleWith applies the HasEdge predicate on the "tag_article" edge with a given conditions (other predicates).
+func HasTagArticleWith(preds ...predicate.ArticleTag) predicate.Tag {
+	return predicate.Tag(func(s *sql.Selector) {
+		step := newTagArticleStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

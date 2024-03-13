@@ -11,17 +11,21 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/k0kishima/golang-realworld-example-app/ent/article"
 	"github.com/k0kishima/golang-realworld-example-app/ent/articletag"
 	"github.com/k0kishima/golang-realworld-example-app/ent/predicate"
+	"github.com/k0kishima/golang-realworld-example-app/ent/tag"
 )
 
 // ArticleTagQuery is the builder for querying ArticleTag entities.
 type ArticleTagQuery struct {
 	config
-	ctx        *QueryContext
-	order      []articletag.OrderOption
-	inters     []Interceptor
-	predicates []predicate.ArticleTag
+	ctx         *QueryContext
+	order       []articletag.OrderOption
+	inters      []Interceptor
+	predicates  []predicate.ArticleTag
+	withArticle *ArticleQuery
+	withTag     *TagQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -56,6 +60,50 @@ func (atq *ArticleTagQuery) Unique(unique bool) *ArticleTagQuery {
 func (atq *ArticleTagQuery) Order(o ...articletag.OrderOption) *ArticleTagQuery {
 	atq.order = append(atq.order, o...)
 	return atq
+}
+
+// QueryArticle chains the current query on the "article" edge.
+func (atq *ArticleTagQuery) QueryArticle() *ArticleQuery {
+	query := (&ArticleClient{config: atq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := atq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := atq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(articletag.Table, articletag.FieldID, selector),
+			sqlgraph.To(article.Table, article.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, articletag.ArticleTable, articletag.ArticleColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(atq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryTag chains the current query on the "tag" edge.
+func (atq *ArticleTagQuery) QueryTag() *TagQuery {
+	query := (&TagClient{config: atq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := atq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := atq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(articletag.Table, articletag.FieldID, selector),
+			sqlgraph.To(tag.Table, tag.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, articletag.TagTable, articletag.TagColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(atq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first ArticleTag entity from the query.
@@ -245,15 +293,39 @@ func (atq *ArticleTagQuery) Clone() *ArticleTagQuery {
 		return nil
 	}
 	return &ArticleTagQuery{
-		config:     atq.config,
-		ctx:        atq.ctx.Clone(),
-		order:      append([]articletag.OrderOption{}, atq.order...),
-		inters:     append([]Interceptor{}, atq.inters...),
-		predicates: append([]predicate.ArticleTag{}, atq.predicates...),
+		config:      atq.config,
+		ctx:         atq.ctx.Clone(),
+		order:       append([]articletag.OrderOption{}, atq.order...),
+		inters:      append([]Interceptor{}, atq.inters...),
+		predicates:  append([]predicate.ArticleTag{}, atq.predicates...),
+		withArticle: atq.withArticle.Clone(),
+		withTag:     atq.withTag.Clone(),
 		// clone intermediate query.
 		sql:  atq.sql.Clone(),
 		path: atq.path,
 	}
+}
+
+// WithArticle tells the query-builder to eager-load the nodes that are connected to
+// the "article" edge. The optional arguments are used to configure the query builder of the edge.
+func (atq *ArticleTagQuery) WithArticle(opts ...func(*ArticleQuery)) *ArticleTagQuery {
+	query := (&ArticleClient{config: atq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	atq.withArticle = query
+	return atq
+}
+
+// WithTag tells the query-builder to eager-load the nodes that are connected to
+// the "tag" edge. The optional arguments are used to configure the query builder of the edge.
+func (atq *ArticleTagQuery) WithTag(opts ...func(*TagQuery)) *ArticleTagQuery {
+	query := (&TagClient{config: atq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	atq.withTag = query
+	return atq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -332,8 +404,12 @@ func (atq *ArticleTagQuery) prepareQuery(ctx context.Context) error {
 
 func (atq *ArticleTagQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*ArticleTag, error) {
 	var (
-		nodes = []*ArticleTag{}
-		_spec = atq.querySpec()
+		nodes       = []*ArticleTag{}
+		_spec       = atq.querySpec()
+		loadedTypes = [2]bool{
+			atq.withArticle != nil,
+			atq.withTag != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*ArticleTag).scanValues(nil, columns)
@@ -341,6 +417,7 @@ func (atq *ArticleTagQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &ArticleTag{config: atq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -352,7 +429,78 @@ func (atq *ArticleTagQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := atq.withArticle; query != nil {
+		if err := atq.loadArticle(ctx, query, nodes, nil,
+			func(n *ArticleTag, e *Article) { n.Edges.Article = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := atq.withTag; query != nil {
+		if err := atq.loadTag(ctx, query, nodes, nil,
+			func(n *ArticleTag, e *Tag) { n.Edges.Tag = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (atq *ArticleTagQuery) loadArticle(ctx context.Context, query *ArticleQuery, nodes []*ArticleTag, init func(*ArticleTag), assign func(*ArticleTag, *Article)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*ArticleTag)
+	for i := range nodes {
+		fk := nodes[i].ArticleID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(article.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "article_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (atq *ArticleTagQuery) loadTag(ctx context.Context, query *TagQuery, nodes []*ArticleTag, init func(*ArticleTag), assign func(*ArticleTag, *Tag)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*ArticleTag)
+	for i := range nodes {
+		fk := nodes[i].TagID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(tag.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "tag_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (atq *ArticleTagQuery) sqlCount(ctx context.Context) (int, error) {
@@ -379,6 +527,12 @@ func (atq *ArticleTagQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != articletag.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if atq.withArticle != nil {
+			_spec.Node.AddColumnOnce(articletag.FieldArticleID)
+		}
+		if atq.withTag != nil {
+			_spec.Node.AddColumnOnce(articletag.FieldTagID)
 		}
 	}
 	if ps := atq.predicates; len(ps) > 0 {

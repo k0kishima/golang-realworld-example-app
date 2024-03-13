@@ -59,7 +59,21 @@ func (atu *ArticleTagUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (atu *ArticleTagUpdate) check() error {
+	if _, ok := atu.mutation.ArticleID(); atu.mutation.ArticleCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "ArticleTag.article"`)
+	}
+	if _, ok := atu.mutation.TagID(); atu.mutation.TagCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "ArticleTag.tag"`)
+	}
+	return nil
+}
+
 func (atu *ArticleTagUpdate) sqlSave(ctx context.Context) (n int, err error) {
+	if err := atu.check(); err != nil {
+		return n, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(articletag.Table, articletag.Columns, sqlgraph.NewFieldSpec(articletag.FieldID, field.TypeUUID))
 	if ps := atu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -133,7 +147,21 @@ func (atuo *ArticleTagUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (atuo *ArticleTagUpdateOne) check() error {
+	if _, ok := atuo.mutation.ArticleID(); atuo.mutation.ArticleCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "ArticleTag.article"`)
+	}
+	if _, ok := atuo.mutation.TagID(); atuo.mutation.TagCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "ArticleTag.tag"`)
+	}
+	return nil
+}
+
 func (atuo *ArticleTagUpdateOne) sqlSave(ctx context.Context) (_node *ArticleTag, err error) {
+	if err := atuo.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(articletag.Table, articletag.Columns, sqlgraph.NewFieldSpec(articletag.FieldID, field.TypeUUID))
 	id, ok := atuo.mutation.ID()
 	if !ok {
