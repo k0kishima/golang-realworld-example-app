@@ -32,9 +32,12 @@ func (User) Indexes() []ent.Index {
 		index.Fields("username", "email").Unique(),
 	}
 }
+
 func (User) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("follows", UserFollow.Type).
 			Unique(),
+		edge.To("articles", Article.Type),
+		edge.To("comments", Comment.Type),
 	}
 }

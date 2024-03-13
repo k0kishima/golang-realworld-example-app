@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -29,5 +30,15 @@ func (Article) Fields() []ent.Field {
 func (Article) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("slug").Unique(),
+	}
+}
+
+func (Article) Edges() []ent.Edge {
+	return []ent.Edge{
+		edge.From("articleAuthor", User.Type).
+			Ref("articles").
+			Unique().
+			Required().
+			Immutable(),
 	}
 }

@@ -96,6 +96,9 @@ func (cu *CommentUpdate) check() error {
 			return &ValidationError{Name: "body", err: fmt.Errorf(`ent: validator failed for field "Comment.body": %w`, err)}
 		}
 	}
+	if _, ok := cu.mutation.CommentAuthorID(); cu.mutation.CommentAuthorCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "Comment.commentAuthor"`)
+	}
 	return nil
 }
 
@@ -217,6 +220,9 @@ func (cuo *CommentUpdateOne) check() error {
 		if err := comment.BodyValidator(v); err != nil {
 			return &ValidationError{Name: "body", err: fmt.Errorf(`ent: validator failed for field "Comment.body": %w`, err)}
 		}
+	}
+	if _, ok := cuo.mutation.CommentAuthorID(); cuo.mutation.CommentAuthorCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "Comment.commentAuthor"`)
 	}
 	return nil
 }

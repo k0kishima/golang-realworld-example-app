@@ -13,15 +13,18 @@ import (
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/comment"
 	"github.com/k0kishima/golang-realworld-example-app/ent/predicate"
+	"github.com/k0kishima/golang-realworld-example-app/ent/user"
 )
 
 // CommentQuery is the builder for querying Comment entities.
 type CommentQuery struct {
 	config
-	ctx        *QueryContext
-	order      []comment.OrderOption
-	inters     []Interceptor
-	predicates []predicate.Comment
+	ctx               *QueryContext
+	order             []comment.OrderOption
+	inters            []Interceptor
+	predicates        []predicate.Comment
+	withCommentAuthor *UserQuery
+	withFKs           bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -56,6 +59,28 @@ func (cq *CommentQuery) Unique(unique bool) *CommentQuery {
 func (cq *CommentQuery) Order(o ...comment.OrderOption) *CommentQuery {
 	cq.order = append(cq.order, o...)
 	return cq
+}
+
+// QueryCommentAuthor chains the current query on the "commentAuthor" edge.
+func (cq *CommentQuery) QueryCommentAuthor() *UserQuery {
+	query := (&UserClient{config: cq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := cq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := cq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(comment.Table, comment.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, comment.CommentAuthorTable, comment.CommentAuthorColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first Comment entity from the query.
@@ -245,15 +270,27 @@ func (cq *CommentQuery) Clone() *CommentQuery {
 		return nil
 	}
 	return &CommentQuery{
-		config:     cq.config,
-		ctx:        cq.ctx.Clone(),
-		order:      append([]comment.OrderOption{}, cq.order...),
-		inters:     append([]Interceptor{}, cq.inters...),
-		predicates: append([]predicate.Comment{}, cq.predicates...),
+		config:            cq.config,
+		ctx:               cq.ctx.Clone(),
+		order:             append([]comment.OrderOption{}, cq.order...),
+		inters:            append([]Interceptor{}, cq.inters...),
+		predicates:        append([]predicate.Comment{}, cq.predicates...),
+		withCommentAuthor: cq.withCommentAuthor.Clone(),
 		// clone intermediate query.
 		sql:  cq.sql.Clone(),
 		path: cq.path,
 	}
+}
+
+// WithCommentAuthor tells the query-builder to eager-load the nodes that are connected to
+// the "commentAuthor" edge. The optional arguments are used to configure the query builder of the edge.
+func (cq *CommentQuery) WithCommentAuthor(opts ...func(*UserQuery)) *CommentQuery {
+	query := (&UserClient{config: cq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	cq.withCommentAuthor = query
+	return cq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -332,15 +369,26 @@ func (cq *CommentQuery) prepareQuery(ctx context.Context) error {
 
 func (cq *CommentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Comment, error) {
 	var (
-		nodes = []*Comment{}
-		_spec = cq.querySpec()
+		nodes       = []*Comment{}
+		withFKs     = cq.withFKs
+		_spec       = cq.querySpec()
+		loadedTypes = [1]bool{
+			cq.withCommentAuthor != nil,
+		}
 	)
+	if cq.withCommentAuthor != nil {
+		withFKs = true
+	}
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, comment.ForeignKeys...)
+	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Comment).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Comment{config: cq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -352,7 +400,46 @@ func (cq *CommentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Comm
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := cq.withCommentAuthor; query != nil {
+		if err := cq.loadCommentAuthor(ctx, query, nodes, nil,
+			func(n *Comment, e *User) { n.Edges.CommentAuthor = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (cq *CommentQuery) loadCommentAuthor(ctx context.Context, query *UserQuery, nodes []*Comment, init func(*Comment), assign func(*Comment, *User)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Comment)
+	for i := range nodes {
+		if nodes[i].user_comments == nil {
+			continue
+		}
+		fk := *nodes[i].user_comments
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(user.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "user_comments" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (cq *CommentQuery) sqlCount(ctx context.Context) (int, error) {

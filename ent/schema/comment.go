@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 )
@@ -20,5 +21,15 @@ func (Comment) Fields() []ent.Field {
 		field.String("body").NotEmpty().MaxLen(4096),
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
+	}
+}
+
+func (Comment) Edges() []ent.Edge {
+	return []ent.Edge{
+		edge.From("commentAuthor", User.Type).
+			Ref("comments").
+			Unique().
+			Required().
+			Immutable(),
 	}
 }

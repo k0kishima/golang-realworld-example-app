@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/comment"
+	"github.com/k0kishima/golang-realworld-example-app/ent/user"
 )
 
 // Comment is the model entity for the Comment schema.
@@ -27,8 +28,32 @@ type Comment struct {
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
-	selectValues sql.SelectValues
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the CommentQuery when eager-loading is set.
+	Edges         CommentEdges `json:"edges"`
+	user_comments *uuid.UUID
+	selectValues  sql.SelectValues
+}
+
+// CommentEdges holds the relations/edges for other nodes in the graph.
+type CommentEdges struct {
+	// CommentAuthor holds the value of the commentAuthor edge.
+	CommentAuthor *User `json:"commentAuthor,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// CommentAuthorOrErr returns the CommentAuthor value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e CommentEdges) CommentAuthorOrErr() (*User, error) {
+	if e.CommentAuthor != nil {
+		return e.CommentAuthor, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: user.Label}
+	}
+	return nil, &NotLoadedError{edge: "commentAuthor"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -42,6 +67,8 @@ func (*Comment) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullTime)
 		case comment.FieldID, comment.FieldAuthorID, comment.FieldArticleID:
 			values[i] = new(uuid.UUID)
+		case comment.ForeignKeys[0]: // user_comments
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -93,6 +120,13 @@ func (c *Comment) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				c.UpdatedAt = value.Time
 			}
+		case comment.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field user_comments", values[i])
+			} else if value.Valid {
+				c.user_comments = new(uuid.UUID)
+				*c.user_comments = *value.S.(*uuid.UUID)
+			}
 		default:
 			c.selectValues.Set(columns[i], values[i])
 		}
@@ -104,6 +138,11 @@ func (c *Comment) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (c *Comment) Value(name string) (ent.Value, error) {
 	return c.selectValues.Get(name)
+}
+
+// QueryCommentAuthor queries the "commentAuthor" edge of the Comment entity.
+func (c *Comment) QueryCommentAuthor() *UserQuery {
+	return NewCommentClient(c.config).QueryCommentAuthor(c)
 }
 
 // Update returns a builder for updating this Comment.
