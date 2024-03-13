@@ -69,6 +69,18 @@ func (f UserFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error)
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.UserMutation", m)
 }
 
+// The UserFavoriteFunc type is an adapter to allow the use of ordinary
+// function as UserFavorite mutator.
+type UserFavoriteFunc func(context.Context, *ent.UserFavoriteMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f UserFavoriteFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.UserFavoriteMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.UserFavoriteMutation", m)
+}
+
 // The UserFollowFunc type is an adapter to allow the use of ordinary
 // function as UserFollow mutator.
 type UserFollowFunc func(context.Context, *ent.UserFollowMutation) (ent.Value, error)

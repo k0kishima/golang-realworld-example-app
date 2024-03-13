@@ -22,6 +22,8 @@ type Tx struct {
 	Tag *TagClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
+	// UserFavorite is the client for interacting with the UserFavorite builders.
+	UserFavorite *UserFavoriteClient
 	// UserFollow is the client for interacting with the UserFollow builders.
 	UserFollow *UserFollowClient
 
@@ -160,6 +162,7 @@ func (tx *Tx) init() {
 	tx.Comment = NewCommentClient(tx.config)
 	tx.Tag = NewTagClient(tx.config)
 	tx.User = NewUserClient(tx.config)
+	tx.UserFavorite = NewUserFavoriteClient(tx.config)
 	tx.UserFollow = NewUserFollowClient(tx.config)
 }
 

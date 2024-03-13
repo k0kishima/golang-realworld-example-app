@@ -12,6 +12,7 @@ import (
 	"github.com/k0kishima/golang-realworld-example-app/ent/schema"
 	"github.com/k0kishima/golang-realworld-example-app/ent/tag"
 	"github.com/k0kishima/golang-realworld-example-app/ent/user"
+	"github.com/k0kishima/golang-realworld-example-app/ent/userfavorite"
 	"github.com/k0kishima/golang-realworld-example-app/ent/userfollow"
 )
 
@@ -197,6 +198,16 @@ func init() {
 	user.DefaultUpdatedAt = userDescUpdatedAt.Default.(func() time.Time)
 	// user.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	user.UpdateDefaultUpdatedAt = userDescUpdatedAt.UpdateDefault.(func() time.Time)
+	userfavoriteFields := schema.UserFavorite{}.Fields()
+	_ = userfavoriteFields
+	// userfavoriteDescCreatedAt is the schema descriptor for created_at field.
+	userfavoriteDescCreatedAt := userfavoriteFields[3].Descriptor()
+	// userfavorite.DefaultCreatedAt holds the default value on creation for the created_at field.
+	userfavorite.DefaultCreatedAt = userfavoriteDescCreatedAt.Default.(func() time.Time)
+	// userfavoriteDescID is the schema descriptor for id field.
+	userfavoriteDescID := userfavoriteFields[0].Descriptor()
+	// userfavorite.DefaultID holds the default value on creation for the id field.
+	userfavorite.DefaultID = userfavoriteDescID.Default.(func() uuid.UUID)
 	userfollowFields := schema.UserFollow{}.Fields()
 	_ = userfollowFields
 	// userfollowDescCreatedAt is the schema descriptor for created_at field.
