@@ -32,7 +32,7 @@ func AuthMiddleware(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		c.Set("user", u)
+		c.Set("currentUser", u)
 		c.Next()
 	}
 }
