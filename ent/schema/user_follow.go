@@ -16,9 +16,9 @@ type UserFollow struct {
 
 func (UserFollow) Fields() []ent.Field {
 	return []ent.Field{
-		field.UUID("id", uuid.UUID{}).Default(uuid.New).StorageKey("id"),
-		field.UUID("follower_id", uuid.UUID{}).StorageKey("follower_id"),
-		field.UUID("followee_id", uuid.UUID{}).StorageKey("followee_id"),
+		field.UUID("id", uuid.UUID{}).Default(uuid.New).Immutable(),
+		field.UUID("follower_id", uuid.UUID{}).Immutable(),
+		field.UUID("followee_id", uuid.UUID{}).Immutable(),
 		field.Time("created_at").Default(time.Now).Immutable(),
 	}
 }
@@ -35,10 +35,12 @@ func (UserFollow) Edges() []ent.Edge {
 			Ref("follows").
 			Unique().
 			Required().
+			Immutable().
 			Field("follower_id"),
 		edge.To("followee", User.Type).
 			Unique().
 			Required().
+			Immutable().
 			Field("followee_id"),
 	}
 }

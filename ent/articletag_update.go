@@ -10,7 +10,6 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/articletag"
 	"github.com/k0kishima/golang-realworld-example-app/ent/predicate"
 )
@@ -25,34 +24,6 @@ type ArticleTagUpdate struct {
 // Where appends a list predicates to the ArticleTagUpdate builder.
 func (atu *ArticleTagUpdate) Where(ps ...predicate.ArticleTag) *ArticleTagUpdate {
 	atu.mutation.Where(ps...)
-	return atu
-}
-
-// SetArticleID sets the "article_id" field.
-func (atu *ArticleTagUpdate) SetArticleID(u uuid.UUID) *ArticleTagUpdate {
-	atu.mutation.SetArticleID(u)
-	return atu
-}
-
-// SetNillableArticleID sets the "article_id" field if the given value is not nil.
-func (atu *ArticleTagUpdate) SetNillableArticleID(u *uuid.UUID) *ArticleTagUpdate {
-	if u != nil {
-		atu.SetArticleID(*u)
-	}
-	return atu
-}
-
-// SetTagID sets the "tag_id" field.
-func (atu *ArticleTagUpdate) SetTagID(u uuid.UUID) *ArticleTagUpdate {
-	atu.mutation.SetTagID(u)
-	return atu
-}
-
-// SetNillableTagID sets the "tag_id" field if the given value is not nil.
-func (atu *ArticleTagUpdate) SetNillableTagID(u *uuid.UUID) *ArticleTagUpdate {
-	if u != nil {
-		atu.SetTagID(*u)
-	}
 	return atu
 }
 
@@ -97,12 +68,6 @@ func (atu *ArticleTagUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
-	if value, ok := atu.mutation.ArticleID(); ok {
-		_spec.SetField(articletag.FieldArticleID, field.TypeUUID, value)
-	}
-	if value, ok := atu.mutation.TagID(); ok {
-		_spec.SetField(articletag.FieldTagID, field.TypeUUID, value)
-	}
 	if n, err = sqlgraph.UpdateNodes(ctx, atu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{articletag.Label}
@@ -121,34 +86,6 @@ type ArticleTagUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *ArticleTagMutation
-}
-
-// SetArticleID sets the "article_id" field.
-func (atuo *ArticleTagUpdateOne) SetArticleID(u uuid.UUID) *ArticleTagUpdateOne {
-	atuo.mutation.SetArticleID(u)
-	return atuo
-}
-
-// SetNillableArticleID sets the "article_id" field if the given value is not nil.
-func (atuo *ArticleTagUpdateOne) SetNillableArticleID(u *uuid.UUID) *ArticleTagUpdateOne {
-	if u != nil {
-		atuo.SetArticleID(*u)
-	}
-	return atuo
-}
-
-// SetTagID sets the "tag_id" field.
-func (atuo *ArticleTagUpdateOne) SetTagID(u uuid.UUID) *ArticleTagUpdateOne {
-	atuo.mutation.SetTagID(u)
-	return atuo
-}
-
-// SetNillableTagID sets the "tag_id" field if the given value is not nil.
-func (atuo *ArticleTagUpdateOne) SetNillableTagID(u *uuid.UUID) *ArticleTagUpdateOne {
-	if u != nil {
-		atuo.SetTagID(*u)
-	}
-	return atuo
 }
 
 // Mutation returns the ArticleTagMutation object of the builder.
@@ -221,12 +158,6 @@ func (atuo *ArticleTagUpdateOne) sqlSave(ctx context.Context) (_node *ArticleTag
 				ps[i](selector)
 			}
 		}
-	}
-	if value, ok := atuo.mutation.ArticleID(); ok {
-		_spec.SetField(articletag.FieldArticleID, field.TypeUUID, value)
-	}
-	if value, ok := atuo.mutation.TagID(); ok {
-		_spec.SetField(articletag.FieldTagID, field.TypeUUID, value)
 	}
 	_node = &ArticleTag{config: atuo.config}
 	_spec.Assign = _node.assignValues
