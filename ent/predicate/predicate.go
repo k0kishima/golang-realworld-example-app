@@ -9,6 +9,9 @@ import (
 // Article is the predicate function for article builders.
 type Article func(*sql.Selector)
 
+// Comment is the predicate function for comment builders.
+type Comment func(*sql.Selector)
+
 // User is the predicate function for user builders.
 type User func(*sql.Selector)
 
