@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/k0kishima/golang-realworld-example-app/ent/article"
 	"github.com/k0kishima/golang-realworld-example-app/ent/user"
 	"github.com/k0kishima/golang-realworld-example-app/ent/userfollow"
 )
@@ -74,6 +75,7 @@ var (
 func checkColumn(table, column string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
+			article.Table:    article.ValidColumn,
 			user.Table:       user.ValidColumn,
 			userfollow.Table: userfollow.ValidColumn,
 		})

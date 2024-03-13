@@ -8,6 +8,30 @@ import (
 )
 
 var (
+	// ArticlesColumns holds the columns for the "articles" table.
+	ArticlesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "author_id", Type: field.TypeUUID},
+		{Name: "slug", Type: field.TypeString, Unique: true, Size: 255},
+		{Name: "title", Type: field.TypeString, Size: 255},
+		{Name: "description", Type: field.TypeString, Size: 255},
+		{Name: "body", Type: field.TypeString, Size: 4096},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// ArticlesTable holds the schema information for the "articles" table.
+	ArticlesTable = &schema.Table{
+		Name:       "articles",
+		Columns:    ArticlesColumns,
+		PrimaryKey: []*schema.Column{ArticlesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "article_slug",
+				Unique:  true,
+				Columns: []*schema.Column{ArticlesColumns[2]},
+			},
+		},
+	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
@@ -68,6 +92,7 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		ArticlesTable,
 		UsersTable,
 		UserFollowsTable,
 	}
