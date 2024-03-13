@@ -9,6 +9,7 @@ import (
 	"github.com/k0kishima/golang-realworld-example-app/ent/article"
 	"github.com/k0kishima/golang-realworld-example-app/ent/comment"
 	"github.com/k0kishima/golang-realworld-example-app/ent/schema"
+	"github.com/k0kishima/golang-realworld-example-app/ent/tag"
 	"github.com/k0kishima/golang-realworld-example-app/ent/user"
 	"github.com/k0kishima/golang-realworld-example-app/ent/userfollow"
 )
@@ -139,6 +140,20 @@ func init() {
 	commentDescID := commentFields[0].Descriptor()
 	// comment.DefaultID holds the default value on creation for the id field.
 	comment.DefaultID = commentDescID.Default.(func() uuid.UUID)
+	tagFields := schema.Tag{}.Fields()
+	_ = tagFields
+	// tagDescDescription is the schema descriptor for description field.
+	tagDescDescription := tagFields[1].Descriptor()
+	// tag.DescriptionValidator is a validator for the "description" field. It is called by the builders before save.
+	tag.DescriptionValidator = tagDescDescription.Validators[0].(func(string) error)
+	// tagDescCreatedAt is the schema descriptor for created_at field.
+	tagDescCreatedAt := tagFields[2].Descriptor()
+	// tag.DefaultCreatedAt holds the default value on creation for the created_at field.
+	tag.DefaultCreatedAt = tagDescCreatedAt.Default.(func() time.Time)
+	// tagDescID is the schema descriptor for id field.
+	tagDescID := tagFields[0].Descriptor()
+	// tag.DefaultID holds the default value on creation for the id field.
+	tag.DefaultID = tagDescID.Default.(func() uuid.UUID)
 	userFields := schema.User{}.Fields()
 	_ = userFields
 	// userDescUsername is the schema descriptor for username field.
