@@ -124,8 +124,8 @@ func Login(client *ent.Client) gin.HandlerFunc {
 
 func GetCurrentUser(client *ent.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		user, _ := c.Get("user")
-		u := user.(*ent.User)
+		currentUser, _ := c.Get("currentUser")
+		u := currentUser.(*ent.User)
 
 		c.JSON(http.StatusOK, gin.H{"user": gin.H{
 			"username": u.Username,
@@ -147,8 +147,8 @@ func UpdateUser(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		user, _ := c.Get("user")
-		u := user.(*ent.User)
+		currentUser, _ := c.Get("currentUser")
+		u := currentUser.(*ent.User)
 
 		u, err := u.Update().
 			SetUsername(req.User.Username).
@@ -172,10 +172,6 @@ func UpdateUser(client *ent.Client) gin.HandlerFunc {
 			"token":    token,
 		}})
 	}
-}
-
-func respondWithError(c *gin.Context, code int, message string) {
-	c.JSON(code, gin.H{"error": message})
 }
 
 func handleUserCreationError(c *gin.Context, err error) {
