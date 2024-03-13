@@ -19,7 +19,7 @@ func (UserFollow) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).Default(uuid.New).StorageKey("id"),
 		field.UUID("follower_id", uuid.UUID{}).StorageKey("follower_id"),
 		field.UUID("followee_id", uuid.UUID{}).StorageKey("followee_id"),
-		field.Time("created_at").Default(time.Now),
+		field.Time("created_at").Default(time.Now).Immutable(),
 	}
 }
 

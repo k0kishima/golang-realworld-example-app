@@ -21,8 +21,8 @@ func (Article) Fields() []ent.Field {
 		field.String("title").NotEmpty().MaxLen(255),
 		field.String("description").NotEmpty().MaxLen(255),
 		field.String("body").NotEmpty().MaxLen(4096),
-		field.Time("created_at").Default(time.Now),
-		field.Time("updated_at").Default(time.Now),
+		field.Time("created_at").Default(time.Now).Immutable(),
+		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
 	}
 }
 

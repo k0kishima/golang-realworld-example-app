@@ -84,31 +84,9 @@ func (au *ArticleUpdate) SetNillableBody(s *string) *ArticleUpdate {
 	return au
 }
 
-// SetCreatedAt sets the "created_at" field.
-func (au *ArticleUpdate) SetCreatedAt(t time.Time) *ArticleUpdate {
-	au.mutation.SetCreatedAt(t)
-	return au
-}
-
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (au *ArticleUpdate) SetNillableCreatedAt(t *time.Time) *ArticleUpdate {
-	if t != nil {
-		au.SetCreatedAt(*t)
-	}
-	return au
-}
-
 // SetUpdatedAt sets the "updated_at" field.
 func (au *ArticleUpdate) SetUpdatedAt(t time.Time) *ArticleUpdate {
 	au.mutation.SetUpdatedAt(t)
-	return au
-}
-
-// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (au *ArticleUpdate) SetNillableUpdatedAt(t *time.Time) *ArticleUpdate {
-	if t != nil {
-		au.SetUpdatedAt(*t)
-	}
 	return au
 }
 
@@ -119,6 +97,7 @@ func (au *ArticleUpdate) Mutation() *ArticleMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (au *ArticleUpdate) Save(ctx context.Context) (int, error) {
+	au.defaults()
 	return withHooks(ctx, au.sqlSave, au.mutation, au.hooks)
 }
 
@@ -141,6 +120,14 @@ func (au *ArticleUpdate) Exec(ctx context.Context) error {
 func (au *ArticleUpdate) ExecX(ctx context.Context) {
 	if err := au.Exec(ctx); err != nil {
 		panic(err)
+	}
+}
+
+// defaults sets the default values of the builder before save.
+func (au *ArticleUpdate) defaults() {
+	if _, ok := au.mutation.UpdatedAt(); !ok {
+		v := article.UpdateDefaultUpdatedAt()
+		au.mutation.SetUpdatedAt(v)
 	}
 }
 
@@ -192,9 +179,6 @@ func (au *ArticleUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := au.mutation.Body(); ok {
 		_spec.SetField(article.FieldBody, field.TypeString, value)
-	}
-	if value, ok := au.mutation.CreatedAt(); ok {
-		_spec.SetField(article.FieldCreatedAt, field.TypeTime, value)
 	}
 	if value, ok := au.mutation.UpdatedAt(); ok {
 		_spec.SetField(article.FieldUpdatedAt, field.TypeTime, value)
@@ -275,31 +259,9 @@ func (auo *ArticleUpdateOne) SetNillableBody(s *string) *ArticleUpdateOne {
 	return auo
 }
 
-// SetCreatedAt sets the "created_at" field.
-func (auo *ArticleUpdateOne) SetCreatedAt(t time.Time) *ArticleUpdateOne {
-	auo.mutation.SetCreatedAt(t)
-	return auo
-}
-
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (auo *ArticleUpdateOne) SetNillableCreatedAt(t *time.Time) *ArticleUpdateOne {
-	if t != nil {
-		auo.SetCreatedAt(*t)
-	}
-	return auo
-}
-
 // SetUpdatedAt sets the "updated_at" field.
 func (auo *ArticleUpdateOne) SetUpdatedAt(t time.Time) *ArticleUpdateOne {
 	auo.mutation.SetUpdatedAt(t)
-	return auo
-}
-
-// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (auo *ArticleUpdateOne) SetNillableUpdatedAt(t *time.Time) *ArticleUpdateOne {
-	if t != nil {
-		auo.SetUpdatedAt(*t)
-	}
 	return auo
 }
 
@@ -323,6 +285,7 @@ func (auo *ArticleUpdateOne) Select(field string, fields ...string) *ArticleUpda
 
 // Save executes the query and returns the updated Article entity.
 func (auo *ArticleUpdateOne) Save(ctx context.Context) (*Article, error) {
+	auo.defaults()
 	return withHooks(ctx, auo.sqlSave, auo.mutation, auo.hooks)
 }
 
@@ -345,6 +308,14 @@ func (auo *ArticleUpdateOne) Exec(ctx context.Context) error {
 func (auo *ArticleUpdateOne) ExecX(ctx context.Context) {
 	if err := auo.Exec(ctx); err != nil {
 		panic(err)
+	}
+}
+
+// defaults sets the default values of the builder before save.
+func (auo *ArticleUpdateOne) defaults() {
+	if _, ok := auo.mutation.UpdatedAt(); !ok {
+		v := article.UpdateDefaultUpdatedAt()
+		auo.mutation.SetUpdatedAt(v)
 	}
 }
 
@@ -413,9 +384,6 @@ func (auo *ArticleUpdateOne) sqlSave(ctx context.Context) (_node *Article, err e
 	}
 	if value, ok := auo.mutation.Body(); ok {
 		_spec.SetField(article.FieldBody, field.TypeString, value)
-	}
-	if value, ok := auo.mutation.CreatedAt(); ok {
-		_spec.SetField(article.FieldCreatedAt, field.TypeTime, value)
 	}
 	if value, ok := auo.mutation.UpdatedAt(); ok {
 		_spec.SetField(article.FieldUpdatedAt, field.TypeTime, value)
