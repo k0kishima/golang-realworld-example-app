@@ -32,6 +32,26 @@ var (
 			},
 		},
 	}
+	// ArticleTagsColumns holds the columns for the "article_tags" table.
+	ArticleTagsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "article_id", Type: field.TypeUUID},
+		{Name: "tag_id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+	}
+	// ArticleTagsTable holds the schema information for the "article_tags" table.
+	ArticleTagsTable = &schema.Table{
+		Name:       "article_tags",
+		Columns:    ArticleTagsColumns,
+		PrimaryKey: []*schema.Column{ArticleTagsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "articletag_article_id_tag_id",
+				Unique:  true,
+				Columns: []*schema.Column{ArticleTagsColumns[1], ArticleTagsColumns[2]},
+			},
+		},
+	}
 	// CommentsColumns holds the columns for the "comments" table.
 	CommentsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -120,6 +140,7 @@ var (
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		ArticlesTable,
+		ArticleTagsTable,
 		CommentsTable,
 		TagsTable,
 		UsersTable,

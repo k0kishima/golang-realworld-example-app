@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/article"
+	"github.com/k0kishima/golang-realworld-example-app/ent/articletag"
 	"github.com/k0kishima/golang-realworld-example-app/ent/comment"
 	"github.com/k0kishima/golang-realworld-example-app/ent/schema"
 	"github.com/k0kishima/golang-realworld-example-app/ent/tag"
@@ -106,6 +107,16 @@ func init() {
 	articleDescID := articleFields[0].Descriptor()
 	// article.DefaultID holds the default value on creation for the id field.
 	article.DefaultID = articleDescID.Default.(func() uuid.UUID)
+	articletagFields := schema.ArticleTag{}.Fields()
+	_ = articletagFields
+	// articletagDescCreatedAt is the schema descriptor for created_at field.
+	articletagDescCreatedAt := articletagFields[3].Descriptor()
+	// articletag.DefaultCreatedAt holds the default value on creation for the created_at field.
+	articletag.DefaultCreatedAt = articletagDescCreatedAt.Default.(func() time.Time)
+	// articletagDescID is the schema descriptor for id field.
+	articletagDescID := articletagFields[0].Descriptor()
+	// articletag.DefaultID holds the default value on creation for the id field.
+	articletag.DefaultID = articletagDescID.Default.(func() uuid.UUID)
 	commentFields := schema.Comment{}.Fields()
 	_ = commentFields
 	// commentDescBody is the schema descriptor for body field.
