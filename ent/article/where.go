@@ -111,26 +111,6 @@ func AuthorIDNotIn(vs ...uuid.UUID) predicate.Article {
 	return predicate.Article(sql.FieldNotIn(FieldAuthorID, vs...))
 }
 
-// AuthorIDGT applies the GT predicate on the "author_id" field.
-func AuthorIDGT(v uuid.UUID) predicate.Article {
-	return predicate.Article(sql.FieldGT(FieldAuthorID, v))
-}
-
-// AuthorIDGTE applies the GTE predicate on the "author_id" field.
-func AuthorIDGTE(v uuid.UUID) predicate.Article {
-	return predicate.Article(sql.FieldGTE(FieldAuthorID, v))
-}
-
-// AuthorIDLT applies the LT predicate on the "author_id" field.
-func AuthorIDLT(v uuid.UUID) predicate.Article {
-	return predicate.Article(sql.FieldLT(FieldAuthorID, v))
-}
-
-// AuthorIDLTE applies the LTE predicate on the "author_id" field.
-func AuthorIDLTE(v uuid.UUID) predicate.Article {
-	return predicate.Article(sql.FieldLTE(FieldAuthorID, v))
-}
-
 // SlugEQ applies the EQ predicate on the "slug" field.
 func SlugEQ(v string) predicate.Article {
 	return predicate.Article(sql.FieldEQ(FieldSlug, v))

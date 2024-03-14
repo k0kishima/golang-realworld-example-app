@@ -11,14 +11,13 @@ var (
 	// ArticlesColumns holds the columns for the "articles" table.
 	ArticlesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "author_id", Type: field.TypeUUID},
 		{Name: "slug", Type: field.TypeString, Unique: true, Size: 255},
 		{Name: "title", Type: field.TypeString, Size: 255},
 		{Name: "description", Type: field.TypeString, Size: 255},
 		{Name: "body", Type: field.TypeString, Size: 4096},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "user_articles", Type: field.TypeUUID},
+		{Name: "author_id", Type: field.TypeUUID},
 	}
 	// ArticlesTable holds the schema information for the "articles" table.
 	ArticlesTable = &schema.Table{
@@ -28,7 +27,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "articles_users_articles",
-				Columns:    []*schema.Column{ArticlesColumns[8]},
+				Columns:    []*schema.Column{ArticlesColumns[7]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -37,7 +36,7 @@ var (
 			{
 				Name:    "article_slug",
 				Unique:  true,
-				Columns: []*schema.Column{ArticlesColumns[2]},
+				Columns: []*schema.Column{ArticlesColumns[1]},
 			},
 		},
 	}

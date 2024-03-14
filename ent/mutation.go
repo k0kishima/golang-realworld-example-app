@@ -46,7 +46,6 @@ type ArticleMutation struct {
 	op                   Op
 	typ                  string
 	id                   *uuid.UUID
-	author_id            *uuid.UUID
 	slug                 *string
 	title                *string
 	description          *string
@@ -173,12 +172,12 @@ func (m *ArticleMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 
 // SetAuthorID sets the "author_id" field.
 func (m *ArticleMutation) SetAuthorID(u uuid.UUID) {
-	m.author_id = &u
+	m.articleAuthor = &u
 }
 
 // AuthorID returns the value of the "author_id" field in the mutation.
 func (m *ArticleMutation) AuthorID() (r uuid.UUID, exists bool) {
-	v := m.author_id
+	v := m.articleAuthor
 	if v == nil {
 		return
 	}
@@ -204,7 +203,7 @@ func (m *ArticleMutation) OldAuthorID(ctx context.Context) (v uuid.UUID, err err
 
 // ResetAuthorID resets all changes to the "author_id" field.
 func (m *ArticleMutation) ResetAuthorID() {
-	m.author_id = nil
+	m.articleAuthor = nil
 }
 
 // SetSlug sets the "slug" field.
@@ -431,6 +430,7 @@ func (m *ArticleMutation) SetArticleAuthorID(id uuid.UUID) {
 // ClearArticleAuthor clears the "articleAuthor" edge to the User entity.
 func (m *ArticleMutation) ClearArticleAuthor() {
 	m.clearedarticleAuthor = true
+	m.clearedFields[article.FieldAuthorID] = struct{}{}
 }
 
 // ArticleAuthorCleared reports if the "articleAuthor" edge to the User entity was cleared.
@@ -605,7 +605,7 @@ func (m *ArticleMutation) Type() string {
 // AddedFields().
 func (m *ArticleMutation) Fields() []string {
 	fields := make([]string, 0, 7)
-	if m.author_id != nil {
+	if m.articleAuthor != nil {
 		fields = append(fields, article.FieldAuthorID)
 	}
 	if m.slug != nil {

@@ -43,7 +43,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "user" package.
 	ArticleAuthorInverseTable = "users"
 	// ArticleAuthorColumn is the table column denoting the articleAuthor relation/edge.
-	ArticleAuthorColumn = "user_articles"
+	ArticleAuthorColumn = "author_id"
 	// TagsTable is the table that holds the tags relation/edge. The primary key declared below.
 	TagsTable = "article_tags"
 	// TagsInverseTable is the table name for the Tag entity.
@@ -70,12 +70,6 @@ var Columns = []string{
 	FieldUpdatedAt,
 }
 
-// ForeignKeys holds the SQL foreign-keys that are owned by the "articles"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"user_articles",
-}
-
 var (
 	// TagsPrimaryKey and TagsColumn2 are the table columns denoting the
 	// primary key for the tags relation (M2M).
@@ -86,11 +80,6 @@ var (
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
-			return true
-		}
-	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
 			return true
 		}
 	}

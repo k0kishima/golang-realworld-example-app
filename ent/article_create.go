@@ -267,10 +267,6 @@ func (ac *ArticleCreate) createSpec() (*Article, *sqlgraph.CreateSpec) {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := ac.mutation.AuthorID(); ok {
-		_spec.SetField(article.FieldAuthorID, field.TypeUUID, value)
-		_node.AuthorID = value
-	}
 	if value, ok := ac.mutation.Slug(); ok {
 		_spec.SetField(article.FieldSlug, field.TypeString, value)
 		_node.Slug = value
@@ -309,7 +305,7 @@ func (ac *ArticleCreate) createSpec() (*Article, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.user_articles = &nodes[0]
+		_node.AuthorID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := ac.mutation.TagsIDs(); len(nodes) > 0 {

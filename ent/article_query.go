@@ -29,7 +29,6 @@ type ArticleQuery struct {
 	withArticleAuthor *UserQuery
 	withTags          *TagQuery
 	withArticleTags   *ArticleTagQuery
-	withFKs           bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -443,7 +442,6 @@ func (aq *ArticleQuery) prepareQuery(ctx context.Context) error {
 func (aq *ArticleQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Article, error) {
 	var (
 		nodes       = []*Article{}
-		withFKs     = aq.withFKs
 		_spec       = aq.querySpec()
 		loadedTypes = [3]bool{
 			aq.withArticleAuthor != nil,
@@ -451,12 +449,6 @@ func (aq *ArticleQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Arti
 			aq.withArticleTags != nil,
 		}
 	)
-	if aq.withArticleAuthor != nil {
-		withFKs = true
-	}
-	if withFKs {
-		_spec.Node.Columns = append(_spec.Node.Columns, article.ForeignKeys...)
-	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Article).scanValues(nil, columns)
 	}
@@ -502,10 +494,7 @@ func (aq *ArticleQuery) loadArticleAuthor(ctx context.Context, query *UserQuery,
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Article)
 	for i := range nodes {
-		if nodes[i].user_articles == nil {
-			continue
-		}
-		fk := *nodes[i].user_articles
+		fk := nodes[i].AuthorID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -522,7 +511,7 @@ func (aq *ArticleQuery) loadArticleAuthor(ctx context.Context, query *UserQuery,
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "user_articles" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "author_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -646,6 +635,9 @@ func (aq *ArticleQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != article.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if aq.withArticleAuthor != nil {
+			_spec.Node.AddColumnOnce(article.FieldAuthorID)
 		}
 	}
 	if ps := aq.predicates; len(ps) > 0 {

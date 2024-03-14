@@ -37,6 +37,7 @@ func (Article) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("articleAuthor", User.Type).
 			Ref("articles").
+			Field("author_id").
 			Unique().
 			Required().
 			Immutable(),
