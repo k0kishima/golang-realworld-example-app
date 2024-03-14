@@ -26,7 +26,11 @@ func CreateArticle(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		validationResult := validators.ValidateArticle(client, &req.Article)
+		validationResult := validators.ValidateArticle(&ent.Article{
+			Title:       req.Article.Title,
+			Description: req.Article.Description,
+			Body:        req.Article.Body,
+		})
 		if !validationResult.Valid {
 			c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": validationResult.Errors})
 			return
@@ -60,7 +64,11 @@ func CreateArticle(client *ent.Client) gin.HandlerFunc {
 			Save(c.Request.Context())
 		if err != nil {
 			tx.Rollback()
-			respondWithError(c, http.StatusInternalServerError, "Error creating article")
+			if ent.IsConstraintError(err) {
+				c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": gin.H{"title": []string{"must be unique"}}})
+			} else {
+				respondWithError(c, http.StatusInternalServerError, "Error creating article")
+			}
 			return
 		}
 
