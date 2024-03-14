@@ -21,8 +21,40 @@ type Tag struct {
 	// Description holds the value of the "description" field.
 	Description string `json:"description,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
-	CreatedAt    time.Time `json:"created_at,omitempty"`
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the TagQuery when eager-loading is set.
+	Edges        TagEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// TagEdges holds the relations/edges for other nodes in the graph.
+type TagEdges struct {
+	// Article holds the value of the article edge.
+	Article []*Article `json:"article,omitempty"`
+	// TagArticle holds the value of the tag_article edge.
+	TagArticle []*ArticleTag `json:"tag_article,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [2]bool
+}
+
+// ArticleOrErr returns the Article value or an error if the edge
+// was not loaded in eager-loading.
+func (e TagEdges) ArticleOrErr() ([]*Article, error) {
+	if e.loadedTypes[0] {
+		return e.Article, nil
+	}
+	return nil, &NotLoadedError{edge: "article"}
+}
+
+// TagArticleOrErr returns the TagArticle value or an error if the edge
+// was not loaded in eager-loading.
+func (e TagEdges) TagArticleOrErr() ([]*ArticleTag, error) {
+	if e.loadedTypes[1] {
+		return e.TagArticle, nil
+	}
+	return nil, &NotLoadedError{edge: "tag_article"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -80,6 +112,16 @@ func (t *Tag) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (t *Tag) Value(name string) (ent.Value, error) {
 	return t.selectValues.Get(name)
+}
+
+// QueryArticle queries the "article" edge of the Tag entity.
+func (t *Tag) QueryArticle() *ArticleQuery {
+	return NewTagClient(t.config).QueryArticle(t)
+}
+
+// QueryTagArticle queries the "tag_article" edge of the Tag entity.
+func (t *Tag) QueryTagArticle() *ArticleTagQuery {
+	return NewTagClient(t.config).QueryTagArticle(t)
 }
 
 // Update returns a builder for updating this Tag.

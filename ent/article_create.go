@@ -12,6 +12,8 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/article"
+	"github.com/k0kishima/golang-realworld-example-app/ent/articletag"
+	"github.com/k0kishima/golang-realworld-example-app/ent/tag"
 	"github.com/k0kishima/golang-realworld-example-app/ent/user"
 )
 
@@ -103,6 +105,36 @@ func (ac *ArticleCreate) SetArticleAuthorID(id uuid.UUID) *ArticleCreate {
 // SetArticleAuthor sets the "articleAuthor" edge to the User entity.
 func (ac *ArticleCreate) SetArticleAuthor(u *User) *ArticleCreate {
 	return ac.SetArticleAuthorID(u.ID)
+}
+
+// AddTagIDs adds the "tags" edge to the Tag entity by IDs.
+func (ac *ArticleCreate) AddTagIDs(ids ...uuid.UUID) *ArticleCreate {
+	ac.mutation.AddTagIDs(ids...)
+	return ac
+}
+
+// AddTags adds the "tags" edges to the Tag entity.
+func (ac *ArticleCreate) AddTags(t ...*Tag) *ArticleCreate {
+	ids := make([]uuid.UUID, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return ac.AddTagIDs(ids...)
+}
+
+// AddArticleTagIDs adds the "article_tags" edge to the ArticleTag entity by IDs.
+func (ac *ArticleCreate) AddArticleTagIDs(ids ...uuid.UUID) *ArticleCreate {
+	ac.mutation.AddArticleTagIDs(ids...)
+	return ac
+}
+
+// AddArticleTags adds the "article_tags" edges to the ArticleTag entity.
+func (ac *ArticleCreate) AddArticleTags(a ...*ArticleTag) *ArticleCreate {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return ac.AddArticleTagIDs(ids...)
 }
 
 // Mutation returns the ArticleMutation object of the builder.
@@ -235,10 +267,6 @@ func (ac *ArticleCreate) createSpec() (*Article, *sqlgraph.CreateSpec) {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := ac.mutation.AuthorID(); ok {
-		_spec.SetField(article.FieldAuthorID, field.TypeUUID, value)
-		_node.AuthorID = value
-	}
 	if value, ok := ac.mutation.Slug(); ok {
 		_spec.SetField(article.FieldSlug, field.TypeString, value)
 		_node.Slug = value
@@ -277,7 +305,46 @@ func (ac *ArticleCreate) createSpec() (*Article, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.user_articles = &nodes[0]
+		_node.AuthorID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := ac.mutation.TagsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   article.TagsTable,
+			Columns: article.TagsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(tag.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		createE := &ArticleTagCreate{config: ac.config, mutation: newArticleTagMutation(ac.config, OpCreate)}
+		createE.defaults()
+		_, specE := createE.createSpec()
+		edge.Target.Fields = specE.Fields
+		if specE.ID.Value != nil {
+			edge.Target.Fields = append(edge.Target.Fields, specE.ID)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := ac.mutation.ArticleTagsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   article.ArticleTagsTable,
+			Columns: []string{article.ArticleTagsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(articletag.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

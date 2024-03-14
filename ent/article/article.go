@@ -31,6 +31,10 @@ const (
 	FieldUpdatedAt = "updated_at"
 	// EdgeArticleAuthor holds the string denoting the articleauthor edge name in mutations.
 	EdgeArticleAuthor = "articleAuthor"
+	// EdgeTags holds the string denoting the tags edge name in mutations.
+	EdgeTags = "tags"
+	// EdgeArticleTags holds the string denoting the article_tags edge name in mutations.
+	EdgeArticleTags = "article_tags"
 	// Table holds the table name of the article in the database.
 	Table = "articles"
 	// ArticleAuthorTable is the table that holds the articleAuthor relation/edge.
@@ -39,7 +43,19 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "user" package.
 	ArticleAuthorInverseTable = "users"
 	// ArticleAuthorColumn is the table column denoting the articleAuthor relation/edge.
-	ArticleAuthorColumn = "user_articles"
+	ArticleAuthorColumn = "author_id"
+	// TagsTable is the table that holds the tags relation/edge. The primary key declared below.
+	TagsTable = "article_tags"
+	// TagsInverseTable is the table name for the Tag entity.
+	// It exists in this package in order to avoid circular dependency with the "tag" package.
+	TagsInverseTable = "tags"
+	// ArticleTagsTable is the table that holds the article_tags relation/edge.
+	ArticleTagsTable = "article_tags"
+	// ArticleTagsInverseTable is the table name for the ArticleTag entity.
+	// It exists in this package in order to avoid circular dependency with the "articletag" package.
+	ArticleTagsInverseTable = "article_tags"
+	// ArticleTagsColumn is the table column denoting the article_tags relation/edge.
+	ArticleTagsColumn = "article_id"
 )
 
 // Columns holds all SQL columns for article fields.
@@ -54,21 +70,16 @@ var Columns = []string{
 	FieldUpdatedAt,
 }
 
-// ForeignKeys holds the SQL foreign-keys that are owned by the "articles"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"user_articles",
-}
+var (
+	// TagsPrimaryKey and TagsColumn2 are the table columns denoting the
+	// primary key for the tags relation (M2M).
+	TagsPrimaryKey = []string{"article_id", "tag_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
-			return true
-		}
-	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -143,10 +154,52 @@ func ByArticleAuthorField(field string, opts ...sql.OrderTermOption) OrderOption
 		sqlgraph.OrderByNeighborTerms(s, newArticleAuthorStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByTagsCount orders the results by tags count.
+func ByTagsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newTagsStep(), opts...)
+	}
+}
+
+// ByTags orders the results by tags terms.
+func ByTags(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTagsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByArticleTagsCount orders the results by article_tags count.
+func ByArticleTagsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newArticleTagsStep(), opts...)
+	}
+}
+
+// ByArticleTags orders the results by article_tags terms.
+func ByArticleTags(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newArticleTagsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newArticleAuthorStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ArticleAuthorInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, ArticleAuthorTable, ArticleAuthorColumn),
+	)
+}
+func newTagsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TagsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, false, TagsTable, TagsPrimaryKey...),
+	)
+}
+func newArticleTagsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ArticleTagsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, ArticleTagsTable, ArticleTagsColumn),
 	)
 }

@@ -35,18 +35,21 @@ type Article struct {
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ArticleQuery when eager-loading is set.
-	Edges         ArticleEdges `json:"edges"`
-	user_articles *uuid.UUID
-	selectValues  sql.SelectValues
+	Edges        ArticleEdges `json:"edges"`
+	selectValues sql.SelectValues
 }
 
 // ArticleEdges holds the relations/edges for other nodes in the graph.
 type ArticleEdges struct {
 	// ArticleAuthor holds the value of the articleAuthor edge.
 	ArticleAuthor *User `json:"articleAuthor,omitempty"`
+	// Tags holds the value of the tags edge.
+	Tags []*Tag `json:"tags,omitempty"`
+	// ArticleTags holds the value of the article_tags edge.
+	ArticleTags []*ArticleTag `json:"article_tags,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [3]bool
 }
 
 // ArticleAuthorOrErr returns the ArticleAuthor value or an error if the edge
@@ -60,6 +63,24 @@ func (e ArticleEdges) ArticleAuthorOrErr() (*User, error) {
 	return nil, &NotLoadedError{edge: "articleAuthor"}
 }
 
+// TagsOrErr returns the Tags value or an error if the edge
+// was not loaded in eager-loading.
+func (e ArticleEdges) TagsOrErr() ([]*Tag, error) {
+	if e.loadedTypes[1] {
+		return e.Tags, nil
+	}
+	return nil, &NotLoadedError{edge: "tags"}
+}
+
+// ArticleTagsOrErr returns the ArticleTags value or an error if the edge
+// was not loaded in eager-loading.
+func (e ArticleEdges) ArticleTagsOrErr() ([]*ArticleTag, error) {
+	if e.loadedTypes[2] {
+		return e.ArticleTags, nil
+	}
+	return nil, &NotLoadedError{edge: "article_tags"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Article) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -71,8 +92,6 @@ func (*Article) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullTime)
 		case article.FieldID, article.FieldAuthorID:
 			values[i] = new(uuid.UUID)
-		case article.ForeignKeys[0]: // user_articles
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -136,13 +155,6 @@ func (a *Article) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				a.UpdatedAt = value.Time
 			}
-		case article.ForeignKeys[0]:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field user_articles", values[i])
-			} else if value.Valid {
-				a.user_articles = new(uuid.UUID)
-				*a.user_articles = *value.S.(*uuid.UUID)
-			}
 		default:
 			a.selectValues.Set(columns[i], values[i])
 		}
@@ -159,6 +171,16 @@ func (a *Article) Value(name string) (ent.Value, error) {
 // QueryArticleAuthor queries the "articleAuthor" edge of the Article entity.
 func (a *Article) QueryArticleAuthor() *UserQuery {
 	return NewArticleClient(a.config).QueryArticleAuthor(a)
+}
+
+// QueryTags queries the "tags" edge of the Article entity.
+func (a *Article) QueryTags() *TagQuery {
+	return NewArticleClient(a.config).QueryTags(a)
+}
+
+// QueryArticleTags queries the "article_tags" edge of the Article entity.
+func (a *Article) QueryArticleTags() *ArticleTagQuery {
+	return NewArticleClient(a.config).QueryArticleTags(a)
 }
 
 // Update returns a builder for updating this Article.

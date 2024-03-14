@@ -50,7 +50,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "article" package.
 	ArticlesInverseTable = "articles"
 	// ArticlesColumn is the table column denoting the articles relation/edge.
-	ArticlesColumn = "user_articles"
+	ArticlesColumn = "author_id"
 	// CommentsTable is the table that holds the comments relation/edge.
 	CommentsTable = "comments"
 	// CommentsInverseTable is the table name for the Comment entity.

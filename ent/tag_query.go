@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -11,6 +12,8 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/k0kishima/golang-realworld-example-app/ent/article"
+	"github.com/k0kishima/golang-realworld-example-app/ent/articletag"
 	"github.com/k0kishima/golang-realworld-example-app/ent/predicate"
 	"github.com/k0kishima/golang-realworld-example-app/ent/tag"
 )
@@ -18,10 +21,12 @@ import (
 // TagQuery is the builder for querying Tag entities.
 type TagQuery struct {
 	config
-	ctx        *QueryContext
-	order      []tag.OrderOption
-	inters     []Interceptor
-	predicates []predicate.Tag
+	ctx            *QueryContext
+	order          []tag.OrderOption
+	inters         []Interceptor
+	predicates     []predicate.Tag
+	withArticle    *ArticleQuery
+	withTagArticle *ArticleTagQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -56,6 +61,50 @@ func (tq *TagQuery) Unique(unique bool) *TagQuery {
 func (tq *TagQuery) Order(o ...tag.OrderOption) *TagQuery {
 	tq.order = append(tq.order, o...)
 	return tq
+}
+
+// QueryArticle chains the current query on the "article" edge.
+func (tq *TagQuery) QueryArticle() *ArticleQuery {
+	query := (&ArticleClient{config: tq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := tq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := tq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(tag.Table, tag.FieldID, selector),
+			sqlgraph.To(article.Table, article.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, tag.ArticleTable, tag.ArticlePrimaryKey...),
+		)
+		fromU = sqlgraph.SetNeighbors(tq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryTagArticle chains the current query on the "tag_article" edge.
+func (tq *TagQuery) QueryTagArticle() *ArticleTagQuery {
+	query := (&ArticleTagClient{config: tq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := tq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := tq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(tag.Table, tag.FieldID, selector),
+			sqlgraph.To(articletag.Table, articletag.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, tag.TagArticleTable, tag.TagArticleColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(tq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first Tag entity from the query.
@@ -245,15 +294,39 @@ func (tq *TagQuery) Clone() *TagQuery {
 		return nil
 	}
 	return &TagQuery{
-		config:     tq.config,
-		ctx:        tq.ctx.Clone(),
-		order:      append([]tag.OrderOption{}, tq.order...),
-		inters:     append([]Interceptor{}, tq.inters...),
-		predicates: append([]predicate.Tag{}, tq.predicates...),
+		config:         tq.config,
+		ctx:            tq.ctx.Clone(),
+		order:          append([]tag.OrderOption{}, tq.order...),
+		inters:         append([]Interceptor{}, tq.inters...),
+		predicates:     append([]predicate.Tag{}, tq.predicates...),
+		withArticle:    tq.withArticle.Clone(),
+		withTagArticle: tq.withTagArticle.Clone(),
 		// clone intermediate query.
 		sql:  tq.sql.Clone(),
 		path: tq.path,
 	}
+}
+
+// WithArticle tells the query-builder to eager-load the nodes that are connected to
+// the "article" edge. The optional arguments are used to configure the query builder of the edge.
+func (tq *TagQuery) WithArticle(opts ...func(*ArticleQuery)) *TagQuery {
+	query := (&ArticleClient{config: tq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	tq.withArticle = query
+	return tq
+}
+
+// WithTagArticle tells the query-builder to eager-load the nodes that are connected to
+// the "tag_article" edge. The optional arguments are used to configure the query builder of the edge.
+func (tq *TagQuery) WithTagArticle(opts ...func(*ArticleTagQuery)) *TagQuery {
+	query := (&ArticleTagClient{config: tq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	tq.withTagArticle = query
+	return tq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -332,8 +405,12 @@ func (tq *TagQuery) prepareQuery(ctx context.Context) error {
 
 func (tq *TagQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Tag, error) {
 	var (
-		nodes = []*Tag{}
-		_spec = tq.querySpec()
+		nodes       = []*Tag{}
+		_spec       = tq.querySpec()
+		loadedTypes = [2]bool{
+			tq.withArticle != nil,
+			tq.withTagArticle != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Tag).scanValues(nil, columns)
@@ -341,6 +418,7 @@ func (tq *TagQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Tag, err
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Tag{config: tq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -352,7 +430,113 @@ func (tq *TagQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Tag, err
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := tq.withArticle; query != nil {
+		if err := tq.loadArticle(ctx, query, nodes,
+			func(n *Tag) { n.Edges.Article = []*Article{} },
+			func(n *Tag, e *Article) { n.Edges.Article = append(n.Edges.Article, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := tq.withTagArticle; query != nil {
+		if err := tq.loadTagArticle(ctx, query, nodes,
+			func(n *Tag) { n.Edges.TagArticle = []*ArticleTag{} },
+			func(n *Tag, e *ArticleTag) { n.Edges.TagArticle = append(n.Edges.TagArticle, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (tq *TagQuery) loadArticle(ctx context.Context, query *ArticleQuery, nodes []*Tag, init func(*Tag), assign func(*Tag, *Article)) error {
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[uuid.UUID]*Tag)
+	nids := make(map[uuid.UUID]map[*Tag]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
+		if init != nil {
+			init(node)
+		}
+	}
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(tag.ArticleTable)
+		s.Join(joinT).On(s.C(article.FieldID), joinT.C(tag.ArticlePrimaryKey[0]))
+		s.Where(sql.InValues(joinT.C(tag.ArticlePrimaryKey[1]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(tag.ArticlePrimaryKey[1]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
+	}
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(uuid.UUID)}, values...), nil
+			}
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := *values[0].(*uuid.UUID)
+				inValue := *values[1].(*uuid.UUID)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*Tag]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
+			}
+		})
+	})
+	neighbors, err := withInterceptors[[]*Article](ctx, query, qr, query.inters)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected "article" node returned %v`, n.ID)
+		}
+		for kn := range nodes {
+			assign(kn, n)
+		}
+	}
+	return nil
+}
+func (tq *TagQuery) loadTagArticle(ctx context.Context, query *ArticleTagQuery, nodes []*Tag, init func(*Tag), assign func(*Tag, *ArticleTag)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Tag)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(articletag.FieldTagID)
+	}
+	query.Where(predicate.ArticleTag(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(tag.TagArticleColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.TagID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "tag_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
 }
 
 func (tq *TagQuery) sqlCount(ctx context.Context) (int, error) {

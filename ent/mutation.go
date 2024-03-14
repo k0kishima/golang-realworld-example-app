@@ -46,7 +46,6 @@ type ArticleMutation struct {
 	op                   Op
 	typ                  string
 	id                   *uuid.UUID
-	author_id            *uuid.UUID
 	slug                 *string
 	title                *string
 	description          *string
@@ -56,6 +55,12 @@ type ArticleMutation struct {
 	clearedFields        map[string]struct{}
 	articleAuthor        *uuid.UUID
 	clearedarticleAuthor bool
+	tags                 map[uuid.UUID]struct{}
+	removedtags          map[uuid.UUID]struct{}
+	clearedtags          bool
+	article_tags         map[uuid.UUID]struct{}
+	removedarticle_tags  map[uuid.UUID]struct{}
+	clearedarticle_tags  bool
 	done                 bool
 	oldValue             func(context.Context) (*Article, error)
 	predicates           []predicate.Article
@@ -167,12 +172,12 @@ func (m *ArticleMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 
 // SetAuthorID sets the "author_id" field.
 func (m *ArticleMutation) SetAuthorID(u uuid.UUID) {
-	m.author_id = &u
+	m.articleAuthor = &u
 }
 
 // AuthorID returns the value of the "author_id" field in the mutation.
 func (m *ArticleMutation) AuthorID() (r uuid.UUID, exists bool) {
-	v := m.author_id
+	v := m.articleAuthor
 	if v == nil {
 		return
 	}
@@ -198,7 +203,7 @@ func (m *ArticleMutation) OldAuthorID(ctx context.Context) (v uuid.UUID, err err
 
 // ResetAuthorID resets all changes to the "author_id" field.
 func (m *ArticleMutation) ResetAuthorID() {
-	m.author_id = nil
+	m.articleAuthor = nil
 }
 
 // SetSlug sets the "slug" field.
@@ -425,6 +430,7 @@ func (m *ArticleMutation) SetArticleAuthorID(id uuid.UUID) {
 // ClearArticleAuthor clears the "articleAuthor" edge to the User entity.
 func (m *ArticleMutation) ClearArticleAuthor() {
 	m.clearedarticleAuthor = true
+	m.clearedFields[article.FieldAuthorID] = struct{}{}
 }
 
 // ArticleAuthorCleared reports if the "articleAuthor" edge to the User entity was cleared.
@@ -454,6 +460,114 @@ func (m *ArticleMutation) ArticleAuthorIDs() (ids []uuid.UUID) {
 func (m *ArticleMutation) ResetArticleAuthor() {
 	m.articleAuthor = nil
 	m.clearedarticleAuthor = false
+}
+
+// AddTagIDs adds the "tags" edge to the Tag entity by ids.
+func (m *ArticleMutation) AddTagIDs(ids ...uuid.UUID) {
+	if m.tags == nil {
+		m.tags = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.tags[ids[i]] = struct{}{}
+	}
+}
+
+// ClearTags clears the "tags" edge to the Tag entity.
+func (m *ArticleMutation) ClearTags() {
+	m.clearedtags = true
+}
+
+// TagsCleared reports if the "tags" edge to the Tag entity was cleared.
+func (m *ArticleMutation) TagsCleared() bool {
+	return m.clearedtags
+}
+
+// RemoveTagIDs removes the "tags" edge to the Tag entity by IDs.
+func (m *ArticleMutation) RemoveTagIDs(ids ...uuid.UUID) {
+	if m.removedtags == nil {
+		m.removedtags = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.tags, ids[i])
+		m.removedtags[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedTags returns the removed IDs of the "tags" edge to the Tag entity.
+func (m *ArticleMutation) RemovedTagsIDs() (ids []uuid.UUID) {
+	for id := range m.removedtags {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// TagsIDs returns the "tags" edge IDs in the mutation.
+func (m *ArticleMutation) TagsIDs() (ids []uuid.UUID) {
+	for id := range m.tags {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetTags resets all changes to the "tags" edge.
+func (m *ArticleMutation) ResetTags() {
+	m.tags = nil
+	m.clearedtags = false
+	m.removedtags = nil
+}
+
+// AddArticleTagIDs adds the "article_tags" edge to the ArticleTag entity by ids.
+func (m *ArticleMutation) AddArticleTagIDs(ids ...uuid.UUID) {
+	if m.article_tags == nil {
+		m.article_tags = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.article_tags[ids[i]] = struct{}{}
+	}
+}
+
+// ClearArticleTags clears the "article_tags" edge to the ArticleTag entity.
+func (m *ArticleMutation) ClearArticleTags() {
+	m.clearedarticle_tags = true
+}
+
+// ArticleTagsCleared reports if the "article_tags" edge to the ArticleTag entity was cleared.
+func (m *ArticleMutation) ArticleTagsCleared() bool {
+	return m.clearedarticle_tags
+}
+
+// RemoveArticleTagIDs removes the "article_tags" edge to the ArticleTag entity by IDs.
+func (m *ArticleMutation) RemoveArticleTagIDs(ids ...uuid.UUID) {
+	if m.removedarticle_tags == nil {
+		m.removedarticle_tags = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.article_tags, ids[i])
+		m.removedarticle_tags[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedArticleTags returns the removed IDs of the "article_tags" edge to the ArticleTag entity.
+func (m *ArticleMutation) RemovedArticleTagsIDs() (ids []uuid.UUID) {
+	for id := range m.removedarticle_tags {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ArticleTagsIDs returns the "article_tags" edge IDs in the mutation.
+func (m *ArticleMutation) ArticleTagsIDs() (ids []uuid.UUID) {
+	for id := range m.article_tags {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetArticleTags resets all changes to the "article_tags" edge.
+func (m *ArticleMutation) ResetArticleTags() {
+	m.article_tags = nil
+	m.clearedarticle_tags = false
+	m.removedarticle_tags = nil
 }
 
 // Where appends a list predicates to the ArticleMutation builder.
@@ -491,7 +605,7 @@ func (m *ArticleMutation) Type() string {
 // AddedFields().
 func (m *ArticleMutation) Fields() []string {
 	fields := make([]string, 0, 7)
-	if m.author_id != nil {
+	if m.articleAuthor != nil {
 		fields = append(fields, article.FieldAuthorID)
 	}
 	if m.slug != nil {
@@ -691,9 +805,15 @@ func (m *ArticleMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ArticleMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 3)
 	if m.articleAuthor != nil {
 		edges = append(edges, article.EdgeArticleAuthor)
+	}
+	if m.tags != nil {
+		edges = append(edges, article.EdgeTags)
+	}
+	if m.article_tags != nil {
+		edges = append(edges, article.EdgeArticleTags)
 	}
 	return edges
 }
@@ -706,27 +826,65 @@ func (m *ArticleMutation) AddedIDs(name string) []ent.Value {
 		if id := m.articleAuthor; id != nil {
 			return []ent.Value{*id}
 		}
+	case article.EdgeTags:
+		ids := make([]ent.Value, 0, len(m.tags))
+		for id := range m.tags {
+			ids = append(ids, id)
+		}
+		return ids
+	case article.EdgeArticleTags:
+		ids := make([]ent.Value, 0, len(m.article_tags))
+		for id := range m.article_tags {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ArticleMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 3)
+	if m.removedtags != nil {
+		edges = append(edges, article.EdgeTags)
+	}
+	if m.removedarticle_tags != nil {
+		edges = append(edges, article.EdgeArticleTags)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *ArticleMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case article.EdgeTags:
+		ids := make([]ent.Value, 0, len(m.removedtags))
+		for id := range m.removedtags {
+			ids = append(ids, id)
+		}
+		return ids
+	case article.EdgeArticleTags:
+		ids := make([]ent.Value, 0, len(m.removedarticle_tags))
+		for id := range m.removedarticle_tags {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ArticleMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 3)
 	if m.clearedarticleAuthor {
 		edges = append(edges, article.EdgeArticleAuthor)
+	}
+	if m.clearedtags {
+		edges = append(edges, article.EdgeTags)
+	}
+	if m.clearedarticle_tags {
+		edges = append(edges, article.EdgeArticleTags)
 	}
 	return edges
 }
@@ -737,6 +895,10 @@ func (m *ArticleMutation) EdgeCleared(name string) bool {
 	switch name {
 	case article.EdgeArticleAuthor:
 		return m.clearedarticleAuthor
+	case article.EdgeTags:
+		return m.clearedtags
+	case article.EdgeArticleTags:
+		return m.clearedarticle_tags
 	}
 	return false
 }
@@ -759,6 +921,12 @@ func (m *ArticleMutation) ResetEdge(name string) error {
 	case article.EdgeArticleAuthor:
 		m.ResetArticleAuthor()
 		return nil
+	case article.EdgeTags:
+		m.ResetTags()
+		return nil
+	case article.EdgeArticleTags:
+		m.ResetArticleTags()
+		return nil
 	}
 	return fmt.Errorf("unknown Article edge %s", name)
 }
@@ -766,16 +934,18 @@ func (m *ArticleMutation) ResetEdge(name string) error {
 // ArticleTagMutation represents an operation that mutates the ArticleTag nodes in the graph.
 type ArticleTagMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	article_id    *uuid.UUID
-	tag_id        *uuid.UUID
-	created_at    *time.Time
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*ArticleTag, error)
-	predicates    []predicate.ArticleTag
+	op             Op
+	typ            string
+	id             *uuid.UUID
+	created_at     *time.Time
+	clearedFields  map[string]struct{}
+	article        *uuid.UUID
+	clearedarticle bool
+	tag            *uuid.UUID
+	clearedtag     bool
+	done           bool
+	oldValue       func(context.Context) (*ArticleTag, error)
+	predicates     []predicate.ArticleTag
 }
 
 var _ ent.Mutation = (*ArticleTagMutation)(nil)
@@ -884,12 +1054,12 @@ func (m *ArticleTagMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 
 // SetArticleID sets the "article_id" field.
 func (m *ArticleTagMutation) SetArticleID(u uuid.UUID) {
-	m.article_id = &u
+	m.article = &u
 }
 
 // ArticleID returns the value of the "article_id" field in the mutation.
 func (m *ArticleTagMutation) ArticleID() (r uuid.UUID, exists bool) {
-	v := m.article_id
+	v := m.article
 	if v == nil {
 		return
 	}
@@ -915,17 +1085,17 @@ func (m *ArticleTagMutation) OldArticleID(ctx context.Context) (v uuid.UUID, err
 
 // ResetArticleID resets all changes to the "article_id" field.
 func (m *ArticleTagMutation) ResetArticleID() {
-	m.article_id = nil
+	m.article = nil
 }
 
 // SetTagID sets the "tag_id" field.
 func (m *ArticleTagMutation) SetTagID(u uuid.UUID) {
-	m.tag_id = &u
+	m.tag = &u
 }
 
 // TagID returns the value of the "tag_id" field in the mutation.
 func (m *ArticleTagMutation) TagID() (r uuid.UUID, exists bool) {
-	v := m.tag_id
+	v := m.tag
 	if v == nil {
 		return
 	}
@@ -951,7 +1121,7 @@ func (m *ArticleTagMutation) OldTagID(ctx context.Context) (v uuid.UUID, err err
 
 // ResetTagID resets all changes to the "tag_id" field.
 func (m *ArticleTagMutation) ResetTagID() {
-	m.tag_id = nil
+	m.tag = nil
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -990,6 +1160,60 @@ func (m *ArticleTagMutation) ResetCreatedAt() {
 	m.created_at = nil
 }
 
+// ClearArticle clears the "article" edge to the Article entity.
+func (m *ArticleTagMutation) ClearArticle() {
+	m.clearedarticle = true
+	m.clearedFields[articletag.FieldArticleID] = struct{}{}
+}
+
+// ArticleCleared reports if the "article" edge to the Article entity was cleared.
+func (m *ArticleTagMutation) ArticleCleared() bool {
+	return m.clearedarticle
+}
+
+// ArticleIDs returns the "article" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ArticleID instead. It exists only for internal usage by the builders.
+func (m *ArticleTagMutation) ArticleIDs() (ids []uuid.UUID) {
+	if id := m.article; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetArticle resets all changes to the "article" edge.
+func (m *ArticleTagMutation) ResetArticle() {
+	m.article = nil
+	m.clearedarticle = false
+}
+
+// ClearTag clears the "tag" edge to the Tag entity.
+func (m *ArticleTagMutation) ClearTag() {
+	m.clearedtag = true
+	m.clearedFields[articletag.FieldTagID] = struct{}{}
+}
+
+// TagCleared reports if the "tag" edge to the Tag entity was cleared.
+func (m *ArticleTagMutation) TagCleared() bool {
+	return m.clearedtag
+}
+
+// TagIDs returns the "tag" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// TagID instead. It exists only for internal usage by the builders.
+func (m *ArticleTagMutation) TagIDs() (ids []uuid.UUID) {
+	if id := m.tag; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetTag resets all changes to the "tag" edge.
+func (m *ArticleTagMutation) ResetTag() {
+	m.tag = nil
+	m.clearedtag = false
+}
+
 // Where appends a list predicates to the ArticleTagMutation builder.
 func (m *ArticleTagMutation) Where(ps ...predicate.ArticleTag) {
 	m.predicates = append(m.predicates, ps...)
@@ -1025,10 +1249,10 @@ func (m *ArticleTagMutation) Type() string {
 // AddedFields().
 func (m *ArticleTagMutation) Fields() []string {
 	fields := make([]string, 0, 3)
-	if m.article_id != nil {
+	if m.article != nil {
 		fields = append(fields, articletag.FieldArticleID)
 	}
-	if m.tag_id != nil {
+	if m.tag != nil {
 		fields = append(fields, articletag.FieldTagID)
 	}
 	if m.created_at != nil {
@@ -1157,19 +1381,35 @@ func (m *ArticleTagMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ArticleTagMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 2)
+	if m.article != nil {
+		edges = append(edges, articletag.EdgeArticle)
+	}
+	if m.tag != nil {
+		edges = append(edges, articletag.EdgeTag)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *ArticleTagMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case articletag.EdgeArticle:
+		if id := m.article; id != nil {
+			return []ent.Value{*id}
+		}
+	case articletag.EdgeTag:
+		if id := m.tag; id != nil {
+			return []ent.Value{*id}
+		}
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ArticleTagMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 2)
 	return edges
 }
 
@@ -1181,25 +1421,53 @@ func (m *ArticleTagMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ArticleTagMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 2)
+	if m.clearedarticle {
+		edges = append(edges, articletag.EdgeArticle)
+	}
+	if m.clearedtag {
+		edges = append(edges, articletag.EdgeTag)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *ArticleTagMutation) EdgeCleared(name string) bool {
+	switch name {
+	case articletag.EdgeArticle:
+		return m.clearedarticle
+	case articletag.EdgeTag:
+		return m.clearedtag
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *ArticleTagMutation) ClearEdge(name string) error {
+	switch name {
+	case articletag.EdgeArticle:
+		m.ClearArticle()
+		return nil
+	case articletag.EdgeTag:
+		m.ClearTag()
+		return nil
+	}
 	return fmt.Errorf("unknown ArticleTag unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *ArticleTagMutation) ResetEdge(name string) error {
+	switch name {
+	case articletag.EdgeArticle:
+		m.ResetArticle()
+		return nil
+	case articletag.EdgeTag:
+		m.ResetTag()
+		return nil
+	}
 	return fmt.Errorf("unknown ArticleTag edge %s", name)
 }
 
@@ -1821,15 +2089,21 @@ func (m *CommentMutation) ResetEdge(name string) error {
 // TagMutation represents an operation that mutates the Tag nodes in the graph.
 type TagMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	description   *string
-	created_at    *time.Time
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*Tag, error)
-	predicates    []predicate.Tag
+	op                 Op
+	typ                string
+	id                 *uuid.UUID
+	description        *string
+	created_at         *time.Time
+	clearedFields      map[string]struct{}
+	article            map[uuid.UUID]struct{}
+	removedarticle     map[uuid.UUID]struct{}
+	clearedarticle     bool
+	tag_article        map[uuid.UUID]struct{}
+	removedtag_article map[uuid.UUID]struct{}
+	clearedtag_article bool
+	done               bool
+	oldValue           func(context.Context) (*Tag, error)
+	predicates         []predicate.Tag
 }
 
 var _ ent.Mutation = (*TagMutation)(nil)
@@ -2008,6 +2282,114 @@ func (m *TagMutation) ResetCreatedAt() {
 	m.created_at = nil
 }
 
+// AddArticleIDs adds the "article" edge to the Article entity by ids.
+func (m *TagMutation) AddArticleIDs(ids ...uuid.UUID) {
+	if m.article == nil {
+		m.article = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.article[ids[i]] = struct{}{}
+	}
+}
+
+// ClearArticle clears the "article" edge to the Article entity.
+func (m *TagMutation) ClearArticle() {
+	m.clearedarticle = true
+}
+
+// ArticleCleared reports if the "article" edge to the Article entity was cleared.
+func (m *TagMutation) ArticleCleared() bool {
+	return m.clearedarticle
+}
+
+// RemoveArticleIDs removes the "article" edge to the Article entity by IDs.
+func (m *TagMutation) RemoveArticleIDs(ids ...uuid.UUID) {
+	if m.removedarticle == nil {
+		m.removedarticle = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.article, ids[i])
+		m.removedarticle[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedArticle returns the removed IDs of the "article" edge to the Article entity.
+func (m *TagMutation) RemovedArticleIDs() (ids []uuid.UUID) {
+	for id := range m.removedarticle {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ArticleIDs returns the "article" edge IDs in the mutation.
+func (m *TagMutation) ArticleIDs() (ids []uuid.UUID) {
+	for id := range m.article {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetArticle resets all changes to the "article" edge.
+func (m *TagMutation) ResetArticle() {
+	m.article = nil
+	m.clearedarticle = false
+	m.removedarticle = nil
+}
+
+// AddTagArticleIDs adds the "tag_article" edge to the ArticleTag entity by ids.
+func (m *TagMutation) AddTagArticleIDs(ids ...uuid.UUID) {
+	if m.tag_article == nil {
+		m.tag_article = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.tag_article[ids[i]] = struct{}{}
+	}
+}
+
+// ClearTagArticle clears the "tag_article" edge to the ArticleTag entity.
+func (m *TagMutation) ClearTagArticle() {
+	m.clearedtag_article = true
+}
+
+// TagArticleCleared reports if the "tag_article" edge to the ArticleTag entity was cleared.
+func (m *TagMutation) TagArticleCleared() bool {
+	return m.clearedtag_article
+}
+
+// RemoveTagArticleIDs removes the "tag_article" edge to the ArticleTag entity by IDs.
+func (m *TagMutation) RemoveTagArticleIDs(ids ...uuid.UUID) {
+	if m.removedtag_article == nil {
+		m.removedtag_article = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.tag_article, ids[i])
+		m.removedtag_article[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedTagArticle returns the removed IDs of the "tag_article" edge to the ArticleTag entity.
+func (m *TagMutation) RemovedTagArticleIDs() (ids []uuid.UUID) {
+	for id := range m.removedtag_article {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// TagArticleIDs returns the "tag_article" edge IDs in the mutation.
+func (m *TagMutation) TagArticleIDs() (ids []uuid.UUID) {
+	for id := range m.tag_article {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetTagArticle resets all changes to the "tag_article" edge.
+func (m *TagMutation) ResetTagArticle() {
+	m.tag_article = nil
+	m.clearedtag_article = false
+	m.removedtag_article = nil
+}
+
 // Where appends a list predicates to the TagMutation builder.
 func (m *TagMutation) Where(ps ...predicate.Tag) {
 	m.predicates = append(m.predicates, ps...)
@@ -2158,49 +2540,111 @@ func (m *TagMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *TagMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 2)
+	if m.article != nil {
+		edges = append(edges, tag.EdgeArticle)
+	}
+	if m.tag_article != nil {
+		edges = append(edges, tag.EdgeTagArticle)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *TagMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case tag.EdgeArticle:
+		ids := make([]ent.Value, 0, len(m.article))
+		for id := range m.article {
+			ids = append(ids, id)
+		}
+		return ids
+	case tag.EdgeTagArticle:
+		ids := make([]ent.Value, 0, len(m.tag_article))
+		for id := range m.tag_article {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *TagMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 2)
+	if m.removedarticle != nil {
+		edges = append(edges, tag.EdgeArticle)
+	}
+	if m.removedtag_article != nil {
+		edges = append(edges, tag.EdgeTagArticle)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *TagMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case tag.EdgeArticle:
+		ids := make([]ent.Value, 0, len(m.removedarticle))
+		for id := range m.removedarticle {
+			ids = append(ids, id)
+		}
+		return ids
+	case tag.EdgeTagArticle:
+		ids := make([]ent.Value, 0, len(m.removedtag_article))
+		for id := range m.removedtag_article {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *TagMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 2)
+	if m.clearedarticle {
+		edges = append(edges, tag.EdgeArticle)
+	}
+	if m.clearedtag_article {
+		edges = append(edges, tag.EdgeTagArticle)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *TagMutation) EdgeCleared(name string) bool {
+	switch name {
+	case tag.EdgeArticle:
+		return m.clearedarticle
+	case tag.EdgeTagArticle:
+		return m.clearedtag_article
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *TagMutation) ClearEdge(name string) error {
+	switch name {
+	}
 	return fmt.Errorf("unknown Tag unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *TagMutation) ResetEdge(name string) error {
+	switch name {
+	case tag.EdgeArticle:
+		m.ResetArticle()
+		return nil
+	case tag.EdgeTagArticle:
+		m.ResetTagArticle()
+		return nil
+	}
 	return fmt.Errorf("unknown Tag edge %s", name)
 }
 

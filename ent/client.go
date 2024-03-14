@@ -378,6 +378,38 @@ func (c *ArticleClient) QueryArticleAuthor(a *Article) *UserQuery {
 	return query
 }
 
+// QueryTags queries the tags edge of a Article.
+func (c *ArticleClient) QueryTags(a *Article) *TagQuery {
+	query := (&TagClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := a.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(article.Table, article.FieldID, id),
+			sqlgraph.To(tag.Table, tag.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, article.TagsTable, article.TagsPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryArticleTags queries the article_tags edge of a Article.
+func (c *ArticleClient) QueryArticleTags(a *Article) *ArticleTagQuery {
+	query := (&ArticleTagClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := a.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(article.Table, article.FieldID, id),
+			sqlgraph.To(articletag.Table, articletag.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, article.ArticleTagsTable, article.ArticleTagsColumn),
+		)
+		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *ArticleClient) Hooks() []Hook {
 	return c.hooks.Article
@@ -509,6 +541,38 @@ func (c *ArticleTagClient) GetX(ctx context.Context, id uuid.UUID) *ArticleTag {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryArticle queries the article edge of a ArticleTag.
+func (c *ArticleTagClient) QueryArticle(at *ArticleTag) *ArticleQuery {
+	query := (&ArticleClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := at.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(articletag.Table, articletag.FieldID, id),
+			sqlgraph.To(article.Table, article.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, articletag.ArticleTable, articletag.ArticleColumn),
+		)
+		fromV = sqlgraph.Neighbors(at.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryTag queries the tag edge of a ArticleTag.
+func (c *ArticleTagClient) QueryTag(at *ArticleTag) *TagQuery {
+	query := (&TagClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := at.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(articletag.Table, articletag.FieldID, id),
+			sqlgraph.To(tag.Table, tag.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, articletag.TagTable, articletag.TagColumn),
+		)
+		fromV = sqlgraph.Neighbors(at.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
@@ -791,6 +855,38 @@ func (c *TagClient) GetX(ctx context.Context, id uuid.UUID) *Tag {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryArticle queries the article edge of a Tag.
+func (c *TagClient) QueryArticle(t *Tag) *ArticleQuery {
+	query := (&ArticleClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := t.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(tag.Table, tag.FieldID, id),
+			sqlgraph.To(article.Table, article.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, tag.ArticleTable, tag.ArticlePrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryTagArticle queries the tag_article edge of a Tag.
+func (c *TagClient) QueryTagArticle(t *Tag) *ArticleTagQuery {
+	query := (&ArticleTagClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := t.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(tag.Table, tag.FieldID, id),
+			sqlgraph.To(articletag.Table, articletag.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, tag.TagArticleTable, tag.TagArticleColumn),
+		)
+		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
