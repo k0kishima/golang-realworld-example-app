@@ -7,9 +7,33 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent"
+	"github.com/k0kishima/golang-realworld-example-app/ent/article"
 	"github.com/k0kishima/golang-realworld-example-app/ent/tag"
 	"github.com/k0kishima/golang-realworld-example-app/validators"
 )
+
+func GetArticle(client *ent.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		slug := c.Param("slug")
+		article, err := client.Article.Query().Where(article.SlugEQ(slug)).Only(c.Request.Context())
+		if err != nil {
+			if ent.IsNotFound(err) {
+				c.JSON(http.StatusNotFound, gin.H{"message": "Article not found"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
+			}
+			return
+		}
+
+		tagList, err := article.QueryTags().Select(tag.FieldDescription).Strings(c.Request.Context())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching tags"})
+			return
+		}
+
+		c.JSON(http.StatusOK, articleResponse(article, tagList))
+	}
+}
 
 func CreateArticle(client *ent.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -92,14 +116,7 @@ func CreateArticle(client *ent.Client) gin.HandlerFunc {
 			respondWithError(c, http.StatusInternalServerError, "Something went wrong")
 		}
 
-		c.JSON(http.StatusCreated, gin.H{
-			"article": gin.H{
-				"title":       article.Title,
-				"description": article.Description,
-				"body":        article.Body,
-				"tagList":     req.Article.TagList,
-			},
-		})
+		c.JSON(http.StatusCreated, articleResponse(article, req.Article.TagList))
 	}
 }
 
@@ -119,4 +136,16 @@ func findOrCreateTagIDsByNames(client *ent.Client, tagNames []string) ([]uuid.UU
 		tagIDs = append(tagIDs, tag.ID)
 	}
 	return tagIDs, nil
+}
+
+func articleResponse(article *ent.Article, tagList []string) gin.H {
+	return gin.H{
+		"article": gin.H{
+			"slug":        article.Slug,
+			"title":       article.Title,
+			"description": article.Description,
+			"body":        article.Body,
+			"tagList":     tagList,
+		},
+	}
 }
