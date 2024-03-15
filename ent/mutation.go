@@ -2662,7 +2662,8 @@ type UserMutation struct {
 	created_at      *time.Time
 	updated_at      *time.Time
 	clearedFields   map[string]struct{}
-	follows         *uuid.UUID
+	follows         map[uuid.UUID]struct{}
+	removedfollows  map[uuid.UUID]struct{}
 	clearedfollows  bool
 	articles        map[uuid.UUID]struct{}
 	removedarticles map[uuid.UUID]struct{}
@@ -3031,9 +3032,14 @@ func (m *UserMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
-// SetFollowsID sets the "follows" edge to the UserFollow entity by id.
-func (m *UserMutation) SetFollowsID(id uuid.UUID) {
-	m.follows = &id
+// AddFollowIDs adds the "follows" edge to the UserFollow entity by ids.
+func (m *UserMutation) AddFollowIDs(ids ...uuid.UUID) {
+	if m.follows == nil {
+		m.follows = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.follows[ids[i]] = struct{}{}
+	}
 }
 
 // ClearFollows clears the "follows" edge to the UserFollow entity.
@@ -3046,20 +3052,29 @@ func (m *UserMutation) FollowsCleared() bool {
 	return m.clearedfollows
 }
 
-// FollowsID returns the "follows" edge ID in the mutation.
-func (m *UserMutation) FollowsID() (id uuid.UUID, exists bool) {
-	if m.follows != nil {
-		return *m.follows, true
+// RemoveFollowIDs removes the "follows" edge to the UserFollow entity by IDs.
+func (m *UserMutation) RemoveFollowIDs(ids ...uuid.UUID) {
+	if m.removedfollows == nil {
+		m.removedfollows = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.follows, ids[i])
+		m.removedfollows[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedFollows returns the removed IDs of the "follows" edge to the UserFollow entity.
+func (m *UserMutation) RemovedFollowsIDs() (ids []uuid.UUID) {
+	for id := range m.removedfollows {
+		ids = append(ids, id)
 	}
 	return
 }
 
 // FollowsIDs returns the "follows" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// FollowsID instead. It exists only for internal usage by the builders.
 func (m *UserMutation) FollowsIDs() (ids []uuid.UUID) {
-	if id := m.follows; id != nil {
-		ids = append(ids, *id)
+	for id := range m.follows {
+		ids = append(ids, id)
 	}
 	return
 }
@@ -3068,6 +3083,7 @@ func (m *UserMutation) FollowsIDs() (ids []uuid.UUID) {
 func (m *UserMutation) ResetFollows() {
 	m.follows = nil
 	m.clearedfollows = false
+	m.removedfollows = nil
 }
 
 // AddArticleIDs adds the "articles" edge to the Article entity by ids.
@@ -3431,9 +3447,11 @@ func (m *UserMutation) AddedEdges() []string {
 func (m *UserMutation) AddedIDs(name string) []ent.Value {
 	switch name {
 	case user.EdgeFollows:
-		if id := m.follows; id != nil {
-			return []ent.Value{*id}
+		ids := make([]ent.Value, 0, len(m.follows))
+		for id := range m.follows {
+			ids = append(ids, id)
 		}
+		return ids
 	case user.EdgeArticles:
 		ids := make([]ent.Value, 0, len(m.articles))
 		for id := range m.articles {
@@ -3453,6 +3471,9 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 3)
+	if m.removedfollows != nil {
+		edges = append(edges, user.EdgeFollows)
+	}
 	if m.removedarticles != nil {
 		edges = append(edges, user.EdgeArticles)
 	}
@@ -3466,6 +3487,12 @@ func (m *UserMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
+	case user.EdgeFollows:
+		ids := make([]ent.Value, 0, len(m.removedfollows))
+		for id := range m.removedfollows {
+			ids = append(ids, id)
+		}
+		return ids
 	case user.EdgeArticles:
 		ids := make([]ent.Value, 0, len(m.removedarticles))
 		for id := range m.removedarticles {
@@ -3515,9 +3542,6 @@ func (m *UserMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *UserMutation) ClearEdge(name string) error {
 	switch name {
-	case user.EdgeFollows:
-		m.ClearFollows()
-		return nil
 	}
 	return fmt.Errorf("unknown User unique edge %s", name)
 }

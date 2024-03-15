@@ -35,8 +35,7 @@ func (User) Indexes() []ent.Index {
 
 func (User) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("follows", UserFollow.Type).
-			Unique(),
+		edge.To("follows", UserFollow.Type),
 		edge.To("articles", Article.Type),
 		edge.To("comments", Comment.Type),
 	}

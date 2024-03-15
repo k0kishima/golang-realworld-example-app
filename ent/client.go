@@ -1030,7 +1030,7 @@ func (c *UserClient) QueryFollows(u *User) *UserFollowQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(userfollow.Table, userfollow.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, user.FollowsTable, user.FollowsColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.FollowsTable, user.FollowsColumn),
 		)
 		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
 		return fromV, nil
@@ -1344,7 +1344,7 @@ func (c *UserFollowClient) QueryFollower(uf *UserFollow) *UserQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(userfollow.Table, userfollow.FieldID, id),
 			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, userfollow.FollowerTable, userfollow.FollowerColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, userfollow.FollowerTable, userfollow.FollowerColumn),
 		)
 		fromV = sqlgraph.Neighbors(uf.driver.Dialect(), step)
 		return fromV, nil

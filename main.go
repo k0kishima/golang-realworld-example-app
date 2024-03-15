@@ -40,6 +40,7 @@ func main() {
 			api.POST("/profiles/:username/follow", handlers.FollowUser(client))
 			api.DELETE("/profiles/:username/follow", handlers.UnfollowUser(client))
 			api.POST("/articles", handlers.CreateArticle(client))
+			api.GET("/articles/feed", handlers.GetFeed(client))
 		}
 	}
 

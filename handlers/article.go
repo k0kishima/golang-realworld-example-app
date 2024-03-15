@@ -9,6 +9,8 @@ import (
 	"github.com/k0kishima/golang-realworld-example-app/ent"
 	"github.com/k0kishima/golang-realworld-example-app/ent/article"
 	"github.com/k0kishima/golang-realworld-example-app/ent/tag"
+	"github.com/k0kishima/golang-realworld-example-app/ent/user"
+	"github.com/k0kishima/golang-realworld-example-app/ent/userfollow"
 	"github.com/k0kishima/golang-realworld-example-app/validators"
 )
 
@@ -117,6 +119,49 @@ func CreateArticle(client *ent.Client) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusCreated, articleResponse(article, req.Article.TagList))
+	}
+}
+
+func GetFeed(client *ent.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		currentUser, _ := c.Get("currentUser")
+		currentUserEntity, ok := currentUser.(*ent.User)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "error asserting user type"})
+			return
+		}
+
+		articles, err := client.Article.Query().
+			Where(
+				article.HasArticleAuthorWith(
+					user.HasFollowsWith(
+						userfollow.FolloweeIDEQ(currentUserEntity.ID),
+					),
+				),
+			).
+			Order(ent.Desc(article.FieldCreatedAt)).
+			All(c.Request.Context())
+
+		if err != nil && !ent.IsNotFound(err) {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "error fetching feed"})
+			return
+		}
+
+		articlesResponse := make([]gin.H, 0)
+		for _, article := range articles {
+			tagList, err := article.QueryTags().Select(tag.FieldDescription).Strings(c.Request.Context())
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "error fetching tags"})
+				return
+			}
+
+			articlesResponse = append(articlesResponse, articleResponse(article, tagList))
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"articles":      articlesResponse,
+			"articlesCount": len(articlesResponse),
+		})
 	}
 }
 

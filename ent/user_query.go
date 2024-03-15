@@ -79,7 +79,7 @@ func (uq *UserQuery) QueryFollows() *UserFollowQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(user.Table, user.FieldID, selector),
 			sqlgraph.To(userfollow.Table, userfollow.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, user.FollowsTable, user.FollowsColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.FollowsTable, user.FollowsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
 		return fromU, nil
@@ -468,8 +468,9 @@ func (uq *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 		return nodes, nil
 	}
 	if query := uq.withFollows; query != nil {
-		if err := uq.loadFollows(ctx, query, nodes, nil,
-			func(n *User, e *UserFollow) { n.Edges.Follows = e }); err != nil {
+		if err := uq.loadFollows(ctx, query, nodes,
+			func(n *User) { n.Edges.Follows = []*UserFollow{} },
+			func(n *User, e *UserFollow) { n.Edges.Follows = append(n.Edges.Follows, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -496,6 +497,9 @@ func (uq *UserQuery) loadFollows(ctx context.Context, query *UserFollowQuery, no
 	for i := range nodes {
 		fks = append(fks, nodes[i].ID)
 		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
 	}
 	if len(query.ctx.Fields) > 0 {
 		query.ctx.AppendFieldOnce(userfollow.FieldFollowerID)

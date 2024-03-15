@@ -108,7 +108,7 @@ func newFollowerStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(FollowerInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2O, true, FollowerTable, FollowerColumn),
+		sqlgraph.Edge(sqlgraph.M2O, true, FollowerTable, FollowerColumn),
 	)
 }
 func newFolloweeStep() *sqlgraph.Step {
