@@ -136,8 +136,8 @@ func ListArticles(client *ent.Client) gin.HandlerFunc {
 				"description":    article.Description,
 				"body":           article.Body,
 				"tagList":        tagList,
-				"createdAt":      article.CreatedAt,
-				"updatedAt":      article.UpdatedAt,
+				"createdAt":      formatTimeForAPI(article.CreatedAt),
+				"updatedAt":      formatTimeForAPI(article.UpdatedAt),
 				"favorited":      false, // TODO: Need to be updated based on current user
 				"favoritesCount": favoritesCount,
 				"author": gin.H{
@@ -690,6 +690,8 @@ func articleResponse(article *ent.Article, tagList []string, favorited bool, fav
 			"tagList":        tagList,
 			"favorited":      favorited,
 			"favoritesCount": favoritesCount,
+			"createdAt":      formatTimeForAPI(article.CreatedAt),
+			"updatedAt":      formatTimeForAPI(article.UpdatedAt),
 		},
 	}
 }
