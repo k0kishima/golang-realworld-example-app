@@ -76,13 +76,7 @@ func RegisterUser(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusCreated, gin.H{"user": gin.H{
-			"username": u.Username,
-			"email":    u.Email,
-			"bio":      u.Bio,
-			"image":    u.Image,
-			"token":    token,
-		}})
+		c.JSON(http.StatusCreated, userResponse(u, token))
 	}
 }
 
@@ -117,13 +111,7 @@ func Login(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"user": gin.H{
-			"username": u.Username,
-			"email":    u.Email,
-			"bio":      u.Bio,
-			"image":    u.Image,
-			"token":    token,
-		}})
+		c.JSON(http.StatusCreated, userResponse(u, token))
 	}
 }
 
@@ -138,13 +126,7 @@ func GetCurrentUser(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"user": gin.H{
-			"username": u.Username,
-			"email":    u.Email,
-			"bio":      u.Bio,
-			"image":    u.Image,
-			"token":    token,
-		}})
+		c.JSON(http.StatusCreated, userResponse(u, token))
 	}
 }
 
@@ -184,13 +166,7 @@ func UpdateUser(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"user": gin.H{
-			"username": u.Username,
-			"email":    u.Email,
-			"bio":      u.Bio,
-			"image":    u.Image,
-			"token":    token,
-		}})
+		c.JSON(http.StatusCreated, userResponse(u, token))
 	}
 }
 
@@ -220,5 +196,17 @@ func handleUserUpdateError(c *gin.Context, err error) {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": errors})
 	} else {
 		respondWithError(c, http.StatusInternalServerError, "Error updating user")
+	}
+}
+
+func userResponse(u *ent.User, token string) gin.H {
+	return gin.H{
+		"user": gin.H{
+			"username": u.Username,
+			"email":    u.Email,
+			"bio":      u.Bio,
+			"image":    u.Image,
+			"token":    token,
+		},
 	}
 }
