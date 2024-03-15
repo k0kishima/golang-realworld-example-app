@@ -38,39 +38,34 @@ func GetArticle(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		favorited := false
-		favoritesCount := 0
-
-		token := c.GetHeader("Authorization")
-		if token != "" {
-			claims, err := auth.ParseToken(token)
-			if err == nil {
-				currentUser, err := client.User.Query().Where(user.EmailEQ(claims.Email)).Only(c.Request.Context())
-				if err == nil {
-					favorited, favoritesCount, err = getArticleFavoritedAndCount(client, article, currentUser)
-					if err != nil {
-						c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching favorites information"})
-						return
-					}
-				}
-			}
+		currentUser, err := getCurrentUser(client, c)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid token"})
+			return
 		}
 
-		c.JSON(http.StatusOK, articleResponse(article, tagList, favorited, favoritesCount))
+		favorited, favoritesCount, err := getArticleFavoritedAndCount(client, article, currentUser)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching favorites information"})
+			return
+		}
+
+		response, err := articleResponse(client, article, tagList, favorited, favoritesCount, currentUser)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error creating article response"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"article": response})
 	}
 }
 
 func ListArticles(client *ent.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		query := client.Article.Query()
+		query := client.Article.Query().WithArticleAuthor().WithTags()
 
 		if tagName := c.Query("tag"); tagName != "" {
-			tagEntity, err := client.Tag.Query().Where(tag.DescriptionEQ(tagName)).Only(c.Request.Context())
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching tag"})
-				return
-			}
-			query.Where(article.HasTagsWith(tag.IDEQ(tagEntity.ID)))
+			query.Where(article.HasTagsWith(tag.DescriptionEQ(tagName)))
 		}
 
 		if author := c.Query("author"); author != "" {
@@ -84,69 +79,45 @@ func ListArticles(client *ent.Client) gin.HandlerFunc {
 		limitStr := c.DefaultQuery("limit", "20")
 		offsetStr := c.DefaultQuery("offset", "0")
 
-		limit, err := strconv.ParseInt(limitStr, 10, 64)
+		limit, err := strconv.Atoi(limitStr)
 		if err != nil {
-			respondWithError(c, http.StatusInternalServerError, "Failed to parse limit")
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid limit value"})
 			return
 		}
 
-		offset, err := strconv.ParseInt(offsetStr, 10, 64)
+		offset, err := strconv.Atoi(offsetStr)
 		if err != nil {
-			respondWithError(c, http.StatusInternalServerError, "Failed to parse offset")
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid offset value"})
 			return
 		}
 
-		query.Limit(int(limit)).Offset(int(offset))
-
-		articles, err := query.All(c.Request.Context())
+		articles, err := query.Limit(limit).Offset(offset).All(c.Request.Context())
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching articles"})
 			return
 		}
 
+		currentUser, _ := getCurrentUser(client, c)
+
 		var articlesResponse []gin.H
 		for _, article := range articles {
-			tags, err := article.QueryTags().All(c.Request.Context())
-			if err != nil {
+			tagList := make([]string, len(article.Edges.Tags))
+			for i, tag := range article.Edges.Tags {
+				tagList[i] = tag.Description
+			}
 
-				c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching tags"})
+			favorited, favoritesCount, err := getArticleFavoritedAndCount(client, article, currentUser)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching favorites information"})
 				return
 			}
 
-			var tagList []string
-			for _, t := range tags {
-				tagList = append(tagList, t.Description)
-			}
-
-			author, err := article.QueryArticleAuthor().Only(c.Request.Context())
+			response, err := articleResponse(client, article, tagList, favorited, favoritesCount, currentUser)
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching author"})
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Error creating article response"})
 				return
 			}
-
-			favoritesCount, err := article.QueryFavoritedUsers().Count(c.Request.Context())
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching favorites count"})
-				return
-			}
-
-			articlesResponse = append(articlesResponse, gin.H{
-				"slug":           article.Slug,
-				"title":          article.Title,
-				"description":    article.Description,
-				"body":           article.Body,
-				"tagList":        tagList,
-				"createdAt":      formatTimeForAPI(article.CreatedAt),
-				"updatedAt":      formatTimeForAPI(article.UpdatedAt),
-				"favorited":      false, // TODO: Need to be updated based on current user
-				"favoritesCount": favoritesCount,
-				"author": gin.H{
-					"username":  author.Username,
-					"bio":       author.Bio,
-					"image":     author.Image,
-					"following": false, // TODO: Need to be updated based on current user
-				},
-			})
+			articlesResponse = append(articlesResponse, response)
 		}
 
 		c.JSON(http.StatusOK, gin.H{
@@ -237,7 +208,15 @@ func CreateArticle(client *ent.Client) gin.HandlerFunc {
 			respondWithError(c, http.StatusInternalServerError, "Something went wrong")
 		}
 
-		c.JSON(http.StatusCreated, articleResponse(article, req.Article.TagList, false, 0))
+		favorited := false
+		favoritesCount := 0
+		response, err := articleResponse(client, article, req.Article.TagList, favorited, favoritesCount, currentUserEntity)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error creating article response"})
+			return
+		}
+
+		c.JSON(http.StatusCreated, gin.H{"article": response})
 	}
 }
 
@@ -304,7 +283,13 @@ func UpdateArticle(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, articleResponse(updatedArticle, tagList, favorited, favoritesCount))
+		response, err := articleResponse(client, updatedArticle, tagList, favorited, favoritesCount, currentUserEntity)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error creating article response"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"article": response})
 	}
 }
 
@@ -388,29 +373,34 @@ func GetFeed(client *ent.Client) gin.HandlerFunc {
 				),
 			).
 			Order(ent.Desc(article.FieldCreatedAt)).
+			WithTags().
 			All(c.Request.Context())
 
-		if err != nil && !ent.IsNotFound(err) {
+		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "error fetching feed"})
 			return
 		}
 
-		// OPTIMIZE: Need to query tunings
 		articlesResponse := make([]gin.H, 0)
 		for _, article := range articles {
-			tagList, err := article.QueryTags().Select(tag.FieldDescription).Strings(c.Request.Context())
+			tagList := make([]string, len(article.Edges.Tags))
+			for i, tag := range article.Edges.Tags {
+				tagList[i] = tag.Description
+			}
+
+			favoritesCount, err := article.QueryFavoritedUsers().Count(c.Request.Context())
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"message": "error fetching tags"})
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "error fetching favorites count"})
 				return
 			}
 
-			favorited, favoritesCount, err := getArticleFavoritedAndCount(client, article, currentUserEntity)
+			// TODO: need to set favaorited
+			response, err := articleResponse(client, article, tagList, false, favoritesCount, currentUserEntity)
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"message": "error fetching favorites"})
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Error creating article response"})
 				return
 			}
-
-			articlesResponse = append(articlesResponse, articleResponse(article, tagList, favorited, favoritesCount))
+			articlesResponse = append(articlesResponse, response)
 		}
 
 		c.JSON(http.StatusOK, gin.H{
@@ -454,15 +444,25 @@ func FavoriteArticle(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		favoritesCount, err := client.UserFavorite.Query().
-			Where(userfavorite.ArticleIDEQ(article.ID)).
-			Count(c.Request.Context())
+		tagList, err := article.QueryTags().Select(tag.FieldDescription).Strings(c.Request.Context())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching tags"})
+			return
+		}
+
+		favoritesCount, err := article.QueryFavoritedUsers().Count(c.Request.Context())
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching favorites count"})
 			return
 		}
 
-		c.JSON(http.StatusOK, articleResponse(article, getTagList(article), true, favoritesCount))
+		response, err := articleResponse(client, article, tagList, true, favoritesCount, currentUserEntity)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error creating article response"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"article": response})
 	}
 }
 
@@ -499,15 +499,25 @@ func UnfavoriteArticle(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		favoritesCount, err := client.UserFavorite.Query().
-			Where(userfavorite.ArticleIDEQ(article.ID)).
-			Count(c.Request.Context())
+		tagList, err := article.QueryTags().Select(tag.FieldDescription).Strings(c.Request.Context())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching tags"})
+			return
+		}
+
+		favoritesCount, err := article.QueryFavoritedUsers().Count(c.Request.Context())
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching favorites count"})
 			return
 		}
 
-		c.JSON(http.StatusOK, articleResponse(article, getTagList(article), false, favoritesCount))
+		response, err := articleResponse(client, article, tagList, false, favoritesCount, currentUserEntity)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error creating article response"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"article": response})
 	}
 }
 
@@ -680,20 +690,49 @@ func findOrCreateTagIDsByNames(client *ent.Client, tagNames []string) ([]uuid.UU
 	return tagIDs, nil
 }
 
-func articleResponse(article *ent.Article, tagList []string, favorited bool, favoritesCount int) gin.H {
-	return gin.H{
-		"article": gin.H{
-			"slug":           article.Slug,
-			"title":          article.Title,
-			"description":    article.Description,
-			"body":           article.Body,
-			"tagList":        tagList,
-			"favorited":      favorited,
-			"favoritesCount": favoritesCount,
-			"createdAt":      formatTimeForAPI(article.CreatedAt),
-			"updatedAt":      formatTimeForAPI(article.UpdatedAt),
-		},
+func articleResponse(client *ent.Client, article *ent.Article, tagList []string, favorited bool, favoritesCount int, currentUser *ent.User) (gin.H, error) {
+	author, err := article.QueryArticleAuthor().Only(context.Background())
+	if err != nil {
+		return nil, err
 	}
+
+	authorResponse, err := authorResponse(client, author, currentUser)
+	if err != nil {
+		return nil, err
+	}
+
+	return gin.H{
+		"slug":           article.Slug,
+		"title":          article.Title,
+		"description":    article.Description,
+		"body":           article.Body,
+		"tagList":        tagList,
+		"favorited":      favorited,
+		"favoritesCount": favoritesCount,
+		"createdAt":      formatTimeForAPI(article.CreatedAt),
+		"updatedAt":      formatTimeForAPI(article.UpdatedAt),
+		"author":         authorResponse,
+	}, nil
+}
+
+func authorResponse(client *ent.Client, author *ent.User, currentUser *ent.User) (gin.H, error) {
+	following := false
+	if currentUser != nil {
+		isFollowing, err := client.UserFollow.Query().
+			Where(userfollow.FollowerIDEQ(currentUser.ID), userfollow.FolloweeIDEQ(author.ID)).
+			Exist(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		following = isFollowing
+	}
+
+	return gin.H{
+		"username":  author.Username,
+		"bio":       author.Bio,
+		"image":     author.Image,
+		"following": following,
+	}, nil
 }
 
 func getTagList(article *ent.Article) []string {
@@ -736,4 +775,18 @@ func getArticleFavoritedAndCount(client *ent.Client, article *ent.Article, curre
 	}
 
 	return favorited, favoritesCount, nil
+}
+
+func getCurrentUser(client *ent.Client, c *gin.Context) (*ent.User, error) {
+	token := c.GetHeader("Authorization")
+	if token == "" {
+		return nil, nil
+	}
+
+	claims, err := auth.ParseToken(token)
+	if err != nil {
+		return nil, err
+	}
+
+	return client.User.Query().Where(user.EmailEQ(claims.Email)).Only(c.Request.Context())
 }
