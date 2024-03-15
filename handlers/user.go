@@ -111,7 +111,7 @@ func Login(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusCreated, userResponse(u, token))
+		c.JSON(http.StatusOK, userResponse(u, token))
 	}
 }
 
@@ -126,7 +126,7 @@ func GetCurrentUser(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusCreated, userResponse(u, token))
+		c.JSON(http.StatusOK, userResponse(u, token))
 	}
 }
 
@@ -166,7 +166,7 @@ func UpdateUser(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusCreated, userResponse(u, token))
+		c.JSON(http.StatusOK, userResponse(u, token))
 	}
 }
 
