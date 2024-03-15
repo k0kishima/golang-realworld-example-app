@@ -1070,6 +1070,22 @@ func (c *UserClient) QueryComments(u *User) *CommentQuery {
 	return query
 }
 
+// QueryFavorites queries the favorites edge of a User.
+func (c *UserClient) QueryFavorites(u *User) *UserFavoriteQuery {
+	query := (&UserFavoriteClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := u.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(userfavorite.Table, userfavorite.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.FavoritesTable, user.FavoritesColumn),
+		)
+		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *UserClient) Hooks() []Hook {
 	return c.hooks.User
@@ -1201,6 +1217,38 @@ func (c *UserFavoriteClient) GetX(ctx context.Context, id uuid.UUID) *UserFavori
 		panic(err)
 	}
 	return obj
+}
+
+// QueryUser queries the user edge of a UserFavorite.
+func (c *UserFavoriteClient) QueryUser(uf *UserFavorite) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := uf.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(userfavorite.Table, userfavorite.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, userfavorite.UserTable, userfavorite.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(uf.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryArticle queries the article edge of a UserFavorite.
+func (c *UserFavoriteClient) QueryArticle(uf *UserFavorite) *ArticleQuery {
+	query := (&ArticleClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := uf.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(userfavorite.Table, userfavorite.FieldID, id),
+			sqlgraph.To(article.Table, article.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, userfavorite.ArticleTable, userfavorite.ArticleColumn),
+		)
+		fromV = sqlgraph.Neighbors(uf.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.

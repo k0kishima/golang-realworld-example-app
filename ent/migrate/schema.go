@@ -137,20 +137,34 @@ var (
 	// UserFavoritesColumns holds the columns for the "user_favorites" table.
 	UserFavoritesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
 		{Name: "user_id", Type: field.TypeUUID},
 		{Name: "article_id", Type: field.TypeUUID},
-		{Name: "created_at", Type: field.TypeTime},
 	}
 	// UserFavoritesTable holds the schema information for the "user_favorites" table.
 	UserFavoritesTable = &schema.Table{
 		Name:       "user_favorites",
 		Columns:    UserFavoritesColumns,
 		PrimaryKey: []*schema.Column{UserFavoritesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "user_favorites_users_favorites",
+				Columns:    []*schema.Column{UserFavoritesColumns[2]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "user_favorites_articles_article",
+				Columns:    []*schema.Column{UserFavoritesColumns[3]},
+				RefColumns: []*schema.Column{ArticlesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "userfavorite_user_id_article_id",
 				Unique:  true,
-				Columns: []*schema.Column{UserFavoritesColumns[1], UserFavoritesColumns[2]},
+				Columns: []*schema.Column{UserFavoritesColumns[2], UserFavoritesColumns[3]},
 			},
 		},
 	}
@@ -205,6 +219,8 @@ func init() {
 	ArticleTagsTable.ForeignKeys[0].RefTable = ArticlesTable
 	ArticleTagsTable.ForeignKeys[1].RefTable = TagsTable
 	CommentsTable.ForeignKeys[0].RefTable = UsersTable
+	UserFavoritesTable.ForeignKeys[0].RefTable = UsersTable
+	UserFavoritesTable.ForeignKeys[1].RefTable = ArticlesTable
 	UserFollowsTable.ForeignKeys[0].RefTable = UsersTable
 	UserFollowsTable.ForeignKeys[1].RefTable = UsersTable
 }

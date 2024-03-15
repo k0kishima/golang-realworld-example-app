@@ -11,6 +11,8 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/k0kishima/golang-realworld-example-app/ent/article"
+	"github.com/k0kishima/golang-realworld-example-app/ent/user"
 	"github.com/k0kishima/golang-realworld-example-app/ent/userfavorite"
 )
 
@@ -59,6 +61,16 @@ func (ufc *UserFavoriteCreate) SetNillableID(u *uuid.UUID) *UserFavoriteCreate {
 		ufc.SetID(*u)
 	}
 	return ufc
+}
+
+// SetUser sets the "user" edge to the User entity.
+func (ufc *UserFavoriteCreate) SetUser(u *User) *UserFavoriteCreate {
+	return ufc.SetUserID(u.ID)
+}
+
+// SetArticle sets the "article" edge to the Article entity.
+func (ufc *UserFavoriteCreate) SetArticle(a *Article) *UserFavoriteCreate {
+	return ufc.SetArticleID(a.ID)
 }
 
 // Mutation returns the UserFavoriteMutation object of the builder.
@@ -117,6 +129,12 @@ func (ufc *UserFavoriteCreate) check() error {
 	if _, ok := ufc.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "UserFavorite.created_at"`)}
 	}
+	if _, ok := ufc.mutation.UserID(); !ok {
+		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "UserFavorite.user"`)}
+	}
+	if _, ok := ufc.mutation.ArticleID(); !ok {
+		return &ValidationError{Name: "article", err: errors.New(`ent: missing required edge "UserFavorite.article"`)}
+	}
 	return nil
 }
 
@@ -152,17 +170,43 @@ func (ufc *UserFavoriteCreate) createSpec() (*UserFavorite, *sqlgraph.CreateSpec
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := ufc.mutation.UserID(); ok {
-		_spec.SetField(userfavorite.FieldUserID, field.TypeUUID, value)
-		_node.UserID = value
-	}
-	if value, ok := ufc.mutation.ArticleID(); ok {
-		_spec.SetField(userfavorite.FieldArticleID, field.TypeUUID, value)
-		_node.ArticleID = value
-	}
 	if value, ok := ufc.mutation.CreatedAt(); ok {
 		_spec.SetField(userfavorite.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
+	}
+	if nodes := ufc.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   userfavorite.UserTable,
+			Columns: []string{userfavorite.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.UserID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := ufc.mutation.ArticleIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   userfavorite.ArticleTable,
+			Columns: []string{userfavorite.ArticleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(article.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.ArticleID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

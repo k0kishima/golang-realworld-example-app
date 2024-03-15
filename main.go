@@ -42,6 +42,7 @@ func main() {
 			api.POST("/articles", handlers.CreateArticle(client))
 			api.PUT("/articles/:slug", handlers.UpdateArticle(client))
 			api.DELETE("/articles/:slug", handlers.DeleteArticle(client))
+			api.POST("/articles/:slug/favorite", handlers.FavoriteArticle(client))
 			api.GET("/articles/feed", handlers.GetFeed(client))
 		}
 	}

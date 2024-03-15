@@ -10,6 +10,8 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
+	"github.com/k0kishima/golang-realworld-example-app/ent/article"
+	"github.com/k0kishima/golang-realworld-example-app/ent/user"
 	"github.com/k0kishima/golang-realworld-example-app/ent/userfavorite"
 )
 
@@ -23,8 +25,44 @@ type UserFavorite struct {
 	// ArticleID holds the value of the "article_id" field.
 	ArticleID uuid.UUID `json:"article_id,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
-	CreatedAt    time.Time `json:"created_at,omitempty"`
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the UserFavoriteQuery when eager-loading is set.
+	Edges        UserFavoriteEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// UserFavoriteEdges holds the relations/edges for other nodes in the graph.
+type UserFavoriteEdges struct {
+	// User holds the value of the user edge.
+	User *User `json:"user,omitempty"`
+	// Article holds the value of the article edge.
+	Article *Article `json:"article,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [2]bool
+}
+
+// UserOrErr returns the User value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e UserFavoriteEdges) UserOrErr() (*User, error) {
+	if e.User != nil {
+		return e.User, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: user.Label}
+	}
+	return nil, &NotLoadedError{edge: "user"}
+}
+
+// ArticleOrErr returns the Article value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e UserFavoriteEdges) ArticleOrErr() (*Article, error) {
+	if e.Article != nil {
+		return e.Article, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: article.Label}
+	}
+	return nil, &NotLoadedError{edge: "article"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -86,6 +124,16 @@ func (uf *UserFavorite) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (uf *UserFavorite) Value(name string) (ent.Value, error) {
 	return uf.selectValues.Get(name)
+}
+
+// QueryUser queries the "user" edge of the UserFavorite entity.
+func (uf *UserFavorite) QueryUser() *UserQuery {
+	return NewUserFavoriteClient(uf.config).QueryUser(uf)
+}
+
+// QueryArticle queries the "article" edge of the UserFavorite entity.
+func (uf *UserFavorite) QueryArticle() *ArticleQuery {
+	return NewUserFavoriteClient(uf.config).QueryArticle(uf)
 }
 
 // Update returns a builder for updating this UserFavorite.

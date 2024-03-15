@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/k0kishima/golang-realworld-example-app/auth"
 	"github.com/k0kishima/golang-realworld-example-app/ent"
 	"github.com/k0kishima/golang-realworld-example-app/ent/article"
 	"github.com/k0kishima/golang-realworld-example-app/ent/articletag"
@@ -35,7 +36,41 @@ func GetArticle(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, articleResponse(article, tagList))
+		favorited := false
+		token := c.GetHeader("Authorization")
+		if token != "" {
+			claims, err := auth.ParseToken(token)
+			if err == nil {
+				currentUser, err := client.User.Query().Where(user.EmailEQ(claims.Email)).Only(c.Request.Context())
+				if err == nil {
+					favorited, err = isArticleFavoritedByUser(client, article, currentUser)
+					if err != nil {
+						c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching favorites"})
+						return
+					}
+				}
+			}
+		}
+		favoritesCount, err := client.UserFavorite.Query().
+			Where(userfavorite.ArticleIDEQ(article.ID)).
+			Count(c.Request.Context())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching favorites count"})
+			return
+		}
+
+		response := gin.H{
+			"article": gin.H{
+				"slug":           article.Slug,
+				"title":          article.Title,
+				"description":    article.Description,
+				"body":           article.Body,
+				"tagList":        tagList,
+				"favorited":      favorited,
+				"favoritesCount": favoritesCount,
+			},
+		}
+		c.JSON(http.StatusOK, response)
 	}
 }
 
@@ -291,6 +326,62 @@ func GetFeed(client *ent.Client) gin.HandlerFunc {
 	}
 }
 
+func FavoriteArticle(client *ent.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		slug := c.Param("slug")
+
+		currentUser, _ := c.Get("currentUser")
+		currentUserEntity, ok := currentUser.(*ent.User)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "error asserting user type"})
+			return
+		}
+
+		article, err := client.Article.Query().Where(article.SlugEQ(slug)).Only(c.Request.Context())
+		if err != nil {
+			if ent.IsNotFound(err) {
+				c.JSON(http.StatusNotFound, gin.H{"message": "Article not found"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
+			}
+			return
+		}
+
+		_, err = client.UserFavorite.Create().
+			SetUser(currentUserEntity).
+			SetArticle(article).
+			Save(c.Request.Context())
+		if err != nil {
+			if ent.IsConstraintError(err) {
+				c.JSON(http.StatusConflict, gin.H{"message": "Article is already favorited"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Error favoriting article"})
+			}
+			return
+		}
+
+		favoritesCount, err := client.UserFavorite.Query().
+			Where(userfavorite.ArticleIDEQ(article.ID)).
+			Count(c.Request.Context())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching favorites count"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"article": gin.H{
+				"slug":           article.Slug,
+				"title":          article.Title,
+				"description":    article.Description,
+				"body":           article.Body,
+				"tagList":        getTagList(article),
+				"favorited":      true,
+				"favoritesCount": favoritesCount,
+			},
+		})
+	}
+}
+
 func findOrCreateTagIDsByNames(client *ent.Client, tagNames []string) ([]uuid.UUID, error) {
 	var tagIDs []uuid.UUID
 	for _, tagName := range tagNames {
@@ -319,4 +410,26 @@ func articleResponse(article *ent.Article, tagList []string) gin.H {
 			"tagList":     tagList,
 		},
 	}
+}
+
+func getTagList(article *ent.Article) []string {
+	tags, err := article.QueryTags().All(context.Background())
+	if err != nil {
+		return nil
+	}
+	tagList := make([]string, len(tags))
+	for i, tag := range tags {
+		tagList[i] = tag.Description
+	}
+	return tagList
+}
+
+func isArticleFavoritedByUser(client *ent.Client, article *ent.Article, user *ent.User) (bool, error) {
+	count, err := client.UserFavorite.Query().
+		Where(userfavorite.And(
+			userfavorite.UserIDEQ(user.ID),
+			userfavorite.ArticleIDEQ(article.ID),
+		)).
+		Count(context.Background())
+	return count > 0, err
 }
