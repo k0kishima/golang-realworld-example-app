@@ -8,8 +8,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent"
 	"github.com/k0kishima/golang-realworld-example-app/ent/article"
+	"github.com/k0kishima/golang-realworld-example-app/ent/articletag"
 	"github.com/k0kishima/golang-realworld-example-app/ent/tag"
 	"github.com/k0kishima/golang-realworld-example-app/ent/user"
+	"github.com/k0kishima/golang-realworld-example-app/ent/userfavorite"
 	"github.com/k0kishima/golang-realworld-example-app/ent/userfollow"
 	"github.com/k0kishima/golang-realworld-example-app/validators"
 )
@@ -181,6 +183,68 @@ func UpdateArticle(client *ent.Client) gin.HandlerFunc {
 				"tagList":     tagList,
 			},
 		})
+	}
+}
+
+func DeleteArticle(client *ent.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		slug := c.Param("slug")
+		article, err := client.Article.Query().Where(article.SlugEQ(slug)).WithArticleAuthor().Only(c.Request.Context())
+		if err != nil {
+			if ent.IsNotFound(err) {
+				c.JSON(http.StatusNotFound, gin.H{"message": "Article not found"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
+			}
+			return
+		}
+
+		currentUser, _ := c.Get("currentUser")
+		currentUserEntity, ok := currentUser.(*ent.User)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "error asserting user type"})
+			return
+		}
+
+		if article.Edges.ArticleAuthor.ID != currentUserEntity.ID {
+			c.JSON(http.StatusForbidden, gin.H{"message": "You are not authorized to delete this article"})
+			return
+		}
+
+		tx, err := client.Tx(c.Request.Context())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error starting transaction"})
+			return
+		}
+
+		_, err = tx.ArticleTag.Delete().Where(articletag.ArticleIDEQ(article.ID)).Exec(c.Request.Context())
+		if err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error deleting article tags"})
+			return
+		}
+
+		_, err = tx.UserFavorite.Delete().Where(userfavorite.ArticleIDEQ(article.ID)).Exec(c.Request.Context())
+		if err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error deleting article favorites"})
+			return
+		}
+
+		err = tx.Article.DeleteOne(article).Exec(c.Request.Context())
+		if err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error deleting article"})
+			return
+		}
+
+		err = tx.Commit()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error committing transaction"})
+			return
+		}
+
+		c.Status(http.StatusNoContent)
 	}
 }
 
