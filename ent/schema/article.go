@@ -43,5 +43,6 @@ func (Article) Edges() []ent.Edge {
 			Immutable(),
 		edge.To("tags", Tag.Type).
 			Through("article_tags", ArticleTag.Type),
+		edge.To("comments", Comment.Type),
 	}
 }

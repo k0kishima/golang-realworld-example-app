@@ -605,7 +605,9 @@ func (uq *UserQuery) loadComments(ctx context.Context, query *CommentQuery, node
 			init(nodes[i])
 		}
 	}
-	query.withFKs = true
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(comment.FieldAuthorID)
+	}
 	query.Where(predicate.Comment(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(user.CommentsColumn), fks...))
 	}))
@@ -614,13 +616,10 @@ func (uq *UserQuery) loadComments(ctx context.Context, query *CommentQuery, node
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.user_comments
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "user_comments" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		fk := n.AuthorID
+		node, ok := nodeids[fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "user_comments" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "author_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}

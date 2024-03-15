@@ -58,6 +58,9 @@ type ArticleMutation struct {
 	tags                 map[uuid.UUID]struct{}
 	removedtags          map[uuid.UUID]struct{}
 	clearedtags          bool
+	comments             map[uuid.UUID]struct{}
+	removedcomments      map[uuid.UUID]struct{}
+	clearedcomments      bool
 	article_tags         map[uuid.UUID]struct{}
 	removedarticle_tags  map[uuid.UUID]struct{}
 	clearedarticle_tags  bool
@@ -516,6 +519,60 @@ func (m *ArticleMutation) ResetTags() {
 	m.removedtags = nil
 }
 
+// AddCommentIDs adds the "comments" edge to the Comment entity by ids.
+func (m *ArticleMutation) AddCommentIDs(ids ...uuid.UUID) {
+	if m.comments == nil {
+		m.comments = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.comments[ids[i]] = struct{}{}
+	}
+}
+
+// ClearComments clears the "comments" edge to the Comment entity.
+func (m *ArticleMutation) ClearComments() {
+	m.clearedcomments = true
+}
+
+// CommentsCleared reports if the "comments" edge to the Comment entity was cleared.
+func (m *ArticleMutation) CommentsCleared() bool {
+	return m.clearedcomments
+}
+
+// RemoveCommentIDs removes the "comments" edge to the Comment entity by IDs.
+func (m *ArticleMutation) RemoveCommentIDs(ids ...uuid.UUID) {
+	if m.removedcomments == nil {
+		m.removedcomments = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.comments, ids[i])
+		m.removedcomments[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedComments returns the removed IDs of the "comments" edge to the Comment entity.
+func (m *ArticleMutation) RemovedCommentsIDs() (ids []uuid.UUID) {
+	for id := range m.removedcomments {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// CommentsIDs returns the "comments" edge IDs in the mutation.
+func (m *ArticleMutation) CommentsIDs() (ids []uuid.UUID) {
+	for id := range m.comments {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetComments resets all changes to the "comments" edge.
+func (m *ArticleMutation) ResetComments() {
+	m.comments = nil
+	m.clearedcomments = false
+	m.removedcomments = nil
+}
+
 // AddArticleTagIDs adds the "article_tags" edge to the ArticleTag entity by ids.
 func (m *ArticleMutation) AddArticleTagIDs(ids ...uuid.UUID) {
 	if m.article_tags == nil {
@@ -805,12 +862,15 @@ func (m *ArticleMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ArticleMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.articleAuthor != nil {
 		edges = append(edges, article.EdgeArticleAuthor)
 	}
 	if m.tags != nil {
 		edges = append(edges, article.EdgeTags)
+	}
+	if m.comments != nil {
+		edges = append(edges, article.EdgeComments)
 	}
 	if m.article_tags != nil {
 		edges = append(edges, article.EdgeArticleTags)
@@ -832,6 +892,12 @@ func (m *ArticleMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case article.EdgeComments:
+		ids := make([]ent.Value, 0, len(m.comments))
+		for id := range m.comments {
+			ids = append(ids, id)
+		}
+		return ids
 	case article.EdgeArticleTags:
 		ids := make([]ent.Value, 0, len(m.article_tags))
 		for id := range m.article_tags {
@@ -844,9 +910,12 @@ func (m *ArticleMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ArticleMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.removedtags != nil {
 		edges = append(edges, article.EdgeTags)
+	}
+	if m.removedcomments != nil {
+		edges = append(edges, article.EdgeComments)
 	}
 	if m.removedarticle_tags != nil {
 		edges = append(edges, article.EdgeArticleTags)
@@ -864,6 +933,12 @@ func (m *ArticleMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case article.EdgeComments:
+		ids := make([]ent.Value, 0, len(m.removedcomments))
+		for id := range m.removedcomments {
+			ids = append(ids, id)
+		}
+		return ids
 	case article.EdgeArticleTags:
 		ids := make([]ent.Value, 0, len(m.removedarticle_tags))
 		for id := range m.removedarticle_tags {
@@ -876,12 +951,15 @@ func (m *ArticleMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ArticleMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.clearedarticleAuthor {
 		edges = append(edges, article.EdgeArticleAuthor)
 	}
 	if m.clearedtags {
 		edges = append(edges, article.EdgeTags)
+	}
+	if m.clearedcomments {
+		edges = append(edges, article.EdgeComments)
 	}
 	if m.clearedarticle_tags {
 		edges = append(edges, article.EdgeArticleTags)
@@ -897,6 +975,8 @@ func (m *ArticleMutation) EdgeCleared(name string) bool {
 		return m.clearedarticleAuthor
 	case article.EdgeTags:
 		return m.clearedtags
+	case article.EdgeComments:
+		return m.clearedcomments
 	case article.EdgeArticleTags:
 		return m.clearedarticle_tags
 	}
@@ -923,6 +1003,9 @@ func (m *ArticleMutation) ResetEdge(name string) error {
 		return nil
 	case article.EdgeTags:
 		m.ResetTags()
+		return nil
+	case article.EdgeComments:
+		m.ResetComments()
 		return nil
 	case article.EdgeArticleTags:
 		m.ResetArticleTags()
@@ -1477,14 +1560,14 @@ type CommentMutation struct {
 	op                   Op
 	typ                  string
 	id                   *uuid.UUID
-	author_id            *uuid.UUID
-	article_id           *uuid.UUID
 	body                 *string
 	created_at           *time.Time
 	updated_at           *time.Time
 	clearedFields        map[string]struct{}
 	commentAuthor        *uuid.UUID
 	clearedcommentAuthor bool
+	article              *uuid.UUID
+	clearedarticle       bool
 	done                 bool
 	oldValue             func(context.Context) (*Comment, error)
 	predicates           []predicate.Comment
@@ -1596,12 +1679,12 @@ func (m *CommentMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 
 // SetAuthorID sets the "author_id" field.
 func (m *CommentMutation) SetAuthorID(u uuid.UUID) {
-	m.author_id = &u
+	m.commentAuthor = &u
 }
 
 // AuthorID returns the value of the "author_id" field in the mutation.
 func (m *CommentMutation) AuthorID() (r uuid.UUID, exists bool) {
-	v := m.author_id
+	v := m.commentAuthor
 	if v == nil {
 		return
 	}
@@ -1627,17 +1710,17 @@ func (m *CommentMutation) OldAuthorID(ctx context.Context) (v uuid.UUID, err err
 
 // ResetAuthorID resets all changes to the "author_id" field.
 func (m *CommentMutation) ResetAuthorID() {
-	m.author_id = nil
+	m.commentAuthor = nil
 }
 
 // SetArticleID sets the "article_id" field.
 func (m *CommentMutation) SetArticleID(u uuid.UUID) {
-	m.article_id = &u
+	m.article = &u
 }
 
 // ArticleID returns the value of the "article_id" field in the mutation.
 func (m *CommentMutation) ArticleID() (r uuid.UUID, exists bool) {
-	v := m.article_id
+	v := m.article
 	if v == nil {
 		return
 	}
@@ -1663,7 +1746,7 @@ func (m *CommentMutation) OldArticleID(ctx context.Context) (v uuid.UUID, err er
 
 // ResetArticleID resets all changes to the "article_id" field.
 func (m *CommentMutation) ResetArticleID() {
-	m.article_id = nil
+	m.article = nil
 }
 
 // SetBody sets the "body" field.
@@ -1782,6 +1865,7 @@ func (m *CommentMutation) SetCommentAuthorID(id uuid.UUID) {
 // ClearCommentAuthor clears the "commentAuthor" edge to the User entity.
 func (m *CommentMutation) ClearCommentAuthor() {
 	m.clearedcommentAuthor = true
+	m.clearedFields[comment.FieldAuthorID] = struct{}{}
 }
 
 // CommentAuthorCleared reports if the "commentAuthor" edge to the User entity was cleared.
@@ -1811,6 +1895,33 @@ func (m *CommentMutation) CommentAuthorIDs() (ids []uuid.UUID) {
 func (m *CommentMutation) ResetCommentAuthor() {
 	m.commentAuthor = nil
 	m.clearedcommentAuthor = false
+}
+
+// ClearArticle clears the "article" edge to the Article entity.
+func (m *CommentMutation) ClearArticle() {
+	m.clearedarticle = true
+	m.clearedFields[comment.FieldArticleID] = struct{}{}
+}
+
+// ArticleCleared reports if the "article" edge to the Article entity was cleared.
+func (m *CommentMutation) ArticleCleared() bool {
+	return m.clearedarticle
+}
+
+// ArticleIDs returns the "article" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ArticleID instead. It exists only for internal usage by the builders.
+func (m *CommentMutation) ArticleIDs() (ids []uuid.UUID) {
+	if id := m.article; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetArticle resets all changes to the "article" edge.
+func (m *CommentMutation) ResetArticle() {
+	m.article = nil
+	m.clearedarticle = false
 }
 
 // Where appends a list predicates to the CommentMutation builder.
@@ -1848,10 +1959,10 @@ func (m *CommentMutation) Type() string {
 // AddedFields().
 func (m *CommentMutation) Fields() []string {
 	fields := make([]string, 0, 5)
-	if m.author_id != nil {
+	if m.commentAuthor != nil {
 		fields = append(fields, comment.FieldAuthorID)
 	}
-	if m.article_id != nil {
+	if m.article != nil {
 		fields = append(fields, comment.FieldArticleID)
 	}
 	if m.body != nil {
@@ -2014,9 +2125,12 @@ func (m *CommentMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *CommentMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.commentAuthor != nil {
 		edges = append(edges, comment.EdgeCommentAuthor)
+	}
+	if m.article != nil {
+		edges = append(edges, comment.EdgeArticle)
 	}
 	return edges
 }
@@ -2029,13 +2143,17 @@ func (m *CommentMutation) AddedIDs(name string) []ent.Value {
 		if id := m.commentAuthor; id != nil {
 			return []ent.Value{*id}
 		}
+	case comment.EdgeArticle:
+		if id := m.article; id != nil {
+			return []ent.Value{*id}
+		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *CommentMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	return edges
 }
 
@@ -2047,9 +2165,12 @@ func (m *CommentMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *CommentMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.clearedcommentAuthor {
 		edges = append(edges, comment.EdgeCommentAuthor)
+	}
+	if m.clearedarticle {
+		edges = append(edges, comment.EdgeArticle)
 	}
 	return edges
 }
@@ -2060,6 +2181,8 @@ func (m *CommentMutation) EdgeCleared(name string) bool {
 	switch name {
 	case comment.EdgeCommentAuthor:
 		return m.clearedcommentAuthor
+	case comment.EdgeArticle:
+		return m.clearedarticle
 	}
 	return false
 }
@@ -2071,6 +2194,9 @@ func (m *CommentMutation) ClearEdge(name string) error {
 	case comment.EdgeCommentAuthor:
 		m.ClearCommentAuthor()
 		return nil
+	case comment.EdgeArticle:
+		m.ClearArticle()
+		return nil
 	}
 	return fmt.Errorf("unknown Comment unique edge %s", name)
 }
@@ -2081,6 +2207,9 @@ func (m *CommentMutation) ResetEdge(name string) error {
 	switch name {
 	case comment.EdgeCommentAuthor:
 		m.ResetCommentAuthor()
+		return nil
+	case comment.EdgeArticle:
+		m.ResetArticle()
 		return nil
 	}
 	return fmt.Errorf("unknown Comment edge %s", name)

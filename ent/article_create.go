@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/article"
 	"github.com/k0kishima/golang-realworld-example-app/ent/articletag"
+	"github.com/k0kishima/golang-realworld-example-app/ent/comment"
 	"github.com/k0kishima/golang-realworld-example-app/ent/tag"
 	"github.com/k0kishima/golang-realworld-example-app/ent/user"
 )
@@ -120,6 +121,21 @@ func (ac *ArticleCreate) AddTags(t ...*Tag) *ArticleCreate {
 		ids[i] = t[i].ID
 	}
 	return ac.AddTagIDs(ids...)
+}
+
+// AddCommentIDs adds the "comments" edge to the Comment entity by IDs.
+func (ac *ArticleCreate) AddCommentIDs(ids ...uuid.UUID) *ArticleCreate {
+	ac.mutation.AddCommentIDs(ids...)
+	return ac
+}
+
+// AddComments adds the "comments" edges to the Comment entity.
+func (ac *ArticleCreate) AddComments(c ...*Comment) *ArticleCreate {
+	ids := make([]uuid.UUID, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return ac.AddCommentIDs(ids...)
 }
 
 // AddArticleTagIDs adds the "article_tags" edge to the ArticleTag entity by IDs.
@@ -328,6 +344,22 @@ func (ac *ArticleCreate) createSpec() (*Article, *sqlgraph.CreateSpec) {
 		edge.Target.Fields = specE.Fields
 		if specE.ID.Value != nil {
 			edge.Target.Fields = append(edge.Target.Fields, specE.ID)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := ac.mutation.CommentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   article.CommentsTable,
+			Columns: []string{article.CommentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(comment.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}

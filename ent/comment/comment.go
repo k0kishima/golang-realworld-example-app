@@ -27,6 +27,8 @@ const (
 	FieldUpdatedAt = "updated_at"
 	// EdgeCommentAuthor holds the string denoting the commentauthor edge name in mutations.
 	EdgeCommentAuthor = "commentAuthor"
+	// EdgeArticle holds the string denoting the article edge name in mutations.
+	EdgeArticle = "article"
 	// Table holds the table name of the comment in the database.
 	Table = "comments"
 	// CommentAuthorTable is the table that holds the commentAuthor relation/edge.
@@ -35,7 +37,14 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "user" package.
 	CommentAuthorInverseTable = "users"
 	// CommentAuthorColumn is the table column denoting the commentAuthor relation/edge.
-	CommentAuthorColumn = "user_comments"
+	CommentAuthorColumn = "author_id"
+	// ArticleTable is the table that holds the article relation/edge.
+	ArticleTable = "comments"
+	// ArticleInverseTable is the table name for the Article entity.
+	// It exists in this package in order to avoid circular dependency with the "article" package.
+	ArticleInverseTable = "articles"
+	// ArticleColumn is the table column denoting the article relation/edge.
+	ArticleColumn = "article_id"
 )
 
 // Columns holds all SQL columns for comment fields.
@@ -48,21 +57,10 @@ var Columns = []string{
 	FieldUpdatedAt,
 }
 
-// ForeignKeys holds the SQL foreign-keys that are owned by the "comments"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"user_comments",
-}
-
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
-			return true
-		}
-	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -121,10 +119,24 @@ func ByCommentAuthorField(field string, opts ...sql.OrderTermOption) OrderOption
 		sqlgraph.OrderByNeighborTerms(s, newCommentAuthorStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByArticleField orders the results by article field.
+func ByArticleField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newArticleStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newCommentAuthorStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(CommentAuthorInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, CommentAuthorTable, CommentAuthorColumn),
+	)
+}
+func newArticleStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ArticleInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, ArticleTable, ArticleColumn),
 	)
 }

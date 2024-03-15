@@ -45,11 +45,13 @@ type ArticleEdges struct {
 	ArticleAuthor *User `json:"articleAuthor,omitempty"`
 	// Tags holds the value of the tags edge.
 	Tags []*Tag `json:"tags,omitempty"`
+	// Comments holds the value of the comments edge.
+	Comments []*Comment `json:"comments,omitempty"`
 	// ArticleTags holds the value of the article_tags edge.
 	ArticleTags []*ArticleTag `json:"article_tags,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 }
 
 // ArticleAuthorOrErr returns the ArticleAuthor value or an error if the edge
@@ -72,10 +74,19 @@ func (e ArticleEdges) TagsOrErr() ([]*Tag, error) {
 	return nil, &NotLoadedError{edge: "tags"}
 }
 
+// CommentsOrErr returns the Comments value or an error if the edge
+// was not loaded in eager-loading.
+func (e ArticleEdges) CommentsOrErr() ([]*Comment, error) {
+	if e.loadedTypes[2] {
+		return e.Comments, nil
+	}
+	return nil, &NotLoadedError{edge: "comments"}
+}
+
 // ArticleTagsOrErr returns the ArticleTags value or an error if the edge
 // was not loaded in eager-loading.
 func (e ArticleEdges) ArticleTagsOrErr() ([]*ArticleTag, error) {
-	if e.loadedTypes[2] {
+	if e.loadedTypes[3] {
 		return e.ArticleTags, nil
 	}
 	return nil, &NotLoadedError{edge: "article_tags"}
@@ -176,6 +187,11 @@ func (a *Article) QueryArticleAuthor() *UserQuery {
 // QueryTags queries the "tags" edge of the Article entity.
 func (a *Article) QueryTags() *TagQuery {
 	return NewArticleClient(a.config).QueryTags(a)
+}
+
+// QueryComments queries the "comments" edge of the Article entity.
+func (a *Article) QueryComments() *CommentQuery {
+	return NewArticleClient(a.config).QueryComments(a)
 }
 
 // QueryArticleTags queries the "article_tags" edge of the Article entity.

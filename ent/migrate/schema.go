@@ -77,12 +77,11 @@ var (
 	// CommentsColumns holds the columns for the "comments" table.
 	CommentsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "author_id", Type: field.TypeUUID},
-		{Name: "article_id", Type: field.TypeUUID},
 		{Name: "body", Type: field.TypeString, Size: 4096},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "user_comments", Type: field.TypeUUID},
+		{Name: "article_id", Type: field.TypeUUID},
+		{Name: "author_id", Type: field.TypeUUID},
 	}
 	// CommentsTable holds the schema information for the "comments" table.
 	CommentsTable = &schema.Table{
@@ -91,8 +90,14 @@ var (
 		PrimaryKey: []*schema.Column{CommentsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
+				Symbol:     "comments_articles_comments",
+				Columns:    []*schema.Column{CommentsColumns[4]},
+				RefColumns: []*schema.Column{ArticlesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
 				Symbol:     "comments_users_comments",
-				Columns:    []*schema.Column{CommentsColumns[6]},
+				Columns:    []*schema.Column{CommentsColumns[5]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -218,7 +223,8 @@ func init() {
 	ArticlesTable.ForeignKeys[0].RefTable = UsersTable
 	ArticleTagsTable.ForeignKeys[0].RefTable = ArticlesTable
 	ArticleTagsTable.ForeignKeys[1].RefTable = TagsTable
-	CommentsTable.ForeignKeys[0].RefTable = UsersTable
+	CommentsTable.ForeignKeys[0].RefTable = ArticlesTable
+	CommentsTable.ForeignKeys[1].RefTable = UsersTable
 	UserFavoritesTable.ForeignKeys[0].RefTable = UsersTable
 	UserFavoritesTable.ForeignKeys[1].RefTable = ArticlesTable
 	UserFollowsTable.ForeignKeys[0].RefTable = UsersTable
