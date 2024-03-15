@@ -37,40 +37,24 @@ func GetArticle(client *ent.Client) gin.HandlerFunc {
 		}
 
 		favorited := false
+		favoritesCount := 0
+
 		token := c.GetHeader("Authorization")
 		if token != "" {
 			claims, err := auth.ParseToken(token)
 			if err == nil {
 				currentUser, err := client.User.Query().Where(user.EmailEQ(claims.Email)).Only(c.Request.Context())
 				if err == nil {
-					favorited, err = isArticleFavoritedByUser(client, article, currentUser)
+					favorited, favoritesCount, err = getArticleFavoritedAndCount(client, article, currentUser)
 					if err != nil {
-						c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching favorites"})
+						c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching favorites information"})
 						return
 					}
 				}
 			}
 		}
-		favoritesCount, err := client.UserFavorite.Query().
-			Where(userfavorite.ArticleIDEQ(article.ID)).
-			Count(c.Request.Context())
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching favorites count"})
-			return
-		}
 
-		response := gin.H{
-			"article": gin.H{
-				"slug":           article.Slug,
-				"title":          article.Title,
-				"description":    article.Description,
-				"body":           article.Body,
-				"tagList":        tagList,
-				"favorited":      favorited,
-				"favoritesCount": favoritesCount,
-			},
-		}
-		c.JSON(http.StatusOK, response)
+		c.JSON(http.StatusOK, articleResponse(article, tagList, favorited, favoritesCount))
 	}
 }
 
@@ -155,7 +139,7 @@ func CreateArticle(client *ent.Client) gin.HandlerFunc {
 			respondWithError(c, http.StatusInternalServerError, "Something went wrong")
 		}
 
-		c.JSON(http.StatusCreated, articleResponse(article, req.Article.TagList))
+		c.JSON(http.StatusCreated, articleResponse(article, req.Article.TagList, false, 0))
 	}
 }
 
@@ -209,15 +193,20 @@ func UpdateArticle(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"article": gin.H{
-				"slug":        updatedArticle.Slug,
-				"title":       updatedArticle.Title,
-				"description": updatedArticle.Description,
-				"body":        updatedArticle.Body,
-				"tagList":     tagList,
-			},
-		})
+		currentUser, _ := c.Get("currentUser")
+		currentUserEntity, ok := currentUser.(*ent.User)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "error asserting user type"})
+			return
+		}
+
+		favorited, favoritesCount, err := getArticleFavoritedAndCount(client, updatedArticle, currentUserEntity)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching favorites information"})
+			return
+		}
+
+		c.JSON(http.StatusOK, articleResponse(updatedArticle, tagList, favorited, favoritesCount))
 	}
 }
 
@@ -308,6 +297,7 @@ func GetFeed(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
+		// OPTIMIZE: Need to query tunings
 		articlesResponse := make([]gin.H, 0)
 		for _, article := range articles {
 			tagList, err := article.QueryTags().Select(tag.FieldDescription).Strings(c.Request.Context())
@@ -316,7 +306,13 @@ func GetFeed(client *ent.Client) gin.HandlerFunc {
 				return
 			}
 
-			articlesResponse = append(articlesResponse, articleResponse(article, tagList))
+			favorited, favoritesCount, err := getArticleFavoritedAndCount(client, article, currentUserEntity)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "error fetching favorites"})
+				return
+			}
+
+			articlesResponse = append(articlesResponse, articleResponse(article, tagList, favorited, favoritesCount))
 		}
 
 		c.JSON(http.StatusOK, gin.H{
@@ -368,17 +364,7 @@ func FavoriteArticle(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"article": gin.H{
-				"slug":           article.Slug,
-				"title":          article.Title,
-				"description":    article.Description,
-				"body":           article.Body,
-				"tagList":        getTagList(article),
-				"favorited":      true,
-				"favoritesCount": favoritesCount,
-			},
-		})
+		c.JSON(http.StatusOK, articleResponse(article, getTagList(article), true, favoritesCount))
 	}
 }
 
@@ -423,17 +409,7 @@ func UnfavoriteArticle(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"article": gin.H{
-				"slug":           article.Slug,
-				"title":          article.Title,
-				"description":    article.Description,
-				"body":           article.Body,
-				"tagList":        getTagList(article),
-				"favorited":      false,
-				"favoritesCount": favoritesCount,
-			},
-		})
+		c.JSON(http.StatusOK, articleResponse(article, getTagList(article), false, favoritesCount))
 	}
 }
 
@@ -455,14 +431,16 @@ func findOrCreateTagIDsByNames(client *ent.Client, tagNames []string) ([]uuid.UU
 	return tagIDs, nil
 }
 
-func articleResponse(article *ent.Article, tagList []string) gin.H {
+func articleResponse(article *ent.Article, tagList []string, favorited bool, favoritesCount int) gin.H {
 	return gin.H{
 		"article": gin.H{
-			"slug":        article.Slug,
-			"title":       article.Title,
-			"description": article.Description,
-			"body":        article.Body,
-			"tagList":     tagList,
+			"slug":           article.Slug,
+			"title":          article.Title,
+			"description":    article.Description,
+			"body":           article.Body,
+			"tagList":        tagList,
+			"favorited":      favorited,
+			"favoritesCount": favoritesCount,
 		},
 	}
 }
@@ -487,4 +465,24 @@ func isArticleFavoritedByUser(client *ent.Client, article *ent.Article, user *en
 		)).
 		Count(context.Background())
 	return count > 0, err
+}
+
+func getArticleFavoritedAndCount(client *ent.Client, article *ent.Article, currentUser *ent.User) (bool, int, error) {
+	if currentUser == nil {
+		return false, 0, nil
+	}
+
+	favorited, err := isArticleFavoritedByUser(client, article, currentUser)
+	if err != nil {
+		return false, 0, err
+	}
+
+	favoritesCount, err := client.UserFavorite.Query().
+		Where(userfavorite.ArticleIDEQ(article.ID)).
+		Count(context.Background())
+	if err != nil {
+		return false, 0, err
+	}
+
+	return favorited, favoritesCount, nil
 }
