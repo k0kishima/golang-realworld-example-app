@@ -13,7 +13,7 @@ func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
 
-		if contains(allowedOrigins, origin) {
+		if contains(allowedOrigins, origin) || origin == "" {
 			c.Header("Access-Control-Allow-Origin", origin)
 		} else {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"message": "Origin not allowed"})
