@@ -122,6 +122,68 @@ func CreateArticle(client *ent.Client) gin.HandlerFunc {
 	}
 }
 
+func UpdateArticle(client *ent.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req struct {
+			Article struct {
+				Title       string   `json:"title"`
+				Description string   `json:"description"`
+				Body        string   `json:"body"`
+				TagList     []string `json:"tagList"`
+			} `json:"article"`
+		}
+		if err := c.BindJSON(&req); err != nil {
+			respondWithError(c, http.StatusBadRequest, "Invalid request payload")
+			return
+		}
+
+		slug := c.Param("slug")
+		article, err := client.Article.Query().Where(article.SlugEQ(slug)).Only(c.Request.Context())
+		if err != nil {
+			if ent.IsNotFound(err) {
+				c.JSON(http.StatusNotFound, gin.H{"message": "Article not found"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
+			}
+			return
+		}
+
+		update := client.Article.UpdateOneID(article.ID)
+		if req.Article.Title != "" {
+			update.SetSlug(req.Article.Title)
+			update.SetTitle(req.Article.Title)
+		}
+		if req.Article.Description != "" {
+			update.SetDescription(req.Article.Description)
+		}
+		if req.Article.Body != "" {
+			update.SetBody(req.Article.Body)
+		}
+
+		updatedArticle, err := update.Save(c.Request.Context())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error updating article"})
+			return
+		}
+
+		tagList, err := updatedArticle.QueryTags().Select(tag.FieldDescription).Strings(c.Request.Context())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching tags"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"article": gin.H{
+				"slug":        updatedArticle.Slug,
+				"title":       updatedArticle.Title,
+				"description": updatedArticle.Description,
+				"body":        updatedArticle.Body,
+				"tagList":     tagList,
+			},
+		})
+	}
+}
+
 func GetFeed(client *ent.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		currentUser, _ := c.Get("currentUser")
