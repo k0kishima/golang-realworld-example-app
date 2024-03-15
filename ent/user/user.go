@@ -59,7 +59,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "comment" package.
 	CommentsInverseTable = "comments"
 	// CommentsColumn is the table column denoting the comments relation/edge.
-	CommentsColumn = "user_comments"
+	CommentsColumn = "author_id"
 	// FavoritesTable is the table that holds the favorites relation/edge.
 	FavoritesTable = "user_favorites"
 	// FavoritesInverseTable is the table name for the UserFavorite entity.

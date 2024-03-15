@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/k0kishima/golang-realworld-example-app/ent/article"
 	"github.com/k0kishima/golang-realworld-example-app/ent/comment"
 	"github.com/k0kishima/golang-realworld-example-app/ent/user"
 )
@@ -93,6 +94,11 @@ func (cc *CommentCreate) SetCommentAuthor(u *User) *CommentCreate {
 	return cc.SetCommentAuthorID(u.ID)
 }
 
+// SetArticle sets the "article" edge to the Article entity.
+func (cc *CommentCreate) SetArticle(a *Article) *CommentCreate {
+	return cc.SetArticleID(a.ID)
+}
+
 // Mutation returns the CommentMutation object of the builder.
 func (cc *CommentCreate) Mutation() *CommentMutation {
 	return cc.mutation
@@ -167,6 +173,9 @@ func (cc *CommentCreate) check() error {
 	if _, ok := cc.mutation.CommentAuthorID(); !ok {
 		return &ValidationError{Name: "commentAuthor", err: errors.New(`ent: missing required edge "Comment.commentAuthor"`)}
 	}
+	if _, ok := cc.mutation.ArticleID(); !ok {
+		return &ValidationError{Name: "article", err: errors.New(`ent: missing required edge "Comment.article"`)}
+	}
 	return nil
 }
 
@@ -202,14 +211,6 @@ func (cc *CommentCreate) createSpec() (*Comment, *sqlgraph.CreateSpec) {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := cc.mutation.AuthorID(); ok {
-		_spec.SetField(comment.FieldAuthorID, field.TypeUUID, value)
-		_node.AuthorID = value
-	}
-	if value, ok := cc.mutation.ArticleID(); ok {
-		_spec.SetField(comment.FieldArticleID, field.TypeUUID, value)
-		_node.ArticleID = value
-	}
 	if value, ok := cc.mutation.Body(); ok {
 		_spec.SetField(comment.FieldBody, field.TypeString, value)
 		_node.Body = value
@@ -236,7 +237,24 @@ func (cc *CommentCreate) createSpec() (*Comment, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.user_comments = &nodes[0]
+		_node.AuthorID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := cc.mutation.ArticleIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   comment.ArticleTable,
+			Columns: []string{comment.ArticleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(article.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.ArticleID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

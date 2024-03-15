@@ -394,6 +394,22 @@ func (c *ArticleClient) QueryTags(a *Article) *TagQuery {
 	return query
 }
 
+// QueryComments queries the comments edge of a Article.
+func (c *ArticleClient) QueryComments(a *Article) *CommentQuery {
+	query := (&CommentClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := a.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(article.Table, article.FieldID, id),
+			sqlgraph.To(comment.Table, comment.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, article.CommentsTable, article.CommentsColumn),
+		)
+		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryArticleTags queries the article_tags edge of a Article.
 func (c *ArticleClient) QueryArticleTags(a *Article) *ArticleTagQuery {
 	query := (&ArticleTagClient{config: c.config}).Query()
@@ -717,6 +733,22 @@ func (c *CommentClient) QueryCommentAuthor(co *Comment) *UserQuery {
 			sqlgraph.From(comment.Table, comment.FieldID, id),
 			sqlgraph.To(user.Table, user.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, comment.CommentAuthorTable, comment.CommentAuthorColumn),
+		)
+		fromV = sqlgraph.Neighbors(co.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryArticle queries the article edge of a Comment.
+func (c *CommentClient) QueryArticle(co *Comment) *ArticleQuery {
+	query := (&ArticleClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := co.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(comment.Table, comment.FieldID, id),
+			sqlgraph.To(article.Table, article.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, comment.ArticleTable, comment.ArticleColumn),
 		)
 		fromV = sqlgraph.Neighbors(co.driver.Dialect(), step)
 		return fromV, nil

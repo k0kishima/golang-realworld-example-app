@@ -28,8 +28,15 @@ func (Comment) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("commentAuthor", User.Type).
 			Ref("comments").
+			Field("author_id").
 			Unique().
 			Required().
+			Immutable(),
+		edge.From("article", Article.Type).
+			Ref("comments").
+			Unique().
+			Required().
+			Field("article_id").
 			Immutable(),
 	}
 }

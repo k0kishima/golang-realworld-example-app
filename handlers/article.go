@@ -10,6 +10,7 @@ import (
 	"github.com/k0kishima/golang-realworld-example-app/ent"
 	"github.com/k0kishima/golang-realworld-example-app/ent/article"
 	"github.com/k0kishima/golang-realworld-example-app/ent/articletag"
+	"github.com/k0kishima/golang-realworld-example-app/ent/comment"
 	"github.com/k0kishima/golang-realworld-example-app/ent/tag"
 	"github.com/k0kishima/golang-realworld-example-app/ent/user"
 	"github.com/k0kishima/golang-realworld-example-app/ent/userfavorite"
@@ -410,6 +411,157 @@ func UnfavoriteArticle(client *ent.Client) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, articleResponse(article, getTagList(article), false, favoritesCount))
+	}
+}
+
+func GetComments(client *ent.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		slug := c.Param("slug")
+
+		article, err := client.Article.Query().Where(article.SlugEQ(slug)).Only(c.Request.Context())
+		if err != nil {
+			if ent.IsNotFound(err) {
+				c.JSON(http.StatusNotFound, gin.H{"message": "Article not found"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
+			}
+			return
+		}
+
+		comments, err := article.QueryComments().WithCommentAuthor().All(c.Request.Context())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching comments"})
+			return
+		}
+
+		var commentsResponse []gin.H
+		for _, comment := range comments {
+			commentResponse := gin.H{
+				"id":        comment.ID,
+				"body":      comment.Body,
+				"createdAt": comment.CreatedAt,
+				"updatedAt": comment.UpdatedAt,
+				"author": gin.H{
+					"username": comment.Edges.CommentAuthor.Username,
+					"bio":      comment.Edges.CommentAuthor.Bio,
+					"image":    comment.Edges.CommentAuthor.Image,
+				},
+			}
+			commentsResponse = append(commentsResponse, commentResponse)
+		}
+
+		c.JSON(http.StatusOK, gin.H{"comments": commentsResponse})
+	}
+}
+
+func PostComment(client *ent.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req struct {
+			Comment struct {
+				Body string `json:"body"`
+			} `json:"comment"`
+		}
+		if err := c.BindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request payload"})
+			return
+		}
+
+		if req.Comment.Body == "" {
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": gin.H{"body": []string{"can't be blank"}}})
+			return
+		}
+
+		currentUser, _ := c.Get("currentUser")
+		currentUserEntity, ok := currentUser.(*ent.User)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "error asserting user type"})
+			return
+		}
+
+		slug := c.Param("slug")
+		article, err := client.Article.Query().Where(article.SlugEQ(slug)).Only(c.Request.Context())
+		if err != nil {
+			if ent.IsNotFound(err) {
+				c.JSON(http.StatusNotFound, gin.H{"message": "Article not found"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
+			}
+			return
+		}
+
+		comment, err := client.Comment.Create().
+			SetBody(req.Comment.Body).
+			SetCommentAuthor(currentUserEntity).
+			SetArticle(article).
+			Save(c.Request.Context())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error creating comment"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"comment": gin.H{
+				"id":        comment.ID,
+				"body":      comment.Body,
+				"createdAt": comment.CreatedAt,
+				"updatedAt": comment.UpdatedAt,
+				"author": gin.H{
+					"username": currentUserEntity.Username,
+					"bio":      currentUserEntity.Bio,
+					"image":    currentUserEntity.Image,
+				},
+			},
+		})
+	}
+}
+
+func DeleteComment(client *ent.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		currentUser, _ := c.Get("currentUser")
+		currentUserEntity, ok := currentUser.(*ent.User)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error asserting user type"})
+			return
+		}
+
+		slug := c.Param("slug")
+		_, err := client.Article.Query().Where(article.SlugEQ(slug)).Only(c.Request.Context())
+		if err != nil {
+			if ent.IsNotFound(err) {
+				c.JSON(http.StatusNotFound, gin.H{"message": "Article not found"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
+			}
+			return
+		}
+
+		commentID, err := uuid.Parse(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid comment ID"})
+			return
+		}
+		comment, err := client.Comment.Query().Where(comment.IDEQ(commentID)).WithCommentAuthor().Only(c.Request.Context())
+		if err != nil {
+			if ent.IsNotFound(err) {
+				c.JSON(http.StatusNotFound, gin.H{"message": "Comment not found"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching comment"})
+			}
+			return
+		}
+
+		if comment.Edges.CommentAuthor.ID != currentUserEntity.ID {
+			c.JSON(http.StatusForbidden, gin.H{"message": "You are not authorized to delete this comment"})
+			return
+		}
+
+		err = client.Comment.DeleteOne(comment).Exec(c.Request.Context())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error deleting comment"})
+			return
+		}
+
+		c.Status(http.StatusOK)
 	}
 }
 
