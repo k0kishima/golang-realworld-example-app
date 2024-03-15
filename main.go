@@ -33,6 +33,7 @@ func main() {
 		api.GET("/profiles/:username", handlers.GetProfile(client))
 		api.GET("/articles/:slug", handlers.GetArticle(client))
 		api.GET("/articles/:slug/comments", handlers.GetComments(client))
+		api.GET("/tags", handlers.GetTags(client))
 
 		api.Use(middlewares.AuthMiddleware(client))
 		{
