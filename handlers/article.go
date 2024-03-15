@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -56,6 +57,102 @@ func GetArticle(client *ent.Client) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, articleResponse(article, tagList, favorited, favoritesCount))
+	}
+}
+
+func ListArticles(client *ent.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		query := client.Article.Query()
+
+		if tagName := c.Query("tag"); tagName != "" {
+			tagEntity, err := client.Tag.Query().Where(tag.DescriptionEQ(tagName)).Only(c.Request.Context())
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching tag"})
+				return
+			}
+			query.Where(article.HasTagsWith(tag.IDEQ(tagEntity.ID)))
+		}
+
+		if author := c.Query("author"); author != "" {
+			query.Where(article.HasArticleAuthorWith(user.UsernameEQ(author)))
+		}
+
+		if favorited := c.Query("favorited"); favorited != "" {
+			query.Where(article.HasFavoritedUsersWith(user.UsernameEQ(favorited)))
+		}
+
+		limitStr := c.DefaultQuery("limit", "20")
+		offsetStr := c.DefaultQuery("offset", "0")
+
+		limit, err := strconv.ParseInt(limitStr, 10, 64)
+		if err != nil {
+			respondWithError(c, http.StatusInternalServerError, "Failed to parse limit")
+			return
+		}
+
+		offset, err := strconv.ParseInt(offsetStr, 10, 64)
+		if err != nil {
+			respondWithError(c, http.StatusInternalServerError, "Failed to parse offset")
+			return
+		}
+
+		query.Limit(int(limit)).Offset(int(offset))
+
+		articles, err := query.All(c.Request.Context())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching articles"})
+			return
+		}
+
+		var articlesResponse []gin.H
+		for _, article := range articles {
+			tags, err := article.QueryTags().All(c.Request.Context())
+			if err != nil {
+
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching tags"})
+				return
+			}
+
+			var tagList []string
+			for _, t := range tags {
+				tagList = append(tagList, t.Description)
+			}
+
+			author, err := article.QueryArticleAuthor().Only(c.Request.Context())
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching author"})
+				return
+			}
+
+			favoritesCount, err := article.QueryFavoritedUsers().Count(c.Request.Context())
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching favorites count"})
+				return
+			}
+
+			articlesResponse = append(articlesResponse, gin.H{
+				"slug":           article.Slug,
+				"title":          article.Title,
+				"description":    article.Description,
+				"body":           article.Body,
+				"tagList":        tagList,
+				"createdAt":      article.CreatedAt,
+				"updatedAt":      article.UpdatedAt,
+				"favorited":      false, // TODO: Need to be updated based on current user
+				"favoritesCount": favoritesCount,
+				"author": gin.H{
+					"username":  author.Username,
+					"bio":       author.Bio,
+					"image":     author.Image,
+					"following": false, // TODO: Need to be updated based on current user
+				},
+			})
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"articles":      articlesResponse,
+			"articlesCount": len(articlesResponse),
+		})
 	}
 }
 

@@ -31,6 +31,7 @@ func main() {
 		api.POST("/users", handlers.RegisterUser(client))
 		api.POST("/users/login", handlers.Login(client))
 		api.GET("/profiles/:username", handlers.GetProfile(client))
+		api.GET("/articles", handlers.ListArticles(client))
 		api.GET("/articles/:slug", handlers.GetArticle(client))
 		api.GET("/articles/:slug/comments", handlers.GetComments(client))
 		api.GET("/tags", handlers.GetTags(client))
