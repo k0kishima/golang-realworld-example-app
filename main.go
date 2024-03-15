@@ -32,6 +32,7 @@ func main() {
 		api.POST("/users/login", handlers.Login(client))
 		api.GET("/profiles/:username", handlers.GetProfile(client))
 		api.GET("/articles/:slug", handlers.GetArticle(client))
+		api.GET("/articles/:slug/comments", handlers.GetComments(client))
 
 		api.Use(middlewares.AuthMiddleware(client))
 		{
@@ -42,6 +43,8 @@ func main() {
 			api.POST("/articles", handlers.CreateArticle(client))
 			api.PUT("/articles/:slug", handlers.UpdateArticle(client))
 			api.DELETE("/articles/:slug", handlers.DeleteArticle(client))
+			api.POST("/articles/:slug/comments", handlers.PostComment(client))
+			api.DELETE("/articles/:slug/comments/:id", handlers.DeleteComment(client))
 			api.POST("/articles/:slug/favorite", handlers.FavoriteArticle(client))
 			api.DELETE("/articles/:slug/favorite", handlers.UnfavoriteArticle(client))
 			api.GET("/articles/feed", handlers.GetFeed(client))
