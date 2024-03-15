@@ -41,6 +41,7 @@ func main() {
 			api.DELETE("/profiles/:username/follow", handlers.UnfollowUser(client))
 			api.POST("/articles", handlers.CreateArticle(client))
 			api.PUT("/articles/:slug", handlers.UpdateArticle(client))
+			api.DELETE("/articles/:slug", handlers.DeleteArticle(client))
 			api.GET("/articles/feed", handlers.GetFeed(client))
 		}
 	}
