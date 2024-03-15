@@ -11,7 +11,6 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/user"
-	"github.com/k0kishima/golang-realworld-example-app/ent/userfollow"
 )
 
 // User is the model entity for the User schema.
@@ -42,7 +41,7 @@ type User struct {
 // UserEdges holds the relations/edges for other nodes in the graph.
 type UserEdges struct {
 	// Follows holds the value of the follows edge.
-	Follows *UserFollow `json:"follows,omitempty"`
+	Follows []*UserFollow `json:"follows,omitempty"`
 	// Articles holds the value of the articles edge.
 	Articles []*Article `json:"articles,omitempty"`
 	// Comments holds the value of the comments edge.
@@ -53,12 +52,10 @@ type UserEdges struct {
 }
 
 // FollowsOrErr returns the Follows value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e UserEdges) FollowsOrErr() (*UserFollow, error) {
-	if e.Follows != nil {
+// was not loaded in eager-loading.
+func (e UserEdges) FollowsOrErr() ([]*UserFollow, error) {
+	if e.loadedTypes[0] {
 		return e.Follows, nil
-	} else if e.loadedTypes[0] {
-		return nil, &NotFoundError{label: userfollow.Label}
 	}
 	return nil, &NotLoadedError{edge: "follows"}
 }

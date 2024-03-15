@@ -158,7 +158,7 @@ var (
 	UserFollowsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
-		{Name: "follower_id", Type: field.TypeUUID, Unique: true},
+		{Name: "follower_id", Type: field.TypeUUID},
 		{Name: "followee_id", Type: field.TypeUUID},
 	}
 	// UserFollowsTable holds the schema information for the "user_follows" table.

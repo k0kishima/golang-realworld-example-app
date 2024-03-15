@@ -112,23 +112,19 @@ func (uc *UserCreate) SetNillableID(u *uuid.UUID) *UserCreate {
 	return uc
 }
 
-// SetFollowsID sets the "follows" edge to the UserFollow entity by ID.
-func (uc *UserCreate) SetFollowsID(id uuid.UUID) *UserCreate {
-	uc.mutation.SetFollowsID(id)
+// AddFollowIDs adds the "follows" edge to the UserFollow entity by IDs.
+func (uc *UserCreate) AddFollowIDs(ids ...uuid.UUID) *UserCreate {
+	uc.mutation.AddFollowIDs(ids...)
 	return uc
 }
 
-// SetNillableFollowsID sets the "follows" edge to the UserFollow entity by ID if the given value is not nil.
-func (uc *UserCreate) SetNillableFollowsID(id *uuid.UUID) *UserCreate {
-	if id != nil {
-		uc = uc.SetFollowsID(*id)
+// AddFollows adds the "follows" edges to the UserFollow entity.
+func (uc *UserCreate) AddFollows(u ...*UserFollow) *UserCreate {
+	ids := make([]uuid.UUID, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
 	}
-	return uc
-}
-
-// SetFollows sets the "follows" edge to the UserFollow entity.
-func (uc *UserCreate) SetFollows(u *UserFollow) *UserCreate {
-	return uc.SetFollowsID(u.ID)
+	return uc.AddFollowIDs(ids...)
 }
 
 // AddArticleIDs adds the "articles" edge to the Article entity by IDs.
@@ -321,7 +317,7 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	}
 	if nodes := uc.mutation.FollowsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
 			Table:   user.FollowsTable,
 			Columns: []string{user.FollowsColumn},

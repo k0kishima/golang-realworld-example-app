@@ -156,7 +156,7 @@ func HasFollower() predicate.UserFollow {
 	return predicate.UserFollow(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, FollowerTable, FollowerColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, FollowerTable, FollowerColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})

@@ -108,23 +108,19 @@ func (uu *UserUpdate) SetUpdatedAt(t time.Time) *UserUpdate {
 	return uu
 }
 
-// SetFollowsID sets the "follows" edge to the UserFollow entity by ID.
-func (uu *UserUpdate) SetFollowsID(id uuid.UUID) *UserUpdate {
-	uu.mutation.SetFollowsID(id)
+// AddFollowIDs adds the "follows" edge to the UserFollow entity by IDs.
+func (uu *UserUpdate) AddFollowIDs(ids ...uuid.UUID) *UserUpdate {
+	uu.mutation.AddFollowIDs(ids...)
 	return uu
 }
 
-// SetNillableFollowsID sets the "follows" edge to the UserFollow entity by ID if the given value is not nil.
-func (uu *UserUpdate) SetNillableFollowsID(id *uuid.UUID) *UserUpdate {
-	if id != nil {
-		uu = uu.SetFollowsID(*id)
+// AddFollows adds the "follows" edges to the UserFollow entity.
+func (uu *UserUpdate) AddFollows(u ...*UserFollow) *UserUpdate {
+	ids := make([]uuid.UUID, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
 	}
-	return uu
-}
-
-// SetFollows sets the "follows" edge to the UserFollow entity.
-func (uu *UserUpdate) SetFollows(u *UserFollow) *UserUpdate {
-	return uu.SetFollowsID(u.ID)
+	return uu.AddFollowIDs(ids...)
 }
 
 // AddArticleIDs adds the "articles" edge to the Article entity by IDs.
@@ -162,10 +158,25 @@ func (uu *UserUpdate) Mutation() *UserMutation {
 	return uu.mutation
 }
 
-// ClearFollows clears the "follows" edge to the UserFollow entity.
+// ClearFollows clears all "follows" edges to the UserFollow entity.
 func (uu *UserUpdate) ClearFollows() *UserUpdate {
 	uu.mutation.ClearFollows()
 	return uu
+}
+
+// RemoveFollowIDs removes the "follows" edge to UserFollow entities by IDs.
+func (uu *UserUpdate) RemoveFollowIDs(ids ...uuid.UUID) *UserUpdate {
+	uu.mutation.RemoveFollowIDs(ids...)
+	return uu
+}
+
+// RemoveFollows removes "follows" edges to UserFollow entities.
+func (uu *UserUpdate) RemoveFollows(u ...*UserFollow) *UserUpdate {
+	ids := make([]uuid.UUID, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return uu.RemoveFollowIDs(ids...)
 }
 
 // ClearArticles clears all "articles" edges to the Article entity.
@@ -298,7 +309,7 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if uu.mutation.FollowsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
 			Table:   user.FollowsTable,
 			Columns: []string{user.FollowsColumn},
@@ -309,9 +320,25 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
+	if nodes := uu.mutation.RemovedFollowsIDs(); len(nodes) > 0 && !uu.mutation.FollowsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.FollowsTable,
+			Columns: []string{user.FollowsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userfollow.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
 	if nodes := uu.mutation.FollowsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
 			Table:   user.FollowsTable,
 			Columns: []string{user.FollowsColumn},
@@ -511,23 +538,19 @@ func (uuo *UserUpdateOne) SetUpdatedAt(t time.Time) *UserUpdateOne {
 	return uuo
 }
 
-// SetFollowsID sets the "follows" edge to the UserFollow entity by ID.
-func (uuo *UserUpdateOne) SetFollowsID(id uuid.UUID) *UserUpdateOne {
-	uuo.mutation.SetFollowsID(id)
+// AddFollowIDs adds the "follows" edge to the UserFollow entity by IDs.
+func (uuo *UserUpdateOne) AddFollowIDs(ids ...uuid.UUID) *UserUpdateOne {
+	uuo.mutation.AddFollowIDs(ids...)
 	return uuo
 }
 
-// SetNillableFollowsID sets the "follows" edge to the UserFollow entity by ID if the given value is not nil.
-func (uuo *UserUpdateOne) SetNillableFollowsID(id *uuid.UUID) *UserUpdateOne {
-	if id != nil {
-		uuo = uuo.SetFollowsID(*id)
+// AddFollows adds the "follows" edges to the UserFollow entity.
+func (uuo *UserUpdateOne) AddFollows(u ...*UserFollow) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
 	}
-	return uuo
-}
-
-// SetFollows sets the "follows" edge to the UserFollow entity.
-func (uuo *UserUpdateOne) SetFollows(u *UserFollow) *UserUpdateOne {
-	return uuo.SetFollowsID(u.ID)
+	return uuo.AddFollowIDs(ids...)
 }
 
 // AddArticleIDs adds the "articles" edge to the Article entity by IDs.
@@ -565,10 +588,25 @@ func (uuo *UserUpdateOne) Mutation() *UserMutation {
 	return uuo.mutation
 }
 
-// ClearFollows clears the "follows" edge to the UserFollow entity.
+// ClearFollows clears all "follows" edges to the UserFollow entity.
 func (uuo *UserUpdateOne) ClearFollows() *UserUpdateOne {
 	uuo.mutation.ClearFollows()
 	return uuo
+}
+
+// RemoveFollowIDs removes the "follows" edge to UserFollow entities by IDs.
+func (uuo *UserUpdateOne) RemoveFollowIDs(ids ...uuid.UUID) *UserUpdateOne {
+	uuo.mutation.RemoveFollowIDs(ids...)
+	return uuo
+}
+
+// RemoveFollows removes "follows" edges to UserFollow entities.
+func (uuo *UserUpdateOne) RemoveFollows(u ...*UserFollow) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return uuo.RemoveFollowIDs(ids...)
 }
 
 // ClearArticles clears all "articles" edges to the Article entity.
@@ -731,7 +769,7 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 	}
 	if uuo.mutation.FollowsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
 			Table:   user.FollowsTable,
 			Columns: []string{user.FollowsColumn},
@@ -742,9 +780,25 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
+	if nodes := uuo.mutation.RemovedFollowsIDs(); len(nodes) > 0 && !uuo.mutation.FollowsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.FollowsTable,
+			Columns: []string{user.FollowsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userfollow.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
 	if nodes := uuo.mutation.FollowsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
 			Table:   user.FollowsTable,
 			Columns: []string{user.FollowsColumn},

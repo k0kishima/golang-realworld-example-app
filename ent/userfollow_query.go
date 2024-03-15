@@ -75,7 +75,7 @@ func (ufq *UserFollowQuery) QueryFollower() *UserQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(userfollow.Table, userfollow.FieldID, selector),
 			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, userfollow.FollowerTable, userfollow.FollowerColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, userfollow.FollowerTable, userfollow.FollowerColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(ufq.driver.Dialect(), step)
 		return fromU, nil

@@ -146,10 +146,17 @@ func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
 }
 
-// ByFollowsField orders the results by follows field.
-func ByFollowsField(field string, opts ...sql.OrderTermOption) OrderOption {
+// ByFollowsCount orders the results by follows count.
+func ByFollowsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newFollowsStep(), sql.OrderByField(field, opts...))
+		sqlgraph.OrderByNeighborsCount(s, newFollowsStep(), opts...)
+	}
+}
+
+// ByFollows orders the results by follows terms.
+func ByFollows(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newFollowsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 
@@ -184,7 +191,7 @@ func newFollowsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(FollowsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2O, false, FollowsTable, FollowsColumn),
+		sqlgraph.Edge(sqlgraph.O2M, false, FollowsTable, FollowsColumn),
 	)
 }
 func newArticlesStep() *sqlgraph.Step {
