@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"strings"
 
@@ -75,11 +76,7 @@ func RegisterUser(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusCreated, gin.H{"user": gin.H{
-			"username": u.Username,
-			"email":    u.Email,
-			"token":    token,
-		}})
+		c.JSON(http.StatusCreated, userResponse(u, token))
 	}
 }
 
@@ -114,11 +111,7 @@ func Login(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"user": gin.H{
-			"username": u.Username,
-			"email":    u.Email,
-			"token":    token,
-		}})
+		c.JSON(http.StatusCreated, userResponse(u, token))
 	}
 }
 
@@ -127,10 +120,13 @@ func GetCurrentUser(client *ent.Client) gin.HandlerFunc {
 		currentUser, _ := c.Get("currentUser")
 		u := currentUser.(*ent.User)
 
-		c.JSON(http.StatusOK, gin.H{"user": gin.H{
-			"username": u.Username,
-			"email":    u.Email,
-		}})
+		token, err := auth.CreateToken(u)
+		if err != nil {
+			respondWithError(c, http.StatusInternalServerError, "Error creating token")
+			return
+		}
+
+		c.JSON(http.StatusCreated, userResponse(u, token))
 	}
 }
 
@@ -138,8 +134,8 @@ func UpdateUser(client *ent.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req struct {
 			User struct {
-				Username string `json:"username"`
-				Email    string `json:"email"`
+				Username *string `json:"username"`
+				Email    *string `json:"email"`
 			} `json:"user"`
 		}
 		if err := c.BindJSON(&req); err != nil {
@@ -150,10 +146,14 @@ func UpdateUser(client *ent.Client) gin.HandlerFunc {
 		currentUser, _ := c.Get("currentUser")
 		u := currentUser.(*ent.User)
 
-		u, err := u.Update().
-			SetUsername(req.User.Username).
-			SetEmail(req.User.Email).
-			Save(c.Request.Context())
+		update := u.Update()
+		if req.User.Username != nil {
+			update.SetUsername(*req.User.Username)
+		}
+		if req.User.Email != nil {
+			update.SetEmail(*req.User.Email)
+		}
+		u, err := update.Save(c.Request.Context())
 
 		if err != nil {
 			handleUserUpdateError(c, err)
@@ -166,11 +166,7 @@ func UpdateUser(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"user": gin.H{
-			"username": u.Username,
-			"email":    u.Email,
-			"token":    token,
-		}})
+		c.JSON(http.StatusCreated, userResponse(u, token))
 	}
 }
 
@@ -188,6 +184,7 @@ func handleUserCreationError(c *gin.Context, err error) {
 }
 
 func handleUserUpdateError(c *gin.Context, err error) {
+	log.Printf("Error updating user: %v", err)
 	if ent.IsConstraintError(err) {
 		errors := make(map[string][]string)
 		if strings.Contains(err.Error(), "users.username") {
@@ -199,5 +196,17 @@ func handleUserUpdateError(c *gin.Context, err error) {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": errors})
 	} else {
 		respondWithError(c, http.StatusInternalServerError, "Error updating user")
+	}
+}
+
+func userResponse(u *ent.User, token string) gin.H {
+	return gin.H{
+		"user": gin.H{
+			"username": u.Username,
+			"email":    u.Email,
+			"bio":      u.Bio,
+			"image":    u.Image,
+			"token":    token,
+		},
 	}
 }
