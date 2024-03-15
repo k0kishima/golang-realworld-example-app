@@ -46,11 +46,13 @@ type UserEdges struct {
 	Articles []*Article `json:"articles,omitempty"`
 	// Comments holds the value of the comments edge.
 	Comments []*Comment `json:"comments,omitempty"`
-	// Favorites holds the value of the favorites edge.
-	Favorites []*UserFavorite `json:"favorites,omitempty"`
+	// FavariteArticle holds the value of the favariteArticle edge.
+	FavariteArticle []*Article `json:"favariteArticle,omitempty"`
+	// UserFavorites holds the value of the user_favorites edge.
+	UserFavorites []*UserFavorite `json:"user_favorites,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 }
 
 // FollowsOrErr returns the Follows value or an error if the edge
@@ -80,13 +82,22 @@ func (e UserEdges) CommentsOrErr() ([]*Comment, error) {
 	return nil, &NotLoadedError{edge: "comments"}
 }
 
-// FavoritesOrErr returns the Favorites value or an error if the edge
+// FavariteArticleOrErr returns the FavariteArticle value or an error if the edge
 // was not loaded in eager-loading.
-func (e UserEdges) FavoritesOrErr() ([]*UserFavorite, error) {
+func (e UserEdges) FavariteArticleOrErr() ([]*Article, error) {
 	if e.loadedTypes[3] {
-		return e.Favorites, nil
+		return e.FavariteArticle, nil
 	}
-	return nil, &NotLoadedError{edge: "favorites"}
+	return nil, &NotLoadedError{edge: "favariteArticle"}
+}
+
+// UserFavoritesOrErr returns the UserFavorites value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) UserFavoritesOrErr() ([]*UserFavorite, error) {
+	if e.loadedTypes[4] {
+		return e.UserFavorites, nil
+	}
+	return nil, &NotLoadedError{edge: "user_favorites"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -191,9 +202,14 @@ func (u *User) QueryComments() *CommentQuery {
 	return NewUserClient(u.config).QueryComments(u)
 }
 
-// QueryFavorites queries the "favorites" edge of the User entity.
-func (u *User) QueryFavorites() *UserFavoriteQuery {
-	return NewUserClient(u.config).QueryFavorites(u)
+// QueryFavariteArticle queries the "favariteArticle" edge of the User entity.
+func (u *User) QueryFavariteArticle() *ArticleQuery {
+	return NewUserClient(u.config).QueryFavariteArticle(u)
+}
+
+// QueryUserFavorites queries the "user_favorites" edge of the User entity.
+func (u *User) QueryUserFavorites() *UserFavoriteQuery {
+	return NewUserClient(u.config).QueryUserFavorites(u)
 }
 
 // Update returns a builder for updating this User.

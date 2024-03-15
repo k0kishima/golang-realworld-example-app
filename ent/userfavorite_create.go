@@ -177,7 +177,7 @@ func (ufc *UserFavoriteCreate) createSpec() (*UserFavorite, *sqlgraph.CreateSpec
 	if nodes := ufc.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
-			Inverse: true,
+			Inverse: false,
 			Table:   userfavorite.UserTable,
 			Columns: []string{userfavorite.UserColumn},
 			Bidi:    false,

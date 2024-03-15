@@ -47,11 +47,15 @@ type ArticleEdges struct {
 	Tags []*Tag `json:"tags,omitempty"`
 	// Comments holds the value of the comments edge.
 	Comments []*Comment `json:"comments,omitempty"`
+	// FavoritedUsers holds the value of the favoritedUsers edge.
+	FavoritedUsers []*User `json:"favoritedUsers,omitempty"`
 	// ArticleTags holds the value of the article_tags edge.
 	ArticleTags []*ArticleTag `json:"article_tags,omitempty"`
+	// UserFavorites holds the value of the user_favorites edge.
+	UserFavorites []*UserFavorite `json:"user_favorites,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [6]bool
 }
 
 // ArticleAuthorOrErr returns the ArticleAuthor value or an error if the edge
@@ -83,13 +87,31 @@ func (e ArticleEdges) CommentsOrErr() ([]*Comment, error) {
 	return nil, &NotLoadedError{edge: "comments"}
 }
 
+// FavoritedUsersOrErr returns the FavoritedUsers value or an error if the edge
+// was not loaded in eager-loading.
+func (e ArticleEdges) FavoritedUsersOrErr() ([]*User, error) {
+	if e.loadedTypes[3] {
+		return e.FavoritedUsers, nil
+	}
+	return nil, &NotLoadedError{edge: "favoritedUsers"}
+}
+
 // ArticleTagsOrErr returns the ArticleTags value or an error if the edge
 // was not loaded in eager-loading.
 func (e ArticleEdges) ArticleTagsOrErr() ([]*ArticleTag, error) {
-	if e.loadedTypes[3] {
+	if e.loadedTypes[4] {
 		return e.ArticleTags, nil
 	}
 	return nil, &NotLoadedError{edge: "article_tags"}
+}
+
+// UserFavoritesOrErr returns the UserFavorites value or an error if the edge
+// was not loaded in eager-loading.
+func (e ArticleEdges) UserFavoritesOrErr() ([]*UserFavorite, error) {
+	if e.loadedTypes[5] {
+		return e.UserFavorites, nil
+	}
+	return nil, &NotLoadedError{edge: "user_favorites"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -194,9 +216,19 @@ func (a *Article) QueryComments() *CommentQuery {
 	return NewArticleClient(a.config).QueryComments(a)
 }
 
+// QueryFavoritedUsers queries the "favoritedUsers" edge of the Article entity.
+func (a *Article) QueryFavoritedUsers() *UserQuery {
+	return NewArticleClient(a.config).QueryFavoritedUsers(a)
+}
+
 // QueryArticleTags queries the "article_tags" edge of the Article entity.
 func (a *Article) QueryArticleTags() *ArticleTagQuery {
 	return NewArticleClient(a.config).QueryArticleTags(a)
+}
+
+// QueryUserFavorites queries the "user_favorites" edge of the Article entity.
+func (a *Article) QueryUserFavorites() *UserFavoriteQuery {
+	return NewArticleClient(a.config).QueryUserFavorites(a)
 }
 
 // Update returns a builder for updating this Article.

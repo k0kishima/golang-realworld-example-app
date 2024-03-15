@@ -153,7 +153,7 @@ var (
 		PrimaryKey: []*schema.Column{UserFavoritesColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "user_favorites_users_favorites",
+				Symbol:     "user_favorites_users_user",
 				Columns:    []*schema.Column{UserFavoritesColumns[2]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,

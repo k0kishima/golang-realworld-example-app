@@ -520,6 +520,29 @@ func HasCommentsWith(preds ...predicate.Comment) predicate.Article {
 	})
 }
 
+// HasFavoritedUsers applies the HasEdge predicate on the "favoritedUsers" edge.
+func HasFavoritedUsers() predicate.Article {
+	return predicate.Article(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, FavoritedUsersTable, FavoritedUsersPrimaryKey...),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasFavoritedUsersWith applies the HasEdge predicate on the "favoritedUsers" edge with a given conditions (other predicates).
+func HasFavoritedUsersWith(preds ...predicate.User) predicate.Article {
+	return predicate.Article(func(s *sql.Selector) {
+		step := newFavoritedUsersStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasArticleTags applies the HasEdge predicate on the "article_tags" edge.
 func HasArticleTags() predicate.Article {
 	return predicate.Article(func(s *sql.Selector) {
@@ -535,6 +558,29 @@ func HasArticleTags() predicate.Article {
 func HasArticleTagsWith(preds ...predicate.ArticleTag) predicate.Article {
 	return predicate.Article(func(s *sql.Selector) {
 		step := newArticleTagsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasUserFavorites applies the HasEdge predicate on the "user_favorites" edge.
+func HasUserFavorites() predicate.Article {
+	return predicate.Article(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, UserFavoritesTable, UserFavoritesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasUserFavoritesWith applies the HasEdge predicate on the "user_favorites" edge with a given conditions (other predicates).
+func HasUserFavoritesWith(preds ...predicate.UserFavorite) predicate.Article {
+	return predicate.Article(func(s *sql.Selector) {
+		step := newUserFavoritesStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

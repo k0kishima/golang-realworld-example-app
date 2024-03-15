@@ -410,6 +410,22 @@ func (c *ArticleClient) QueryComments(a *Article) *CommentQuery {
 	return query
 }
 
+// QueryFavoritedUsers queries the favoritedUsers edge of a Article.
+func (c *ArticleClient) QueryFavoritedUsers(a *Article) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := a.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(article.Table, article.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, article.FavoritedUsersTable, article.FavoritedUsersPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryArticleTags queries the article_tags edge of a Article.
 func (c *ArticleClient) QueryArticleTags(a *Article) *ArticleTagQuery {
 	query := (&ArticleTagClient{config: c.config}).Query()
@@ -419,6 +435,22 @@ func (c *ArticleClient) QueryArticleTags(a *Article) *ArticleTagQuery {
 			sqlgraph.From(article.Table, article.FieldID, id),
 			sqlgraph.To(articletag.Table, articletag.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, true, article.ArticleTagsTable, article.ArticleTagsColumn),
+		)
+		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryUserFavorites queries the user_favorites edge of a Article.
+func (c *ArticleClient) QueryUserFavorites(a *Article) *UserFavoriteQuery {
+	query := (&UserFavoriteClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := a.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(article.Table, article.FieldID, id),
+			sqlgraph.To(userfavorite.Table, userfavorite.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, article.UserFavoritesTable, article.UserFavoritesColumn),
 		)
 		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
 		return fromV, nil
@@ -1102,15 +1134,31 @@ func (c *UserClient) QueryComments(u *User) *CommentQuery {
 	return query
 }
 
-// QueryFavorites queries the favorites edge of a User.
-func (c *UserClient) QueryFavorites(u *User) *UserFavoriteQuery {
+// QueryFavariteArticle queries the favariteArticle edge of a User.
+func (c *UserClient) QueryFavariteArticle(u *User) *ArticleQuery {
+	query := (&ArticleClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := u.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(article.Table, article.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, user.FavariteArticleTable, user.FavariteArticlePrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryUserFavorites queries the user_favorites edge of a User.
+func (c *UserClient) QueryUserFavorites(u *User) *UserFavoriteQuery {
 	query := (&UserFavoriteClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := u.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(userfavorite.Table, userfavorite.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.FavoritesTable, user.FavoritesColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, user.UserFavoritesTable, user.UserFavoritesColumn),
 		)
 		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
 		return fromV, nil
@@ -1259,7 +1307,7 @@ func (c *UserFavoriteClient) QueryUser(uf *UserFavorite) *UserQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(userfavorite.Table, userfavorite.FieldID, id),
 			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, userfavorite.UserTable, userfavorite.UserColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, userfavorite.UserTable, userfavorite.UserColumn),
 		)
 		fromV = sqlgraph.Neighbors(uf.driver.Dialect(), step)
 		return fromV, nil

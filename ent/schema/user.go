@@ -38,6 +38,8 @@ func (User) Edges() []ent.Edge {
 		edge.To("follows", UserFollow.Type),
 		edge.To("articles", Article.Type),
 		edge.To("comments", Comment.Type),
-		edge.To("favorites", UserFavorite.Type),
+		edge.From("favariteArticle", Article.Type).
+			Ref("favoritedUsers").
+			Through("user_favorites", UserFavorite.Type),
 	}
 }

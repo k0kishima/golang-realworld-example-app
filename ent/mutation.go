@@ -43,30 +43,36 @@ const (
 // ArticleMutation represents an operation that mutates the Article nodes in the graph.
 type ArticleMutation struct {
 	config
-	op                   Op
-	typ                  string
-	id                   *uuid.UUID
-	slug                 *string
-	title                *string
-	description          *string
-	body                 *string
-	created_at           *time.Time
-	updated_at           *time.Time
-	clearedFields        map[string]struct{}
-	articleAuthor        *uuid.UUID
-	clearedarticleAuthor bool
-	tags                 map[uuid.UUID]struct{}
-	removedtags          map[uuid.UUID]struct{}
-	clearedtags          bool
-	comments             map[uuid.UUID]struct{}
-	removedcomments      map[uuid.UUID]struct{}
-	clearedcomments      bool
-	article_tags         map[uuid.UUID]struct{}
-	removedarticle_tags  map[uuid.UUID]struct{}
-	clearedarticle_tags  bool
-	done                 bool
-	oldValue             func(context.Context) (*Article, error)
-	predicates           []predicate.Article
+	op                    Op
+	typ                   string
+	id                    *uuid.UUID
+	slug                  *string
+	title                 *string
+	description           *string
+	body                  *string
+	created_at            *time.Time
+	updated_at            *time.Time
+	clearedFields         map[string]struct{}
+	articleAuthor         *uuid.UUID
+	clearedarticleAuthor  bool
+	tags                  map[uuid.UUID]struct{}
+	removedtags           map[uuid.UUID]struct{}
+	clearedtags           bool
+	comments              map[uuid.UUID]struct{}
+	removedcomments       map[uuid.UUID]struct{}
+	clearedcomments       bool
+	favoritedUsers        map[uuid.UUID]struct{}
+	removedfavoritedUsers map[uuid.UUID]struct{}
+	clearedfavoritedUsers bool
+	article_tags          map[uuid.UUID]struct{}
+	removedarticle_tags   map[uuid.UUID]struct{}
+	clearedarticle_tags   bool
+	user_favorites        map[uuid.UUID]struct{}
+	removeduser_favorites map[uuid.UUID]struct{}
+	cleareduser_favorites bool
+	done                  bool
+	oldValue              func(context.Context) (*Article, error)
+	predicates            []predicate.Article
 }
 
 var _ ent.Mutation = (*ArticleMutation)(nil)
@@ -573,6 +579,60 @@ func (m *ArticleMutation) ResetComments() {
 	m.removedcomments = nil
 }
 
+// AddFavoritedUserIDs adds the "favoritedUsers" edge to the User entity by ids.
+func (m *ArticleMutation) AddFavoritedUserIDs(ids ...uuid.UUID) {
+	if m.favoritedUsers == nil {
+		m.favoritedUsers = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.favoritedUsers[ids[i]] = struct{}{}
+	}
+}
+
+// ClearFavoritedUsers clears the "favoritedUsers" edge to the User entity.
+func (m *ArticleMutation) ClearFavoritedUsers() {
+	m.clearedfavoritedUsers = true
+}
+
+// FavoritedUsersCleared reports if the "favoritedUsers" edge to the User entity was cleared.
+func (m *ArticleMutation) FavoritedUsersCleared() bool {
+	return m.clearedfavoritedUsers
+}
+
+// RemoveFavoritedUserIDs removes the "favoritedUsers" edge to the User entity by IDs.
+func (m *ArticleMutation) RemoveFavoritedUserIDs(ids ...uuid.UUID) {
+	if m.removedfavoritedUsers == nil {
+		m.removedfavoritedUsers = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.favoritedUsers, ids[i])
+		m.removedfavoritedUsers[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedFavoritedUsers returns the removed IDs of the "favoritedUsers" edge to the User entity.
+func (m *ArticleMutation) RemovedFavoritedUsersIDs() (ids []uuid.UUID) {
+	for id := range m.removedfavoritedUsers {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// FavoritedUsersIDs returns the "favoritedUsers" edge IDs in the mutation.
+func (m *ArticleMutation) FavoritedUsersIDs() (ids []uuid.UUID) {
+	for id := range m.favoritedUsers {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetFavoritedUsers resets all changes to the "favoritedUsers" edge.
+func (m *ArticleMutation) ResetFavoritedUsers() {
+	m.favoritedUsers = nil
+	m.clearedfavoritedUsers = false
+	m.removedfavoritedUsers = nil
+}
+
 // AddArticleTagIDs adds the "article_tags" edge to the ArticleTag entity by ids.
 func (m *ArticleMutation) AddArticleTagIDs(ids ...uuid.UUID) {
 	if m.article_tags == nil {
@@ -625,6 +685,60 @@ func (m *ArticleMutation) ResetArticleTags() {
 	m.article_tags = nil
 	m.clearedarticle_tags = false
 	m.removedarticle_tags = nil
+}
+
+// AddUserFavoriteIDs adds the "user_favorites" edge to the UserFavorite entity by ids.
+func (m *ArticleMutation) AddUserFavoriteIDs(ids ...uuid.UUID) {
+	if m.user_favorites == nil {
+		m.user_favorites = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.user_favorites[ids[i]] = struct{}{}
+	}
+}
+
+// ClearUserFavorites clears the "user_favorites" edge to the UserFavorite entity.
+func (m *ArticleMutation) ClearUserFavorites() {
+	m.cleareduser_favorites = true
+}
+
+// UserFavoritesCleared reports if the "user_favorites" edge to the UserFavorite entity was cleared.
+func (m *ArticleMutation) UserFavoritesCleared() bool {
+	return m.cleareduser_favorites
+}
+
+// RemoveUserFavoriteIDs removes the "user_favorites" edge to the UserFavorite entity by IDs.
+func (m *ArticleMutation) RemoveUserFavoriteIDs(ids ...uuid.UUID) {
+	if m.removeduser_favorites == nil {
+		m.removeduser_favorites = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.user_favorites, ids[i])
+		m.removeduser_favorites[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedUserFavorites returns the removed IDs of the "user_favorites" edge to the UserFavorite entity.
+func (m *ArticleMutation) RemovedUserFavoritesIDs() (ids []uuid.UUID) {
+	for id := range m.removeduser_favorites {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// UserFavoritesIDs returns the "user_favorites" edge IDs in the mutation.
+func (m *ArticleMutation) UserFavoritesIDs() (ids []uuid.UUID) {
+	for id := range m.user_favorites {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetUserFavorites resets all changes to the "user_favorites" edge.
+func (m *ArticleMutation) ResetUserFavorites() {
+	m.user_favorites = nil
+	m.cleareduser_favorites = false
+	m.removeduser_favorites = nil
 }
 
 // Where appends a list predicates to the ArticleMutation builder.
@@ -862,7 +976,7 @@ func (m *ArticleMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ArticleMutation) AddedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 6)
 	if m.articleAuthor != nil {
 		edges = append(edges, article.EdgeArticleAuthor)
 	}
@@ -872,8 +986,14 @@ func (m *ArticleMutation) AddedEdges() []string {
 	if m.comments != nil {
 		edges = append(edges, article.EdgeComments)
 	}
+	if m.favoritedUsers != nil {
+		edges = append(edges, article.EdgeFavoritedUsers)
+	}
 	if m.article_tags != nil {
 		edges = append(edges, article.EdgeArticleTags)
+	}
+	if m.user_favorites != nil {
+		edges = append(edges, article.EdgeUserFavorites)
 	}
 	return edges
 }
@@ -898,9 +1018,21 @@ func (m *ArticleMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case article.EdgeFavoritedUsers:
+		ids := make([]ent.Value, 0, len(m.favoritedUsers))
+		for id := range m.favoritedUsers {
+			ids = append(ids, id)
+		}
+		return ids
 	case article.EdgeArticleTags:
 		ids := make([]ent.Value, 0, len(m.article_tags))
 		for id := range m.article_tags {
+			ids = append(ids, id)
+		}
+		return ids
+	case article.EdgeUserFavorites:
+		ids := make([]ent.Value, 0, len(m.user_favorites))
+		for id := range m.user_favorites {
 			ids = append(ids, id)
 		}
 		return ids
@@ -910,15 +1042,21 @@ func (m *ArticleMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ArticleMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 6)
 	if m.removedtags != nil {
 		edges = append(edges, article.EdgeTags)
 	}
 	if m.removedcomments != nil {
 		edges = append(edges, article.EdgeComments)
 	}
+	if m.removedfavoritedUsers != nil {
+		edges = append(edges, article.EdgeFavoritedUsers)
+	}
 	if m.removedarticle_tags != nil {
 		edges = append(edges, article.EdgeArticleTags)
+	}
+	if m.removeduser_favorites != nil {
+		edges = append(edges, article.EdgeUserFavorites)
 	}
 	return edges
 }
@@ -939,9 +1077,21 @@ func (m *ArticleMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case article.EdgeFavoritedUsers:
+		ids := make([]ent.Value, 0, len(m.removedfavoritedUsers))
+		for id := range m.removedfavoritedUsers {
+			ids = append(ids, id)
+		}
+		return ids
 	case article.EdgeArticleTags:
 		ids := make([]ent.Value, 0, len(m.removedarticle_tags))
 		for id := range m.removedarticle_tags {
+			ids = append(ids, id)
+		}
+		return ids
+	case article.EdgeUserFavorites:
+		ids := make([]ent.Value, 0, len(m.removeduser_favorites))
+		for id := range m.removeduser_favorites {
 			ids = append(ids, id)
 		}
 		return ids
@@ -951,7 +1101,7 @@ func (m *ArticleMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ArticleMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 6)
 	if m.clearedarticleAuthor {
 		edges = append(edges, article.EdgeArticleAuthor)
 	}
@@ -961,8 +1111,14 @@ func (m *ArticleMutation) ClearedEdges() []string {
 	if m.clearedcomments {
 		edges = append(edges, article.EdgeComments)
 	}
+	if m.clearedfavoritedUsers {
+		edges = append(edges, article.EdgeFavoritedUsers)
+	}
 	if m.clearedarticle_tags {
 		edges = append(edges, article.EdgeArticleTags)
+	}
+	if m.cleareduser_favorites {
+		edges = append(edges, article.EdgeUserFavorites)
 	}
 	return edges
 }
@@ -977,8 +1133,12 @@ func (m *ArticleMutation) EdgeCleared(name string) bool {
 		return m.clearedtags
 	case article.EdgeComments:
 		return m.clearedcomments
+	case article.EdgeFavoritedUsers:
+		return m.clearedfavoritedUsers
 	case article.EdgeArticleTags:
 		return m.clearedarticle_tags
+	case article.EdgeUserFavorites:
+		return m.cleareduser_favorites
 	}
 	return false
 }
@@ -1007,8 +1167,14 @@ func (m *ArticleMutation) ResetEdge(name string) error {
 	case article.EdgeComments:
 		m.ResetComments()
 		return nil
+	case article.EdgeFavoritedUsers:
+		m.ResetFavoritedUsers()
+		return nil
 	case article.EdgeArticleTags:
 		m.ResetArticleTags()
+		return nil
+	case article.EdgeUserFavorites:
+		m.ResetUserFavorites()
 		return nil
 	}
 	return fmt.Errorf("unknown Article edge %s", name)
@@ -2780,32 +2946,35 @@ func (m *TagMutation) ResetEdge(name string) error {
 // UserMutation represents an operation that mutates the User nodes in the graph.
 type UserMutation struct {
 	config
-	op               Op
-	typ              string
-	id               *uuid.UUID
-	username         *string
-	email            *string
-	password         *string
-	image            *string
-	bio              *string
-	created_at       *time.Time
-	updated_at       *time.Time
-	clearedFields    map[string]struct{}
-	follows          map[uuid.UUID]struct{}
-	removedfollows   map[uuid.UUID]struct{}
-	clearedfollows   bool
-	articles         map[uuid.UUID]struct{}
-	removedarticles  map[uuid.UUID]struct{}
-	clearedarticles  bool
-	comments         map[uuid.UUID]struct{}
-	removedcomments  map[uuid.UUID]struct{}
-	clearedcomments  bool
-	favorites        map[uuid.UUID]struct{}
-	removedfavorites map[uuid.UUID]struct{}
-	clearedfavorites bool
-	done             bool
-	oldValue         func(context.Context) (*User, error)
-	predicates       []predicate.User
+	op                     Op
+	typ                    string
+	id                     *uuid.UUID
+	username               *string
+	email                  *string
+	password               *string
+	image                  *string
+	bio                    *string
+	created_at             *time.Time
+	updated_at             *time.Time
+	clearedFields          map[string]struct{}
+	follows                map[uuid.UUID]struct{}
+	removedfollows         map[uuid.UUID]struct{}
+	clearedfollows         bool
+	articles               map[uuid.UUID]struct{}
+	removedarticles        map[uuid.UUID]struct{}
+	clearedarticles        bool
+	comments               map[uuid.UUID]struct{}
+	removedcomments        map[uuid.UUID]struct{}
+	clearedcomments        bool
+	favariteArticle        map[uuid.UUID]struct{}
+	removedfavariteArticle map[uuid.UUID]struct{}
+	clearedfavariteArticle bool
+	user_favorites         map[uuid.UUID]struct{}
+	removeduser_favorites  map[uuid.UUID]struct{}
+	cleareduser_favorites  bool
+	done                   bool
+	oldValue               func(context.Context) (*User, error)
+	predicates             []predicate.User
 }
 
 var _ ent.Mutation = (*UserMutation)(nil)
@@ -3326,58 +3495,112 @@ func (m *UserMutation) ResetComments() {
 	m.removedcomments = nil
 }
 
-// AddFavoriteIDs adds the "favorites" edge to the UserFavorite entity by ids.
-func (m *UserMutation) AddFavoriteIDs(ids ...uuid.UUID) {
-	if m.favorites == nil {
-		m.favorites = make(map[uuid.UUID]struct{})
+// AddFavariteArticleIDs adds the "favariteArticle" edge to the Article entity by ids.
+func (m *UserMutation) AddFavariteArticleIDs(ids ...uuid.UUID) {
+	if m.favariteArticle == nil {
+		m.favariteArticle = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m.favorites[ids[i]] = struct{}{}
+		m.favariteArticle[ids[i]] = struct{}{}
 	}
 }
 
-// ClearFavorites clears the "favorites" edge to the UserFavorite entity.
-func (m *UserMutation) ClearFavorites() {
-	m.clearedfavorites = true
+// ClearFavariteArticle clears the "favariteArticle" edge to the Article entity.
+func (m *UserMutation) ClearFavariteArticle() {
+	m.clearedfavariteArticle = true
 }
 
-// FavoritesCleared reports if the "favorites" edge to the UserFavorite entity was cleared.
-func (m *UserMutation) FavoritesCleared() bool {
-	return m.clearedfavorites
+// FavariteArticleCleared reports if the "favariteArticle" edge to the Article entity was cleared.
+func (m *UserMutation) FavariteArticleCleared() bool {
+	return m.clearedfavariteArticle
 }
 
-// RemoveFavoriteIDs removes the "favorites" edge to the UserFavorite entity by IDs.
-func (m *UserMutation) RemoveFavoriteIDs(ids ...uuid.UUID) {
-	if m.removedfavorites == nil {
-		m.removedfavorites = make(map[uuid.UUID]struct{})
+// RemoveFavariteArticleIDs removes the "favariteArticle" edge to the Article entity by IDs.
+func (m *UserMutation) RemoveFavariteArticleIDs(ids ...uuid.UUID) {
+	if m.removedfavariteArticle == nil {
+		m.removedfavariteArticle = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m.favorites, ids[i])
-		m.removedfavorites[ids[i]] = struct{}{}
+		delete(m.favariteArticle, ids[i])
+		m.removedfavariteArticle[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedFavorites returns the removed IDs of the "favorites" edge to the UserFavorite entity.
-func (m *UserMutation) RemovedFavoritesIDs() (ids []uuid.UUID) {
-	for id := range m.removedfavorites {
+// RemovedFavariteArticle returns the removed IDs of the "favariteArticle" edge to the Article entity.
+func (m *UserMutation) RemovedFavariteArticleIDs() (ids []uuid.UUID) {
+	for id := range m.removedfavariteArticle {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// FavoritesIDs returns the "favorites" edge IDs in the mutation.
-func (m *UserMutation) FavoritesIDs() (ids []uuid.UUID) {
-	for id := range m.favorites {
+// FavariteArticleIDs returns the "favariteArticle" edge IDs in the mutation.
+func (m *UserMutation) FavariteArticleIDs() (ids []uuid.UUID) {
+	for id := range m.favariteArticle {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetFavorites resets all changes to the "favorites" edge.
-func (m *UserMutation) ResetFavorites() {
-	m.favorites = nil
-	m.clearedfavorites = false
-	m.removedfavorites = nil
+// ResetFavariteArticle resets all changes to the "favariteArticle" edge.
+func (m *UserMutation) ResetFavariteArticle() {
+	m.favariteArticle = nil
+	m.clearedfavariteArticle = false
+	m.removedfavariteArticle = nil
+}
+
+// AddUserFavoriteIDs adds the "user_favorites" edge to the UserFavorite entity by ids.
+func (m *UserMutation) AddUserFavoriteIDs(ids ...uuid.UUID) {
+	if m.user_favorites == nil {
+		m.user_favorites = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.user_favorites[ids[i]] = struct{}{}
+	}
+}
+
+// ClearUserFavorites clears the "user_favorites" edge to the UserFavorite entity.
+func (m *UserMutation) ClearUserFavorites() {
+	m.cleareduser_favorites = true
+}
+
+// UserFavoritesCleared reports if the "user_favorites" edge to the UserFavorite entity was cleared.
+func (m *UserMutation) UserFavoritesCleared() bool {
+	return m.cleareduser_favorites
+}
+
+// RemoveUserFavoriteIDs removes the "user_favorites" edge to the UserFavorite entity by IDs.
+func (m *UserMutation) RemoveUserFavoriteIDs(ids ...uuid.UUID) {
+	if m.removeduser_favorites == nil {
+		m.removeduser_favorites = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.user_favorites, ids[i])
+		m.removeduser_favorites[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedUserFavorites returns the removed IDs of the "user_favorites" edge to the UserFavorite entity.
+func (m *UserMutation) RemovedUserFavoritesIDs() (ids []uuid.UUID) {
+	for id := range m.removeduser_favorites {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// UserFavoritesIDs returns the "user_favorites" edge IDs in the mutation.
+func (m *UserMutation) UserFavoritesIDs() (ids []uuid.UUID) {
+	for id := range m.user_favorites {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetUserFavorites resets all changes to the "user_favorites" edge.
+func (m *UserMutation) ResetUserFavorites() {
+	m.user_favorites = nil
+	m.cleareduser_favorites = false
+	m.removeduser_favorites = nil
 }
 
 // Where appends a list predicates to the UserMutation builder.
@@ -3615,7 +3838,7 @@ func (m *UserMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.follows != nil {
 		edges = append(edges, user.EdgeFollows)
 	}
@@ -3625,8 +3848,11 @@ func (m *UserMutation) AddedEdges() []string {
 	if m.comments != nil {
 		edges = append(edges, user.EdgeComments)
 	}
-	if m.favorites != nil {
-		edges = append(edges, user.EdgeFavorites)
+	if m.favariteArticle != nil {
+		edges = append(edges, user.EdgeFavariteArticle)
+	}
+	if m.user_favorites != nil {
+		edges = append(edges, user.EdgeUserFavorites)
 	}
 	return edges
 }
@@ -3653,9 +3879,15 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case user.EdgeFavorites:
-		ids := make([]ent.Value, 0, len(m.favorites))
-		for id := range m.favorites {
+	case user.EdgeFavariteArticle:
+		ids := make([]ent.Value, 0, len(m.favariteArticle))
+		for id := range m.favariteArticle {
+			ids = append(ids, id)
+		}
+		return ids
+	case user.EdgeUserFavorites:
+		ids := make([]ent.Value, 0, len(m.user_favorites))
+		for id := range m.user_favorites {
 			ids = append(ids, id)
 		}
 		return ids
@@ -3665,7 +3897,7 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.removedfollows != nil {
 		edges = append(edges, user.EdgeFollows)
 	}
@@ -3675,8 +3907,11 @@ func (m *UserMutation) RemovedEdges() []string {
 	if m.removedcomments != nil {
 		edges = append(edges, user.EdgeComments)
 	}
-	if m.removedfavorites != nil {
-		edges = append(edges, user.EdgeFavorites)
+	if m.removedfavariteArticle != nil {
+		edges = append(edges, user.EdgeFavariteArticle)
+	}
+	if m.removeduser_favorites != nil {
+		edges = append(edges, user.EdgeUserFavorites)
 	}
 	return edges
 }
@@ -3703,9 +3938,15 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case user.EdgeFavorites:
-		ids := make([]ent.Value, 0, len(m.removedfavorites))
-		for id := range m.removedfavorites {
+	case user.EdgeFavariteArticle:
+		ids := make([]ent.Value, 0, len(m.removedfavariteArticle))
+		for id := range m.removedfavariteArticle {
+			ids = append(ids, id)
+		}
+		return ids
+	case user.EdgeUserFavorites:
+		ids := make([]ent.Value, 0, len(m.removeduser_favorites))
+		for id := range m.removeduser_favorites {
 			ids = append(ids, id)
 		}
 		return ids
@@ -3715,7 +3956,7 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.clearedfollows {
 		edges = append(edges, user.EdgeFollows)
 	}
@@ -3725,8 +3966,11 @@ func (m *UserMutation) ClearedEdges() []string {
 	if m.clearedcomments {
 		edges = append(edges, user.EdgeComments)
 	}
-	if m.clearedfavorites {
-		edges = append(edges, user.EdgeFavorites)
+	if m.clearedfavariteArticle {
+		edges = append(edges, user.EdgeFavariteArticle)
+	}
+	if m.cleareduser_favorites {
+		edges = append(edges, user.EdgeUserFavorites)
 	}
 	return edges
 }
@@ -3741,8 +3985,10 @@ func (m *UserMutation) EdgeCleared(name string) bool {
 		return m.clearedarticles
 	case user.EdgeComments:
 		return m.clearedcomments
-	case user.EdgeFavorites:
-		return m.clearedfavorites
+	case user.EdgeFavariteArticle:
+		return m.clearedfavariteArticle
+	case user.EdgeUserFavorites:
+		return m.cleareduser_favorites
 	}
 	return false
 }
@@ -3768,8 +4014,11 @@ func (m *UserMutation) ResetEdge(name string) error {
 	case user.EdgeComments:
 		m.ResetComments()
 		return nil
-	case user.EdgeFavorites:
-		m.ResetFavorites()
+	case user.EdgeFavariteArticle:
+		m.ResetFavariteArticle()
+		return nil
+	case user.EdgeUserFavorites:
+		m.ResetUserFavorites()
 		return nil
 	}
 	return fmt.Errorf("unknown User edge %s", name)

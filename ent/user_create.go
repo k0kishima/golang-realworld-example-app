@@ -158,19 +158,34 @@ func (uc *UserCreate) AddComments(c ...*Comment) *UserCreate {
 	return uc.AddCommentIDs(ids...)
 }
 
-// AddFavoriteIDs adds the "favorites" edge to the UserFavorite entity by IDs.
-func (uc *UserCreate) AddFavoriteIDs(ids ...uuid.UUID) *UserCreate {
-	uc.mutation.AddFavoriteIDs(ids...)
+// AddFavariteArticleIDs adds the "favariteArticle" edge to the Article entity by IDs.
+func (uc *UserCreate) AddFavariteArticleIDs(ids ...uuid.UUID) *UserCreate {
+	uc.mutation.AddFavariteArticleIDs(ids...)
 	return uc
 }
 
-// AddFavorites adds the "favorites" edges to the UserFavorite entity.
-func (uc *UserCreate) AddFavorites(u ...*UserFavorite) *UserCreate {
+// AddFavariteArticle adds the "favariteArticle" edges to the Article entity.
+func (uc *UserCreate) AddFavariteArticle(a ...*Article) *UserCreate {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return uc.AddFavariteArticleIDs(ids...)
+}
+
+// AddUserFavoriteIDs adds the "user_favorites" edge to the UserFavorite entity by IDs.
+func (uc *UserCreate) AddUserFavoriteIDs(ids ...uuid.UUID) *UserCreate {
+	uc.mutation.AddUserFavoriteIDs(ids...)
+	return uc
+}
+
+// AddUserFavorites adds the "user_favorites" edges to the UserFavorite entity.
+func (uc *UserCreate) AddUserFavorites(u ...*UserFavorite) *UserCreate {
 	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
 	}
-	return uc.AddFavoriteIDs(ids...)
+	return uc.AddUserFavoriteIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -379,12 +394,35 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := uc.mutation.FavoritesIDs(); len(nodes) > 0 {
+	if nodes := uc.mutation.FavariteArticleIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   user.FavariteArticleTable,
+			Columns: user.FavariteArticlePrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(article.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		createE := &UserFavoriteCreate{config: uc.config, mutation: newUserFavoriteMutation(uc.config, OpCreate)}
+		createE.defaults()
+		_, specE := createE.createSpec()
+		edge.Target.Fields = specE.Fields
+		if specE.ID.Value != nil {
+			edge.Target.Fields = append(edge.Target.Fields, specE.ID)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := uc.mutation.UserFavoritesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.FavoritesTable,
-			Columns: []string{user.FavoritesColumn},
+			Inverse: true,
+			Table:   user.UserFavoritesTable,
+			Columns: []string{user.UserFavoritesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(userfavorite.FieldID, field.TypeUUID),

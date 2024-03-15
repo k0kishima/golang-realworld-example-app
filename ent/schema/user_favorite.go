@@ -31,12 +31,11 @@ func (UserFavorite) Indexes() []ent.Index {
 
 func (UserFavorite) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("user", User.Type).
-			Ref("favorites").
+		edge.To("user", User.Type).
 			Unique().
 			Required().
-			Field("user_id").
-			Immutable(),
+			Immutable().
+			Field("user_id"),
 		edge.To("article", Article.Type).
 			Unique().
 			Required().
