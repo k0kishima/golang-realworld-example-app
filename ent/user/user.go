@@ -35,8 +35,10 @@ const (
 	EdgeArticles = "articles"
 	// EdgeComments holds the string denoting the comments edge name in mutations.
 	EdgeComments = "comments"
-	// EdgeFavorites holds the string denoting the favorites edge name in mutations.
-	EdgeFavorites = "favorites"
+	// EdgeFavariteArticle holds the string denoting the favaritearticle edge name in mutations.
+	EdgeFavariteArticle = "favariteArticle"
+	// EdgeUserFavorites holds the string denoting the user_favorites edge name in mutations.
+	EdgeUserFavorites = "user_favorites"
 	// Table holds the table name of the user in the database.
 	Table = "users"
 	// FollowsTable is the table that holds the follows relation/edge.
@@ -60,13 +62,18 @@ const (
 	CommentsInverseTable = "comments"
 	// CommentsColumn is the table column denoting the comments relation/edge.
 	CommentsColumn = "author_id"
-	// FavoritesTable is the table that holds the favorites relation/edge.
-	FavoritesTable = "user_favorites"
-	// FavoritesInverseTable is the table name for the UserFavorite entity.
+	// FavariteArticleTable is the table that holds the favariteArticle relation/edge. The primary key declared below.
+	FavariteArticleTable = "user_favorites"
+	// FavariteArticleInverseTable is the table name for the Article entity.
+	// It exists in this package in order to avoid circular dependency with the "article" package.
+	FavariteArticleInverseTable = "articles"
+	// UserFavoritesTable is the table that holds the user_favorites relation/edge.
+	UserFavoritesTable = "user_favorites"
+	// UserFavoritesInverseTable is the table name for the UserFavorite entity.
 	// It exists in this package in order to avoid circular dependency with the "userfavorite" package.
-	FavoritesInverseTable = "user_favorites"
-	// FavoritesColumn is the table column denoting the favorites relation/edge.
-	FavoritesColumn = "user_id"
+	UserFavoritesInverseTable = "user_favorites"
+	// UserFavoritesColumn is the table column denoting the user_favorites relation/edge.
+	UserFavoritesColumn = "user_id"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -80,6 +87,12 @@ var Columns = []string{
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }
+
+var (
+	// FavariteArticlePrimaryKey and FavariteArticleColumn2 are the table columns denoting the
+	// primary key for the favariteArticle relation (M2M).
+	FavariteArticlePrimaryKey = []string{"article_id", "user_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -197,17 +210,31 @@ func ByComments(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
-// ByFavoritesCount orders the results by favorites count.
-func ByFavoritesCount(opts ...sql.OrderTermOption) OrderOption {
+// ByFavariteArticleCount orders the results by favariteArticle count.
+func ByFavariteArticleCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newFavoritesStep(), opts...)
+		sqlgraph.OrderByNeighborsCount(s, newFavariteArticleStep(), opts...)
 	}
 }
 
-// ByFavorites orders the results by favorites terms.
-func ByFavorites(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+// ByFavariteArticle orders the results by favariteArticle terms.
+func ByFavariteArticle(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newFavoritesStep(), append([]sql.OrderTerm{term}, terms...)...)
+		sqlgraph.OrderByNeighborTerms(s, newFavariteArticleStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByUserFavoritesCount orders the results by user_favorites count.
+func ByUserFavoritesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newUserFavoritesStep(), opts...)
+	}
+}
+
+// ByUserFavorites orders the results by user_favorites terms.
+func ByUserFavorites(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newUserFavoritesStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 func newFollowsStep() *sqlgraph.Step {
@@ -231,10 +258,17 @@ func newCommentsStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.O2M, false, CommentsTable, CommentsColumn),
 	)
 }
-func newFavoritesStep() *sqlgraph.Step {
+func newFavariteArticleStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(FavoritesInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, FavoritesTable, FavoritesColumn),
+		sqlgraph.To(FavariteArticleInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, true, FavariteArticleTable, FavariteArticlePrimaryKey...),
+	)
+}
+func newUserFavoritesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(UserFavoritesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, true, UserFavoritesTable, UserFavoritesColumn),
 	)
 }

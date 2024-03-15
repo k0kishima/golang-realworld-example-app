@@ -16,6 +16,7 @@ import (
 	"github.com/k0kishima/golang-realworld-example-app/ent/comment"
 	"github.com/k0kishima/golang-realworld-example-app/ent/tag"
 	"github.com/k0kishima/golang-realworld-example-app/ent/user"
+	"github.com/k0kishima/golang-realworld-example-app/ent/userfavorite"
 )
 
 // ArticleCreate is the builder for creating a Article entity.
@@ -138,6 +139,21 @@ func (ac *ArticleCreate) AddComments(c ...*Comment) *ArticleCreate {
 	return ac.AddCommentIDs(ids...)
 }
 
+// AddFavoritedUserIDs adds the "favoritedUsers" edge to the User entity by IDs.
+func (ac *ArticleCreate) AddFavoritedUserIDs(ids ...uuid.UUID) *ArticleCreate {
+	ac.mutation.AddFavoritedUserIDs(ids...)
+	return ac
+}
+
+// AddFavoritedUsers adds the "favoritedUsers" edges to the User entity.
+func (ac *ArticleCreate) AddFavoritedUsers(u ...*User) *ArticleCreate {
+	ids := make([]uuid.UUID, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return ac.AddFavoritedUserIDs(ids...)
+}
+
 // AddArticleTagIDs adds the "article_tags" edge to the ArticleTag entity by IDs.
 func (ac *ArticleCreate) AddArticleTagIDs(ids ...uuid.UUID) *ArticleCreate {
 	ac.mutation.AddArticleTagIDs(ids...)
@@ -151,6 +167,21 @@ func (ac *ArticleCreate) AddArticleTags(a ...*ArticleTag) *ArticleCreate {
 		ids[i] = a[i].ID
 	}
 	return ac.AddArticleTagIDs(ids...)
+}
+
+// AddUserFavoriteIDs adds the "user_favorites" edge to the UserFavorite entity by IDs.
+func (ac *ArticleCreate) AddUserFavoriteIDs(ids ...uuid.UUID) *ArticleCreate {
+	ac.mutation.AddUserFavoriteIDs(ids...)
+	return ac
+}
+
+// AddUserFavorites adds the "user_favorites" edges to the UserFavorite entity.
+func (ac *ArticleCreate) AddUserFavorites(u ...*UserFavorite) *ArticleCreate {
+	ids := make([]uuid.UUID, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return ac.AddUserFavoriteIDs(ids...)
 }
 
 // Mutation returns the ArticleMutation object of the builder.
@@ -363,6 +394,29 @@ func (ac *ArticleCreate) createSpec() (*Article, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
+	if nodes := ac.mutation.FavoritedUsersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   article.FavoritedUsersTable,
+			Columns: article.FavoritedUsersPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		createE := &UserFavoriteCreate{config: ac.config, mutation: newUserFavoriteMutation(ac.config, OpCreate)}
+		createE.defaults()
+		_, specE := createE.createSpec()
+		edge.Target.Fields = specE.Fields
+		if specE.ID.Value != nil {
+			edge.Target.Fields = append(edge.Target.Fields, specE.ID)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
 	if nodes := ac.mutation.ArticleTagsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -372,6 +426,22 @@ func (ac *ArticleCreate) createSpec() (*Article, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(articletag.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := ac.mutation.UserFavoritesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: true,
+			Table:   article.UserFavoritesTable,
+			Columns: []string{article.UserFavoritesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(userfavorite.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

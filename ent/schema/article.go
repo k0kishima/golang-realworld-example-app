@@ -44,5 +44,7 @@ func (Article) Edges() []ent.Edge {
 		edge.To("tags", Tag.Type).
 			Through("article_tags", ArticleTag.Type),
 		edge.To("comments", Comment.Type),
+		edge.To("favoritedUsers", User.Type).
+			Through("user_favorites", UserFavorite.Type),
 	}
 }

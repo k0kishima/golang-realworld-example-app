@@ -18,19 +18,22 @@ import (
 	"github.com/k0kishima/golang-realworld-example-app/ent/predicate"
 	"github.com/k0kishima/golang-realworld-example-app/ent/tag"
 	"github.com/k0kishima/golang-realworld-example-app/ent/user"
+	"github.com/k0kishima/golang-realworld-example-app/ent/userfavorite"
 )
 
 // ArticleQuery is the builder for querying Article entities.
 type ArticleQuery struct {
 	config
-	ctx               *QueryContext
-	order             []article.OrderOption
-	inters            []Interceptor
-	predicates        []predicate.Article
-	withArticleAuthor *UserQuery
-	withTags          *TagQuery
-	withComments      *CommentQuery
-	withArticleTags   *ArticleTagQuery
+	ctx                *QueryContext
+	order              []article.OrderOption
+	inters             []Interceptor
+	predicates         []predicate.Article
+	withArticleAuthor  *UserQuery
+	withTags           *TagQuery
+	withComments       *CommentQuery
+	withFavoritedUsers *UserQuery
+	withArticleTags    *ArticleTagQuery
+	withUserFavorites  *UserFavoriteQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -133,6 +136,28 @@ func (aq *ArticleQuery) QueryComments() *CommentQuery {
 	return query
 }
 
+// QueryFavoritedUsers chains the current query on the "favoritedUsers" edge.
+func (aq *ArticleQuery) QueryFavoritedUsers() *UserQuery {
+	query := (&UserClient{config: aq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := aq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := aq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(article.Table, article.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, article.FavoritedUsersTable, article.FavoritedUsersPrimaryKey...),
+		)
+		fromU = sqlgraph.SetNeighbors(aq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // QueryArticleTags chains the current query on the "article_tags" edge.
 func (aq *ArticleQuery) QueryArticleTags() *ArticleTagQuery {
 	query := (&ArticleTagClient{config: aq.config}).Query()
@@ -148,6 +173,28 @@ func (aq *ArticleQuery) QueryArticleTags() *ArticleTagQuery {
 			sqlgraph.From(article.Table, article.FieldID, selector),
 			sqlgraph.To(articletag.Table, articletag.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, true, article.ArticleTagsTable, article.ArticleTagsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(aq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryUserFavorites chains the current query on the "user_favorites" edge.
+func (aq *ArticleQuery) QueryUserFavorites() *UserFavoriteQuery {
+	query := (&UserFavoriteClient{config: aq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := aq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := aq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(article.Table, article.FieldID, selector),
+			sqlgraph.To(userfavorite.Table, userfavorite.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, article.UserFavoritesTable, article.UserFavoritesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(aq.driver.Dialect(), step)
 		return fromU, nil
@@ -342,15 +389,17 @@ func (aq *ArticleQuery) Clone() *ArticleQuery {
 		return nil
 	}
 	return &ArticleQuery{
-		config:            aq.config,
-		ctx:               aq.ctx.Clone(),
-		order:             append([]article.OrderOption{}, aq.order...),
-		inters:            append([]Interceptor{}, aq.inters...),
-		predicates:        append([]predicate.Article{}, aq.predicates...),
-		withArticleAuthor: aq.withArticleAuthor.Clone(),
-		withTags:          aq.withTags.Clone(),
-		withComments:      aq.withComments.Clone(),
-		withArticleTags:   aq.withArticleTags.Clone(),
+		config:             aq.config,
+		ctx:                aq.ctx.Clone(),
+		order:              append([]article.OrderOption{}, aq.order...),
+		inters:             append([]Interceptor{}, aq.inters...),
+		predicates:         append([]predicate.Article{}, aq.predicates...),
+		withArticleAuthor:  aq.withArticleAuthor.Clone(),
+		withTags:           aq.withTags.Clone(),
+		withComments:       aq.withComments.Clone(),
+		withFavoritedUsers: aq.withFavoritedUsers.Clone(),
+		withArticleTags:    aq.withArticleTags.Clone(),
+		withUserFavorites:  aq.withUserFavorites.Clone(),
 		// clone intermediate query.
 		sql:  aq.sql.Clone(),
 		path: aq.path,
@@ -390,6 +439,17 @@ func (aq *ArticleQuery) WithComments(opts ...func(*CommentQuery)) *ArticleQuery 
 	return aq
 }
 
+// WithFavoritedUsers tells the query-builder to eager-load the nodes that are connected to
+// the "favoritedUsers" edge. The optional arguments are used to configure the query builder of the edge.
+func (aq *ArticleQuery) WithFavoritedUsers(opts ...func(*UserQuery)) *ArticleQuery {
+	query := (&UserClient{config: aq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	aq.withFavoritedUsers = query
+	return aq
+}
+
 // WithArticleTags tells the query-builder to eager-load the nodes that are connected to
 // the "article_tags" edge. The optional arguments are used to configure the query builder of the edge.
 func (aq *ArticleQuery) WithArticleTags(opts ...func(*ArticleTagQuery)) *ArticleQuery {
@@ -398,6 +458,17 @@ func (aq *ArticleQuery) WithArticleTags(opts ...func(*ArticleTagQuery)) *Article
 		opt(query)
 	}
 	aq.withArticleTags = query
+	return aq
+}
+
+// WithUserFavorites tells the query-builder to eager-load the nodes that are connected to
+// the "user_favorites" edge. The optional arguments are used to configure the query builder of the edge.
+func (aq *ArticleQuery) WithUserFavorites(opts ...func(*UserFavoriteQuery)) *ArticleQuery {
+	query := (&UserFavoriteClient{config: aq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	aq.withUserFavorites = query
 	return aq
 }
 
@@ -479,11 +550,13 @@ func (aq *ArticleQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Arti
 	var (
 		nodes       = []*Article{}
 		_spec       = aq.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [6]bool{
 			aq.withArticleAuthor != nil,
 			aq.withTags != nil,
 			aq.withComments != nil,
+			aq.withFavoritedUsers != nil,
 			aq.withArticleTags != nil,
+			aq.withUserFavorites != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -524,10 +597,24 @@ func (aq *ArticleQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Arti
 			return nil, err
 		}
 	}
+	if query := aq.withFavoritedUsers; query != nil {
+		if err := aq.loadFavoritedUsers(ctx, query, nodes,
+			func(n *Article) { n.Edges.FavoritedUsers = []*User{} },
+			func(n *Article, e *User) { n.Edges.FavoritedUsers = append(n.Edges.FavoritedUsers, e) }); err != nil {
+			return nil, err
+		}
+	}
 	if query := aq.withArticleTags; query != nil {
 		if err := aq.loadArticleTags(ctx, query, nodes,
 			func(n *Article) { n.Edges.ArticleTags = []*ArticleTag{} },
 			func(n *Article, e *ArticleTag) { n.Edges.ArticleTags = append(n.Edges.ArticleTags, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := aq.withUserFavorites; query != nil {
+		if err := aq.loadUserFavorites(ctx, query, nodes,
+			func(n *Article) { n.Edges.UserFavorites = []*UserFavorite{} },
+			func(n *Article, e *UserFavorite) { n.Edges.UserFavorites = append(n.Edges.UserFavorites, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -654,6 +741,67 @@ func (aq *ArticleQuery) loadComments(ctx context.Context, query *CommentQuery, n
 	}
 	return nil
 }
+func (aq *ArticleQuery) loadFavoritedUsers(ctx context.Context, query *UserQuery, nodes []*Article, init func(*Article), assign func(*Article, *User)) error {
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[uuid.UUID]*Article)
+	nids := make(map[uuid.UUID]map[*Article]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
+		if init != nil {
+			init(node)
+		}
+	}
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(article.FavoritedUsersTable)
+		s.Join(joinT).On(s.C(user.FieldID), joinT.C(article.FavoritedUsersPrimaryKey[1]))
+		s.Where(sql.InValues(joinT.C(article.FavoritedUsersPrimaryKey[0]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(article.FavoritedUsersPrimaryKey[0]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
+	}
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(uuid.UUID)}, values...), nil
+			}
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := *values[0].(*uuid.UUID)
+				inValue := *values[1].(*uuid.UUID)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*Article]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
+			}
+		})
+	})
+	neighbors, err := withInterceptors[[]*User](ctx, query, qr, query.inters)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected "favoritedUsers" node returned %v`, n.ID)
+		}
+		for kn := range nodes {
+			assign(kn, n)
+		}
+	}
+	return nil
+}
 func (aq *ArticleQuery) loadArticleTags(ctx context.Context, query *ArticleTagQuery, nodes []*Article, init func(*Article), assign func(*Article, *ArticleTag)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*Article)
@@ -669,6 +817,36 @@ func (aq *ArticleQuery) loadArticleTags(ctx context.Context, query *ArticleTagQu
 	}
 	query.Where(predicate.ArticleTag(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(article.ArticleTagsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ArticleID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "article_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (aq *ArticleQuery) loadUserFavorites(ctx context.Context, query *UserFavoriteQuery, nodes []*Article, init func(*Article), assign func(*Article, *UserFavorite)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Article)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(userfavorite.FieldArticleID)
+	}
+	query.Where(predicate.UserFavorite(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(article.UserFavoritesColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {

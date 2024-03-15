@@ -565,21 +565,44 @@ func HasCommentsWith(preds ...predicate.Comment) predicate.User {
 	})
 }
 
-// HasFavorites applies the HasEdge predicate on the "favorites" edge.
-func HasFavorites() predicate.User {
+// HasFavariteArticle applies the HasEdge predicate on the "favariteArticle" edge.
+func HasFavariteArticle() predicate.User {
 	return predicate.User(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, FavoritesTable, FavoritesColumn),
+			sqlgraph.Edge(sqlgraph.M2M, true, FavariteArticleTable, FavariteArticlePrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasFavoritesWith applies the HasEdge predicate on the "favorites" edge with a given conditions (other predicates).
-func HasFavoritesWith(preds ...predicate.UserFavorite) predicate.User {
+// HasFavariteArticleWith applies the HasEdge predicate on the "favariteArticle" edge with a given conditions (other predicates).
+func HasFavariteArticleWith(preds ...predicate.Article) predicate.User {
 	return predicate.User(func(s *sql.Selector) {
-		step := newFavoritesStep()
+		step := newFavariteArticleStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasUserFavorites applies the HasEdge predicate on the "user_favorites" edge.
+func HasUserFavorites() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, UserFavoritesTable, UserFavoritesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasUserFavoritesWith applies the HasEdge predicate on the "user_favorites" edge with a given conditions (other predicates).
+func HasUserFavoritesWith(preds ...predicate.UserFavorite) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newUserFavoritesStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

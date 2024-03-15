@@ -76,7 +76,7 @@ func (ufq *UserFavoriteQuery) QueryUser() *UserQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(userfavorite.Table, userfavorite.FieldID, selector),
 			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, userfavorite.UserTable, userfavorite.UserColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, userfavorite.UserTable, userfavorite.UserColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(ufq.driver.Dialect(), step)
 		return fromU, nil
