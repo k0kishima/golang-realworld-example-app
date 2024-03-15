@@ -59,7 +59,21 @@ func (ufu *UserFavoriteUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (ufu *UserFavoriteUpdate) check() error {
+	if _, ok := ufu.mutation.UserID(); ufu.mutation.UserCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "UserFavorite.user"`)
+	}
+	if _, ok := ufu.mutation.ArticleID(); ufu.mutation.ArticleCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "UserFavorite.article"`)
+	}
+	return nil
+}
+
 func (ufu *UserFavoriteUpdate) sqlSave(ctx context.Context) (n int, err error) {
+	if err := ufu.check(); err != nil {
+		return n, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(userfavorite.Table, userfavorite.Columns, sqlgraph.NewFieldSpec(userfavorite.FieldID, field.TypeUUID))
 	if ps := ufu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -133,7 +147,21 @@ func (ufuo *UserFavoriteUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (ufuo *UserFavoriteUpdateOne) check() error {
+	if _, ok := ufuo.mutation.UserID(); ufuo.mutation.UserCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "UserFavorite.user"`)
+	}
+	if _, ok := ufuo.mutation.ArticleID(); ufuo.mutation.ArticleCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "UserFavorite.article"`)
+	}
+	return nil
+}
+
 func (ufuo *UserFavoriteUpdateOne) sqlSave(ctx context.Context) (_node *UserFavorite, err error) {
+	if err := ufuo.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(userfavorite.Table, userfavorite.Columns, sqlgraph.NewFieldSpec(userfavorite.FieldID, field.TypeUUID))
 	id, ok := ufuo.mutation.ID()
 	if !ok {

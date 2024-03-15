@@ -11,17 +11,21 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/k0kishima/golang-realworld-example-app/ent/article"
 	"github.com/k0kishima/golang-realworld-example-app/ent/predicate"
+	"github.com/k0kishima/golang-realworld-example-app/ent/user"
 	"github.com/k0kishima/golang-realworld-example-app/ent/userfavorite"
 )
 
 // UserFavoriteQuery is the builder for querying UserFavorite entities.
 type UserFavoriteQuery struct {
 	config
-	ctx        *QueryContext
-	order      []userfavorite.OrderOption
-	inters     []Interceptor
-	predicates []predicate.UserFavorite
+	ctx         *QueryContext
+	order       []userfavorite.OrderOption
+	inters      []Interceptor
+	predicates  []predicate.UserFavorite
+	withUser    *UserQuery
+	withArticle *ArticleQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -56,6 +60,50 @@ func (ufq *UserFavoriteQuery) Unique(unique bool) *UserFavoriteQuery {
 func (ufq *UserFavoriteQuery) Order(o ...userfavorite.OrderOption) *UserFavoriteQuery {
 	ufq.order = append(ufq.order, o...)
 	return ufq
+}
+
+// QueryUser chains the current query on the "user" edge.
+func (ufq *UserFavoriteQuery) QueryUser() *UserQuery {
+	query := (&UserClient{config: ufq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := ufq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := ufq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(userfavorite.Table, userfavorite.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, userfavorite.UserTable, userfavorite.UserColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(ufq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryArticle chains the current query on the "article" edge.
+func (ufq *UserFavoriteQuery) QueryArticle() *ArticleQuery {
+	query := (&ArticleClient{config: ufq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := ufq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := ufq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(userfavorite.Table, userfavorite.FieldID, selector),
+			sqlgraph.To(article.Table, article.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, false, userfavorite.ArticleTable, userfavorite.ArticleColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(ufq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first UserFavorite entity from the query.
@@ -245,15 +293,39 @@ func (ufq *UserFavoriteQuery) Clone() *UserFavoriteQuery {
 		return nil
 	}
 	return &UserFavoriteQuery{
-		config:     ufq.config,
-		ctx:        ufq.ctx.Clone(),
-		order:      append([]userfavorite.OrderOption{}, ufq.order...),
-		inters:     append([]Interceptor{}, ufq.inters...),
-		predicates: append([]predicate.UserFavorite{}, ufq.predicates...),
+		config:      ufq.config,
+		ctx:         ufq.ctx.Clone(),
+		order:       append([]userfavorite.OrderOption{}, ufq.order...),
+		inters:      append([]Interceptor{}, ufq.inters...),
+		predicates:  append([]predicate.UserFavorite{}, ufq.predicates...),
+		withUser:    ufq.withUser.Clone(),
+		withArticle: ufq.withArticle.Clone(),
 		// clone intermediate query.
 		sql:  ufq.sql.Clone(),
 		path: ufq.path,
 	}
+}
+
+// WithUser tells the query-builder to eager-load the nodes that are connected to
+// the "user" edge. The optional arguments are used to configure the query builder of the edge.
+func (ufq *UserFavoriteQuery) WithUser(opts ...func(*UserQuery)) *UserFavoriteQuery {
+	query := (&UserClient{config: ufq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	ufq.withUser = query
+	return ufq
+}
+
+// WithArticle tells the query-builder to eager-load the nodes that are connected to
+// the "article" edge. The optional arguments are used to configure the query builder of the edge.
+func (ufq *UserFavoriteQuery) WithArticle(opts ...func(*ArticleQuery)) *UserFavoriteQuery {
+	query := (&ArticleClient{config: ufq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	ufq.withArticle = query
+	return ufq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -332,8 +404,12 @@ func (ufq *UserFavoriteQuery) prepareQuery(ctx context.Context) error {
 
 func (ufq *UserFavoriteQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*UserFavorite, error) {
 	var (
-		nodes = []*UserFavorite{}
-		_spec = ufq.querySpec()
+		nodes       = []*UserFavorite{}
+		_spec       = ufq.querySpec()
+		loadedTypes = [2]bool{
+			ufq.withUser != nil,
+			ufq.withArticle != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*UserFavorite).scanValues(nil, columns)
@@ -341,6 +417,7 @@ func (ufq *UserFavoriteQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &UserFavorite{config: ufq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -352,7 +429,78 @@ func (ufq *UserFavoriteQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := ufq.withUser; query != nil {
+		if err := ufq.loadUser(ctx, query, nodes, nil,
+			func(n *UserFavorite, e *User) { n.Edges.User = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := ufq.withArticle; query != nil {
+		if err := ufq.loadArticle(ctx, query, nodes, nil,
+			func(n *UserFavorite, e *Article) { n.Edges.Article = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (ufq *UserFavoriteQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*UserFavorite, init func(*UserFavorite), assign func(*UserFavorite, *User)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*UserFavorite)
+	for i := range nodes {
+		fk := nodes[i].UserID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(user.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "user_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (ufq *UserFavoriteQuery) loadArticle(ctx context.Context, query *ArticleQuery, nodes []*UserFavorite, init func(*UserFavorite), assign func(*UserFavorite, *Article)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*UserFavorite)
+	for i := range nodes {
+		fk := nodes[i].ArticleID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(article.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "article_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (ufq *UserFavoriteQuery) sqlCount(ctx context.Context) (int, error) {
@@ -379,6 +527,12 @@ func (ufq *UserFavoriteQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != userfavorite.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if ufq.withUser != nil {
+			_spec.Node.AddColumnOnce(userfavorite.FieldUserID)
+		}
+		if ufq.withArticle != nil {
+			_spec.Node.AddColumnOnce(userfavorite.FieldArticleID)
 		}
 	}
 	if ps := ufq.predicates; len(ps) > 0 {
