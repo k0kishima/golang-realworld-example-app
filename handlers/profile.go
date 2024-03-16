@@ -123,7 +123,11 @@ func followUser(client *ent.Client, c *gin.Context, currentUserEntity, targetUse
 		SetFollowee(targetUser).
 		Save(c.Request.Context())
 	if err != nil {
-		respondWithError(c, http.StatusInternalServerError, "Error following user")
+		if ent.IsConstraintError(err) {
+			respondWithError(c, http.StatusConflict, "User is already followed")
+		} else {
+			respondWithError(c, http.StatusInternalServerError, "Error following user")
+		}
 		return err
 	}
 	return nil
