@@ -291,11 +291,7 @@ func DeleteArticle(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		exists, err := currentUserEntity.QueryArticles().Where(article.IDEQ(targetArticle.ID)).Exist(c.Request.Context())
-		if err != nil {
-			respondWithError(c, http.StatusInternalServerError, "Error checking if user is author")
-		}
-		if !exists {
+		if targetArticle.AuthorID != currentUserEntity.ID {
 			c.JSON(http.StatusForbidden, gin.H{"message": "You are not authorized to delete this article"})
 			return
 		}
@@ -306,7 +302,7 @@ func DeleteArticle(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		_, err = tx.Tag.Delete().Where(tag.HasArticlesWith(article.IDEQ(targetArticle.ID))).Exec(c.Request.Context())
+		err = tx.Article.UpdateOne(targetArticle).ClearTags().Exec(c.Request.Context())
 		if err != nil {
 			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error deleting article tags"})
