@@ -66,12 +66,15 @@ func ListArticles(client *ent.Client) gin.HandlerFunc {
 		}
 
 		if authorName := c.Query("author"); authorName != "" {
-			author, err := getUserByUsername(client, c, authorName)
-			if err != nil {
-				respondWithError(c, http.StatusInternalServerError, "Error fetching author")
-				return
+			author, err := client.User.Query().Where(user.UsernameEQ(authorName)).Only(c.Request.Context())
+			if err == nil {
+				query.Where(article.AuthorIDEQ(author.ID))
+			} else {
+				c.JSON(http.StatusOK, gin.H{
+					"articles":      []gin.H{},
+					"articlesCount": 0,
+				})
 			}
-			query.Where(article.AuthorIDEQ(author.ID))
 		}
 
 		if favorited := c.Query("favorited"); favorited != "" {
@@ -362,6 +365,7 @@ func GetFeed(client *ent.Client) gin.HandlerFunc {
 			favorited, favoritesCount, err := getArticleFavoritedAndCount(article, currentUserEntity)
 			if err != nil {
 				respondWithError(c, http.StatusInternalServerError, "Error fetching favorites information")
+				return
 			}
 
 			response, err := articleResponse(client, article, tagList, favorited, favoritesCount, currentUserEntity)
