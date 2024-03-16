@@ -59,6 +59,7 @@ func RegisterUser(client *ent.Client) gin.HandlerFunc {
 			Save(c.Request.Context())
 
 		if err != nil {
+			log.Printf("Error: %v", err)
 			tx.Rollback()
 			handleUserCreationError(c, err)
 			return
@@ -67,6 +68,7 @@ func RegisterUser(client *ent.Client) gin.HandlerFunc {
 		token, err := auth.CreateToken(u)
 		if err != nil {
 			tx.Rollback()
+			log.Printf("Error: %v", err)
 			respondWithError(c, http.StatusInternalServerError, "Error creating token")
 			return
 		}
