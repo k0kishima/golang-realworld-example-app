@@ -13,7 +13,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/article"
 	"github.com/k0kishima/golang-realworld-example-app/ent/comment"
-	"github.com/k0kishima/golang-realworld-example-app/ent/user"
 )
 
 // CommentCreate is the builder for creating a Comment entity.
@@ -23,15 +22,15 @@ type CommentCreate struct {
 	hooks    []Hook
 }
 
-// SetAuthorID sets the "author_id" field.
-func (cc *CommentCreate) SetAuthorID(u uuid.UUID) *CommentCreate {
-	cc.mutation.SetAuthorID(u)
-	return cc
-}
-
 // SetArticleID sets the "article_id" field.
 func (cc *CommentCreate) SetArticleID(u uuid.UUID) *CommentCreate {
 	cc.mutation.SetArticleID(u)
+	return cc
+}
+
+// SetAuthorID sets the "author_id" field.
+func (cc *CommentCreate) SetAuthorID(u uuid.UUID) *CommentCreate {
+	cc.mutation.SetAuthorID(u)
 	return cc
 }
 
@@ -83,20 +82,19 @@ func (cc *CommentCreate) SetNillableID(u *uuid.UUID) *CommentCreate {
 	return cc
 }
 
-// SetCommentAuthorID sets the "commentAuthor" edge to the User entity by ID.
-func (cc *CommentCreate) SetCommentAuthorID(id uuid.UUID) *CommentCreate {
-	cc.mutation.SetCommentAuthorID(id)
+// AddArticleIDs adds the "article" edge to the Article entity by IDs.
+func (cc *CommentCreate) AddArticleIDs(ids ...uuid.UUID) *CommentCreate {
+	cc.mutation.AddArticleIDs(ids...)
 	return cc
 }
 
-// SetCommentAuthor sets the "commentAuthor" edge to the User entity.
-func (cc *CommentCreate) SetCommentAuthor(u *User) *CommentCreate {
-	return cc.SetCommentAuthorID(u.ID)
-}
-
-// SetArticle sets the "article" edge to the Article entity.
-func (cc *CommentCreate) SetArticle(a *Article) *CommentCreate {
-	return cc.SetArticleID(a.ID)
+// AddArticle adds the "article" edges to the Article entity.
+func (cc *CommentCreate) AddArticle(a ...*Article) *CommentCreate {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return cc.AddArticleIDs(ids...)
 }
 
 // Mutation returns the CommentMutation object of the builder.
@@ -150,11 +148,11 @@ func (cc *CommentCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (cc *CommentCreate) check() error {
-	if _, ok := cc.mutation.AuthorID(); !ok {
-		return &ValidationError{Name: "author_id", err: errors.New(`ent: missing required field "Comment.author_id"`)}
-	}
 	if _, ok := cc.mutation.ArticleID(); !ok {
 		return &ValidationError{Name: "article_id", err: errors.New(`ent: missing required field "Comment.article_id"`)}
+	}
+	if _, ok := cc.mutation.AuthorID(); !ok {
+		return &ValidationError{Name: "author_id", err: errors.New(`ent: missing required field "Comment.author_id"`)}
 	}
 	if _, ok := cc.mutation.Body(); !ok {
 		return &ValidationError{Name: "body", err: errors.New(`ent: missing required field "Comment.body"`)}
@@ -169,12 +167,6 @@ func (cc *CommentCreate) check() error {
 	}
 	if _, ok := cc.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "Comment.updated_at"`)}
-	}
-	if _, ok := cc.mutation.CommentAuthorID(); !ok {
-		return &ValidationError{Name: "commentAuthor", err: errors.New(`ent: missing required edge "Comment.commentAuthor"`)}
-	}
-	if _, ok := cc.mutation.ArticleID(); !ok {
-		return &ValidationError{Name: "article", err: errors.New(`ent: missing required edge "Comment.article"`)}
 	}
 	return nil
 }
@@ -211,6 +203,14 @@ func (cc *CommentCreate) createSpec() (*Comment, *sqlgraph.CreateSpec) {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
+	if value, ok := cc.mutation.ArticleID(); ok {
+		_spec.SetField(comment.FieldArticleID, field.TypeUUID, value)
+		_node.ArticleID = value
+	}
+	if value, ok := cc.mutation.AuthorID(); ok {
+		_spec.SetField(comment.FieldAuthorID, field.TypeUUID, value)
+		_node.AuthorID = value
+	}
 	if value, ok := cc.mutation.Body(); ok {
 		_spec.SetField(comment.FieldBody, field.TypeString, value)
 		_node.Body = value
@@ -223,26 +223,9 @@ func (cc *CommentCreate) createSpec() (*Comment, *sqlgraph.CreateSpec) {
 		_spec.SetField(comment.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if nodes := cc.mutation.CommentAuthorIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   comment.CommentAuthorTable,
-			Columns: []string{comment.CommentAuthorColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.AuthorID = nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
-	}
 	if nodes := cc.mutation.ArticleIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: true,
 			Table:   comment.ArticleTable,
 			Columns: []string{comment.ArticleColumn},
@@ -254,7 +237,6 @@ func (cc *CommentCreate) createSpec() (*Comment, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.ArticleID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

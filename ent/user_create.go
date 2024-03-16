@@ -14,8 +14,6 @@ import (
 	"github.com/k0kishima/golang-realworld-example-app/ent/article"
 	"github.com/k0kishima/golang-realworld-example-app/ent/comment"
 	"github.com/k0kishima/golang-realworld-example-app/ent/user"
-	"github.com/k0kishima/golang-realworld-example-app/ent/userfavorite"
-	"github.com/k0kishima/golang-realworld-example-app/ent/userfollow"
 )
 
 // UserCreate is the builder for creating a User entity.
@@ -113,79 +111,72 @@ func (uc *UserCreate) SetNillableID(u *uuid.UUID) *UserCreate {
 	return uc
 }
 
-// AddFollowIDs adds the "follows" edge to the UserFollow entity by IDs.
-func (uc *UserCreate) AddFollowIDs(ids ...uuid.UUID) *UserCreate {
-	uc.mutation.AddFollowIDs(ids...)
+// SetArticlesID sets the "articles" edge to the Article entity by ID.
+func (uc *UserCreate) SetArticlesID(id uuid.UUID) *UserCreate {
+	uc.mutation.SetArticlesID(id)
 	return uc
 }
 
-// AddFollows adds the "follows" edges to the UserFollow entity.
-func (uc *UserCreate) AddFollows(u ...*UserFollow) *UserCreate {
-	ids := make([]uuid.UUID, len(u))
-	for i := range u {
-		ids[i] = u[i].ID
+// SetNillableArticlesID sets the "articles" edge to the Article entity by ID if the given value is not nil.
+func (uc *UserCreate) SetNillableArticlesID(id *uuid.UUID) *UserCreate {
+	if id != nil {
+		uc = uc.SetArticlesID(*id)
 	}
-	return uc.AddFollowIDs(ids...)
-}
-
-// AddArticleIDs adds the "articles" edge to the Article entity by IDs.
-func (uc *UserCreate) AddArticleIDs(ids ...uuid.UUID) *UserCreate {
-	uc.mutation.AddArticleIDs(ids...)
 	return uc
 }
 
-// AddArticles adds the "articles" edges to the Article entity.
-func (uc *UserCreate) AddArticles(a ...*Article) *UserCreate {
+// SetArticles sets the "articles" edge to the Article entity.
+func (uc *UserCreate) SetArticles(a *Article) *UserCreate {
+	return uc.SetArticlesID(a.ID)
+}
+
+// SetCommentsID sets the "comments" edge to the Comment entity by ID.
+func (uc *UserCreate) SetCommentsID(id uuid.UUID) *UserCreate {
+	uc.mutation.SetCommentsID(id)
+	return uc
+}
+
+// SetNillableCommentsID sets the "comments" edge to the Comment entity by ID if the given value is not nil.
+func (uc *UserCreate) SetNillableCommentsID(id *uuid.UUID) *UserCreate {
+	if id != nil {
+		uc = uc.SetCommentsID(*id)
+	}
+	return uc
+}
+
+// SetComments sets the "comments" edge to the Comment entity.
+func (uc *UserCreate) SetComments(c *Comment) *UserCreate {
+	return uc.SetCommentsID(c.ID)
+}
+
+// AddFavoriteArticleIDs adds the "favoriteArticles" edge to the Article entity by IDs.
+func (uc *UserCreate) AddFavoriteArticleIDs(ids ...uuid.UUID) *UserCreate {
+	uc.mutation.AddFavoriteArticleIDs(ids...)
+	return uc
+}
+
+// AddFavoriteArticles adds the "favoriteArticles" edges to the Article entity.
+func (uc *UserCreate) AddFavoriteArticles(a ...*Article) *UserCreate {
 	ids := make([]uuid.UUID, len(a))
 	for i := range a {
 		ids[i] = a[i].ID
 	}
-	return uc.AddArticleIDs(ids...)
+	return uc.AddFavoriteArticleIDs(ids...)
 }
 
-// AddCommentIDs adds the "comments" edge to the Comment entity by IDs.
-func (uc *UserCreate) AddCommentIDs(ids ...uuid.UUID) *UserCreate {
-	uc.mutation.AddCommentIDs(ids...)
+// AddFollowingIDs adds the "following" edge to the User entity by IDs.
+func (uc *UserCreate) AddFollowingIDs(ids ...uuid.UUID) *UserCreate {
+	uc.mutation.AddFollowingIDs(ids...)
 	return uc
 }
 
-// AddComments adds the "comments" edges to the Comment entity.
-func (uc *UserCreate) AddComments(c ...*Comment) *UserCreate {
-	ids := make([]uuid.UUID, len(c))
-	for i := range c {
-		ids[i] = c[i].ID
-	}
-	return uc.AddCommentIDs(ids...)
-}
-
-// AddFavariteArticleIDs adds the "favariteArticle" edge to the Article entity by IDs.
-func (uc *UserCreate) AddFavariteArticleIDs(ids ...uuid.UUID) *UserCreate {
-	uc.mutation.AddFavariteArticleIDs(ids...)
-	return uc
-}
-
-// AddFavariteArticle adds the "favariteArticle" edges to the Article entity.
-func (uc *UserCreate) AddFavariteArticle(a ...*Article) *UserCreate {
-	ids := make([]uuid.UUID, len(a))
-	for i := range a {
-		ids[i] = a[i].ID
-	}
-	return uc.AddFavariteArticleIDs(ids...)
-}
-
-// AddUserFavoriteIDs adds the "user_favorites" edge to the UserFavorite entity by IDs.
-func (uc *UserCreate) AddUserFavoriteIDs(ids ...uuid.UUID) *UserCreate {
-	uc.mutation.AddUserFavoriteIDs(ids...)
-	return uc
-}
-
-// AddUserFavorites adds the "user_favorites" edges to the UserFavorite entity.
-func (uc *UserCreate) AddUserFavorites(u ...*UserFavorite) *UserCreate {
+// AddFollowing adds the "following" edges to the User entity.
+func (uc *UserCreate) AddFollowing(u ...*User) *UserCreate {
 	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
 	}
-	return uc.AddUserFavoriteIDs(ids...)
+	return uc.AddFollowingIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -346,25 +337,9 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		_spec.SetField(user.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if nodes := uc.mutation.FollowsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   user.FollowsTable,
-			Columns: []string{user.FollowsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(userfollow.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
 	if nodes := uc.mutation.ArticlesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2O,
 			Inverse: false,
 			Table:   user.ArticlesTable,
 			Columns: []string{user.ArticlesColumn},
@@ -376,11 +351,12 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_node.author_id = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := uc.mutation.CommentsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2O,
 			Inverse: false,
 			Table:   user.CommentsTable,
 			Columns: []string{user.CommentsColumn},
@@ -392,14 +368,15 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_node.author_id = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := uc.mutation.FavariteArticleIDs(); len(nodes) > 0 {
+	if nodes := uc.mutation.FavoriteArticlesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   user.FavariteArticleTable,
-			Columns: user.FavariteArticlePrimaryKey,
+			Inverse: false,
+			Table:   user.FavoriteArticlesTable,
+			Columns: user.FavoriteArticlesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(article.FieldID, field.TypeUUID),
@@ -408,24 +385,17 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		createE := &UserFavoriteCreate{config: uc.config, mutation: newUserFavoriteMutation(uc.config, OpCreate)}
-		createE.defaults()
-		_, specE := createE.createSpec()
-		edge.Target.Fields = specE.Fields
-		if specE.ID.Value != nil {
-			edge.Target.Fields = append(edge.Target.Fields, specE.ID)
-		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := uc.mutation.UserFavoritesIDs(); len(nodes) > 0 {
+	if nodes := uc.mutation.FollowingIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   user.UserFavoritesTable,
-			Columns: []string{user.UserFavoritesColumn},
-			Bidi:    false,
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   user.FollowingTable,
+			Columns: user.FollowingPrimaryKey,
+			Bidi:    true,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(userfavorite.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

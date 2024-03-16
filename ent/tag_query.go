@@ -13,7 +13,6 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/article"
-	"github.com/k0kishima/golang-realworld-example-app/ent/articletag"
 	"github.com/k0kishima/golang-realworld-example-app/ent/predicate"
 	"github.com/k0kishima/golang-realworld-example-app/ent/tag"
 )
@@ -21,12 +20,11 @@ import (
 // TagQuery is the builder for querying Tag entities.
 type TagQuery struct {
 	config
-	ctx            *QueryContext
-	order          []tag.OrderOption
-	inters         []Interceptor
-	predicates     []predicate.Tag
-	withArticle    *ArticleQuery
-	withTagArticle *ArticleTagQuery
+	ctx          *QueryContext
+	order        []tag.OrderOption
+	inters       []Interceptor
+	predicates   []predicate.Tag
+	withArticles *ArticleQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -63,8 +61,8 @@ func (tq *TagQuery) Order(o ...tag.OrderOption) *TagQuery {
 	return tq
 }
 
-// QueryArticle chains the current query on the "article" edge.
-func (tq *TagQuery) QueryArticle() *ArticleQuery {
+// QueryArticles chains the current query on the "articles" edge.
+func (tq *TagQuery) QueryArticles() *ArticleQuery {
 	query := (&ArticleClient{config: tq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := tq.prepareQuery(ctx); err != nil {
@@ -77,29 +75,7 @@ func (tq *TagQuery) QueryArticle() *ArticleQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(tag.Table, tag.FieldID, selector),
 			sqlgraph.To(article.Table, article.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, tag.ArticleTable, tag.ArticlePrimaryKey...),
-		)
-		fromU = sqlgraph.SetNeighbors(tq.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryTagArticle chains the current query on the "tag_article" edge.
-func (tq *TagQuery) QueryTagArticle() *ArticleTagQuery {
-	query := (&ArticleTagClient{config: tq.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := tq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := tq.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(tag.Table, tag.FieldID, selector),
-			sqlgraph.To(articletag.Table, articletag.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, tag.TagArticleTable, tag.TagArticleColumn),
+			sqlgraph.Edge(sqlgraph.M2M, true, tag.ArticlesTable, tag.ArticlesPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(tq.driver.Dialect(), step)
 		return fromU, nil
@@ -294,38 +270,26 @@ func (tq *TagQuery) Clone() *TagQuery {
 		return nil
 	}
 	return &TagQuery{
-		config:         tq.config,
-		ctx:            tq.ctx.Clone(),
-		order:          append([]tag.OrderOption{}, tq.order...),
-		inters:         append([]Interceptor{}, tq.inters...),
-		predicates:     append([]predicate.Tag{}, tq.predicates...),
-		withArticle:    tq.withArticle.Clone(),
-		withTagArticle: tq.withTagArticle.Clone(),
+		config:       tq.config,
+		ctx:          tq.ctx.Clone(),
+		order:        append([]tag.OrderOption{}, tq.order...),
+		inters:       append([]Interceptor{}, tq.inters...),
+		predicates:   append([]predicate.Tag{}, tq.predicates...),
+		withArticles: tq.withArticles.Clone(),
 		// clone intermediate query.
 		sql:  tq.sql.Clone(),
 		path: tq.path,
 	}
 }
 
-// WithArticle tells the query-builder to eager-load the nodes that are connected to
-// the "article" edge. The optional arguments are used to configure the query builder of the edge.
-func (tq *TagQuery) WithArticle(opts ...func(*ArticleQuery)) *TagQuery {
+// WithArticles tells the query-builder to eager-load the nodes that are connected to
+// the "articles" edge. The optional arguments are used to configure the query builder of the edge.
+func (tq *TagQuery) WithArticles(opts ...func(*ArticleQuery)) *TagQuery {
 	query := (&ArticleClient{config: tq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	tq.withArticle = query
-	return tq
-}
-
-// WithTagArticle tells the query-builder to eager-load the nodes that are connected to
-// the "tag_article" edge. The optional arguments are used to configure the query builder of the edge.
-func (tq *TagQuery) WithTagArticle(opts ...func(*ArticleTagQuery)) *TagQuery {
-	query := (&ArticleTagClient{config: tq.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	tq.withTagArticle = query
+	tq.withArticles = query
 	return tq
 }
 
@@ -407,9 +371,8 @@ func (tq *TagQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Tag, err
 	var (
 		nodes       = []*Tag{}
 		_spec       = tq.querySpec()
-		loadedTypes = [2]bool{
-			tq.withArticle != nil,
-			tq.withTagArticle != nil,
+		loadedTypes = [1]bool{
+			tq.withArticles != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -430,24 +393,17 @@ func (tq *TagQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Tag, err
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := tq.withArticle; query != nil {
-		if err := tq.loadArticle(ctx, query, nodes,
-			func(n *Tag) { n.Edges.Article = []*Article{} },
-			func(n *Tag, e *Article) { n.Edges.Article = append(n.Edges.Article, e) }); err != nil {
-			return nil, err
-		}
-	}
-	if query := tq.withTagArticle; query != nil {
-		if err := tq.loadTagArticle(ctx, query, nodes,
-			func(n *Tag) { n.Edges.TagArticle = []*ArticleTag{} },
-			func(n *Tag, e *ArticleTag) { n.Edges.TagArticle = append(n.Edges.TagArticle, e) }); err != nil {
+	if query := tq.withArticles; query != nil {
+		if err := tq.loadArticles(ctx, query, nodes,
+			func(n *Tag) { n.Edges.Articles = []*Article{} },
+			func(n *Tag, e *Article) { n.Edges.Articles = append(n.Edges.Articles, e) }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (tq *TagQuery) loadArticle(ctx context.Context, query *ArticleQuery, nodes []*Tag, init func(*Tag), assign func(*Tag, *Article)) error {
+func (tq *TagQuery) loadArticles(ctx context.Context, query *ArticleQuery, nodes []*Tag, init func(*Tag), assign func(*Tag, *Article)) error {
 	edgeIDs := make([]driver.Value, len(nodes))
 	byID := make(map[uuid.UUID]*Tag)
 	nids := make(map[uuid.UUID]map[*Tag]struct{})
@@ -459,11 +415,11 @@ func (tq *TagQuery) loadArticle(ctx context.Context, query *ArticleQuery, nodes 
 		}
 	}
 	query.Where(func(s *sql.Selector) {
-		joinT := sql.Table(tag.ArticleTable)
-		s.Join(joinT).On(s.C(article.FieldID), joinT.C(tag.ArticlePrimaryKey[0]))
-		s.Where(sql.InValues(joinT.C(tag.ArticlePrimaryKey[1]), edgeIDs...))
+		joinT := sql.Table(tag.ArticlesTable)
+		s.Join(joinT).On(s.C(article.FieldID), joinT.C(tag.ArticlesPrimaryKey[0]))
+		s.Where(sql.InValues(joinT.C(tag.ArticlesPrimaryKey[1]), edgeIDs...))
 		columns := s.SelectedColumns()
-		s.Select(joinT.C(tag.ArticlePrimaryKey[1]))
+		s.Select(joinT.C(tag.ArticlesPrimaryKey[1]))
 		s.AppendSelect(columns...)
 		s.SetDistinct(false)
 	})
@@ -500,41 +456,11 @@ func (tq *TagQuery) loadArticle(ctx context.Context, query *ArticleQuery, nodes 
 	for _, n := range neighbors {
 		nodes, ok := nids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected "article" node returned %v`, n.ID)
+			return fmt.Errorf(`unexpected "articles" node returned %v`, n.ID)
 		}
 		for kn := range nodes {
 			assign(kn, n)
 		}
-	}
-	return nil
-}
-func (tq *TagQuery) loadTagArticle(ctx context.Context, query *ArticleTagQuery, nodes []*Tag, init func(*Tag), assign func(*Tag, *ArticleTag)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uuid.UUID]*Tag)
-	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
-		}
-	}
-	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(articletag.FieldTagID)
-	}
-	query.Where(predicate.ArticleTag(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(tag.TagArticleColumn), fks...))
-	}))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		fk := n.TagID
-		node, ok := nodeids[fk]
-		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "tag_id" returned %v for node %v`, fk, n.ID)
-		}
-		assign(node, n)
 	}
 	return nil
 }

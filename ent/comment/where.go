@@ -56,14 +56,14 @@ func IDLTE(id uuid.UUID) predicate.Comment {
 	return predicate.Comment(sql.FieldLTE(FieldID, id))
 }
 
-// AuthorID applies equality check predicate on the "author_id" field. It's identical to AuthorIDEQ.
-func AuthorID(v uuid.UUID) predicate.Comment {
-	return predicate.Comment(sql.FieldEQ(FieldAuthorID, v))
-}
-
 // ArticleID applies equality check predicate on the "article_id" field. It's identical to ArticleIDEQ.
 func ArticleID(v uuid.UUID) predicate.Comment {
 	return predicate.Comment(sql.FieldEQ(FieldArticleID, v))
+}
+
+// AuthorID applies equality check predicate on the "author_id" field. It's identical to AuthorIDEQ.
+func AuthorID(v uuid.UUID) predicate.Comment {
+	return predicate.Comment(sql.FieldEQ(FieldAuthorID, v))
 }
 
 // Body applies equality check predicate on the "body" field. It's identical to BodyEQ.
@@ -79,6 +79,46 @@ func CreatedAt(v time.Time) predicate.Comment {
 // UpdatedAt applies equality check predicate on the "updated_at" field. It's identical to UpdatedAtEQ.
 func UpdatedAt(v time.Time) predicate.Comment {
 	return predicate.Comment(sql.FieldEQ(FieldUpdatedAt, v))
+}
+
+// ArticleIDEQ applies the EQ predicate on the "article_id" field.
+func ArticleIDEQ(v uuid.UUID) predicate.Comment {
+	return predicate.Comment(sql.FieldEQ(FieldArticleID, v))
+}
+
+// ArticleIDNEQ applies the NEQ predicate on the "article_id" field.
+func ArticleIDNEQ(v uuid.UUID) predicate.Comment {
+	return predicate.Comment(sql.FieldNEQ(FieldArticleID, v))
+}
+
+// ArticleIDIn applies the In predicate on the "article_id" field.
+func ArticleIDIn(vs ...uuid.UUID) predicate.Comment {
+	return predicate.Comment(sql.FieldIn(FieldArticleID, vs...))
+}
+
+// ArticleIDNotIn applies the NotIn predicate on the "article_id" field.
+func ArticleIDNotIn(vs ...uuid.UUID) predicate.Comment {
+	return predicate.Comment(sql.FieldNotIn(FieldArticleID, vs...))
+}
+
+// ArticleIDGT applies the GT predicate on the "article_id" field.
+func ArticleIDGT(v uuid.UUID) predicate.Comment {
+	return predicate.Comment(sql.FieldGT(FieldArticleID, v))
+}
+
+// ArticleIDGTE applies the GTE predicate on the "article_id" field.
+func ArticleIDGTE(v uuid.UUID) predicate.Comment {
+	return predicate.Comment(sql.FieldGTE(FieldArticleID, v))
+}
+
+// ArticleIDLT applies the LT predicate on the "article_id" field.
+func ArticleIDLT(v uuid.UUID) predicate.Comment {
+	return predicate.Comment(sql.FieldLT(FieldArticleID, v))
+}
+
+// ArticleIDLTE applies the LTE predicate on the "article_id" field.
+func ArticleIDLTE(v uuid.UUID) predicate.Comment {
+	return predicate.Comment(sql.FieldLTE(FieldArticleID, v))
 }
 
 // AuthorIDEQ applies the EQ predicate on the "author_id" field.
@@ -101,24 +141,24 @@ func AuthorIDNotIn(vs ...uuid.UUID) predicate.Comment {
 	return predicate.Comment(sql.FieldNotIn(FieldAuthorID, vs...))
 }
 
-// ArticleIDEQ applies the EQ predicate on the "article_id" field.
-func ArticleIDEQ(v uuid.UUID) predicate.Comment {
-	return predicate.Comment(sql.FieldEQ(FieldArticleID, v))
+// AuthorIDGT applies the GT predicate on the "author_id" field.
+func AuthorIDGT(v uuid.UUID) predicate.Comment {
+	return predicate.Comment(sql.FieldGT(FieldAuthorID, v))
 }
 
-// ArticleIDNEQ applies the NEQ predicate on the "article_id" field.
-func ArticleIDNEQ(v uuid.UUID) predicate.Comment {
-	return predicate.Comment(sql.FieldNEQ(FieldArticleID, v))
+// AuthorIDGTE applies the GTE predicate on the "author_id" field.
+func AuthorIDGTE(v uuid.UUID) predicate.Comment {
+	return predicate.Comment(sql.FieldGTE(FieldAuthorID, v))
 }
 
-// ArticleIDIn applies the In predicate on the "article_id" field.
-func ArticleIDIn(vs ...uuid.UUID) predicate.Comment {
-	return predicate.Comment(sql.FieldIn(FieldArticleID, vs...))
+// AuthorIDLT applies the LT predicate on the "author_id" field.
+func AuthorIDLT(v uuid.UUID) predicate.Comment {
+	return predicate.Comment(sql.FieldLT(FieldAuthorID, v))
 }
 
-// ArticleIDNotIn applies the NotIn predicate on the "article_id" field.
-func ArticleIDNotIn(vs ...uuid.UUID) predicate.Comment {
-	return predicate.Comment(sql.FieldNotIn(FieldArticleID, vs...))
+// AuthorIDLTE applies the LTE predicate on the "author_id" field.
+func AuthorIDLTE(v uuid.UUID) predicate.Comment {
+	return predicate.Comment(sql.FieldLTE(FieldAuthorID, v))
 }
 
 // BodyEQ applies the EQ predicate on the "body" field.
@@ -266,35 +306,12 @@ func UpdatedAtLTE(v time.Time) predicate.Comment {
 	return predicate.Comment(sql.FieldLTE(FieldUpdatedAt, v))
 }
 
-// HasCommentAuthor applies the HasEdge predicate on the "commentAuthor" edge.
-func HasCommentAuthor() predicate.Comment {
-	return predicate.Comment(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, CommentAuthorTable, CommentAuthorColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasCommentAuthorWith applies the HasEdge predicate on the "commentAuthor" edge with a given conditions (other predicates).
-func HasCommentAuthorWith(preds ...predicate.User) predicate.Comment {
-	return predicate.Comment(func(s *sql.Selector) {
-		step := newCommentAuthorStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
 // HasArticle applies the HasEdge predicate on the "article" edge.
 func HasArticle() predicate.Comment {
 	return predicate.Comment(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, ArticleTable, ArticleColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, ArticleTable, ArticleColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})

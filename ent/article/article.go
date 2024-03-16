@@ -29,58 +29,31 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
-	// EdgeArticleAuthor holds the string denoting the articleauthor edge name in mutations.
-	EdgeArticleAuthor = "articleAuthor"
 	// EdgeTags holds the string denoting the tags edge name in mutations.
 	EdgeTags = "tags"
 	// EdgeComments holds the string denoting the comments edge name in mutations.
 	EdgeComments = "comments"
-	// EdgeFavoritedUsers holds the string denoting the favoritedusers edge name in mutations.
-	EdgeFavoritedUsers = "favoritedUsers"
-	// EdgeArticleTags holds the string denoting the article_tags edge name in mutations.
-	EdgeArticleTags = "article_tags"
-	// EdgeUserFavorites holds the string denoting the user_favorites edge name in mutations.
-	EdgeUserFavorites = "user_favorites"
+	// EdgeUsers holds the string denoting the users edge name in mutations.
+	EdgeUsers = "users"
 	// Table holds the table name of the article in the database.
 	Table = "articles"
-	// ArticleAuthorTable is the table that holds the articleAuthor relation/edge.
-	ArticleAuthorTable = "articles"
-	// ArticleAuthorInverseTable is the table name for the User entity.
-	// It exists in this package in order to avoid circular dependency with the "user" package.
-	ArticleAuthorInverseTable = "users"
-	// ArticleAuthorColumn is the table column denoting the articleAuthor relation/edge.
-	ArticleAuthorColumn = "author_id"
 	// TagsTable is the table that holds the tags relation/edge. The primary key declared below.
 	TagsTable = "article_tags"
 	// TagsInverseTable is the table name for the Tag entity.
 	// It exists in this package in order to avoid circular dependency with the "tag" package.
 	TagsInverseTable = "tags"
 	// CommentsTable is the table that holds the comments relation/edge.
-	CommentsTable = "comments"
+	CommentsTable = "articles"
 	// CommentsInverseTable is the table name for the Comment entity.
 	// It exists in this package in order to avoid circular dependency with the "comment" package.
 	CommentsInverseTable = "comments"
 	// CommentsColumn is the table column denoting the comments relation/edge.
-	CommentsColumn = "article_id"
-	// FavoritedUsersTable is the table that holds the favoritedUsers relation/edge. The primary key declared below.
-	FavoritedUsersTable = "user_favorites"
-	// FavoritedUsersInverseTable is the table name for the User entity.
+	CommentsColumn = "article_comments"
+	// UsersTable is the table that holds the users relation/edge. The primary key declared below.
+	UsersTable = "user_favorites"
+	// UsersInverseTable is the table name for the User entity.
 	// It exists in this package in order to avoid circular dependency with the "user" package.
-	FavoritedUsersInverseTable = "users"
-	// ArticleTagsTable is the table that holds the article_tags relation/edge.
-	ArticleTagsTable = "article_tags"
-	// ArticleTagsInverseTable is the table name for the ArticleTag entity.
-	// It exists in this package in order to avoid circular dependency with the "articletag" package.
-	ArticleTagsInverseTable = "article_tags"
-	// ArticleTagsColumn is the table column denoting the article_tags relation/edge.
-	ArticleTagsColumn = "article_id"
-	// UserFavoritesTable is the table that holds the user_favorites relation/edge.
-	UserFavoritesTable = "user_favorites"
-	// UserFavoritesInverseTable is the table name for the UserFavorite entity.
-	// It exists in this package in order to avoid circular dependency with the "userfavorite" package.
-	UserFavoritesInverseTable = "user_favorites"
-	// UserFavoritesColumn is the table column denoting the user_favorites relation/edge.
-	UserFavoritesColumn = "article_id"
+	UsersInverseTable = "users"
 )
 
 // Columns holds all SQL columns for article fields.
@@ -95,19 +68,30 @@ var Columns = []string{
 	FieldUpdatedAt,
 }
 
+// ForeignKeys holds the SQL foreign-keys that are owned by the "articles"
+// table and are not defined as standalone fields in the schema.
+var ForeignKeys = []string{
+	"article_comments",
+}
+
 var (
 	// TagsPrimaryKey and TagsColumn2 are the table columns denoting the
 	// primary key for the tags relation (M2M).
 	TagsPrimaryKey = []string{"article_id", "tag_id"}
-	// FavoritedUsersPrimaryKey and FavoritedUsersColumn2 are the table columns denoting the
-	// primary key for the favoritedUsers relation (M2M).
-	FavoritedUsersPrimaryKey = []string{"article_id", "user_id"}
+	// UsersPrimaryKey and UsersColumn2 are the table columns denoting the
+	// primary key for the users relation (M2M).
+	UsersPrimaryKey = []string{"user_id", "article_id"}
 )
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
+			return true
+		}
+	}
+	for i := range ForeignKeys {
+		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -176,13 +160,6 @@ func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
 }
 
-// ByArticleAuthorField orders the results by articleAuthor field.
-func ByArticleAuthorField(field string, opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newArticleAuthorStep(), sql.OrderByField(field, opts...))
-	}
-}
-
 // ByTagsCount orders the results by tags count.
 func ByTagsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -197,67 +174,25 @@ func ByTags(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
-// ByCommentsCount orders the results by comments count.
-func ByCommentsCount(opts ...sql.OrderTermOption) OrderOption {
+// ByCommentsField orders the results by comments field.
+func ByCommentsField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newCommentsStep(), opts...)
+		sqlgraph.OrderByNeighborTerms(s, newCommentsStep(), sql.OrderByField(field, opts...))
 	}
 }
 
-// ByComments orders the results by comments terms.
-func ByComments(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+// ByUsersCount orders the results by users count.
+func ByUsersCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newCommentsStep(), append([]sql.OrderTerm{term}, terms...)...)
+		sqlgraph.OrderByNeighborsCount(s, newUsersStep(), opts...)
 	}
 }
 
-// ByFavoritedUsersCount orders the results by favoritedUsers count.
-func ByFavoritedUsersCount(opts ...sql.OrderTermOption) OrderOption {
+// ByUsers orders the results by users terms.
+func ByUsers(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newFavoritedUsersStep(), opts...)
+		sqlgraph.OrderByNeighborTerms(s, newUsersStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
-}
-
-// ByFavoritedUsers orders the results by favoritedUsers terms.
-func ByFavoritedUsers(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newFavoritedUsersStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-
-// ByArticleTagsCount orders the results by article_tags count.
-func ByArticleTagsCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newArticleTagsStep(), opts...)
-	}
-}
-
-// ByArticleTags orders the results by article_tags terms.
-func ByArticleTags(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newArticleTagsStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-
-// ByUserFavoritesCount orders the results by user_favorites count.
-func ByUserFavoritesCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newUserFavoritesStep(), opts...)
-	}
-}
-
-// ByUserFavorites orders the results by user_favorites terms.
-func ByUserFavorites(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newUserFavoritesStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-func newArticleAuthorStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(ArticleAuthorInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, true, ArticleAuthorTable, ArticleAuthorColumn),
-	)
 }
 func newTagsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
@@ -270,27 +205,13 @@ func newCommentsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(CommentsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, CommentsTable, CommentsColumn),
+		sqlgraph.Edge(sqlgraph.M2O, false, CommentsTable, CommentsColumn),
 	)
 }
-func newFavoritedUsersStep() *sqlgraph.Step {
+func newUsersStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(FavoritedUsersInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2M, false, FavoritedUsersTable, FavoritedUsersPrimaryKey...),
-	)
-}
-func newArticleTagsStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(ArticleTagsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, true, ArticleTagsTable, ArticleTagsColumn),
-	)
-}
-func newUserFavoritesStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(UserFavoritesInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, true, UserFavoritesTable, UserFavoritesColumn),
+		sqlgraph.To(UsersInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, true, UsersTable, UsersPrimaryKey...),
 	)
 }

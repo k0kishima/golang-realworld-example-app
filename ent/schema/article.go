@@ -35,16 +35,9 @@ func (Article) Indexes() []ent.Index {
 
 func (Article) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("articleAuthor", User.Type).
-			Ref("articles").
-			Field("author_id").
-			Unique().
-			Required().
-			Immutable(),
-		edge.To("tags", Tag.Type).
-			Through("article_tags", ArticleTag.Type),
-		edge.To("comments", Comment.Type),
-		edge.To("favoritedUsers", User.Type).
-			Through("user_favorites", UserFavorite.Type),
+		edge.To("tags", Tag.Type),
+		edge.To("comments", Comment.Type).Immutable().Unique(),
+		edge.From("users", User.Type).
+			Ref("favoriteArticles").Immutable(),
 	}
 }

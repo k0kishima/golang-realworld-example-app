@@ -171,44 +171,21 @@ func CreatedAtLTE(v time.Time) predicate.Tag {
 	return predicate.Tag(sql.FieldLTE(FieldCreatedAt, v))
 }
 
-// HasArticle applies the HasEdge predicate on the "article" edge.
-func HasArticle() predicate.Tag {
+// HasArticles applies the HasEdge predicate on the "articles" edge.
+func HasArticles() predicate.Tag {
 	return predicate.Tag(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, ArticleTable, ArticlePrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2M, true, ArticlesTable, ArticlesPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasArticleWith applies the HasEdge predicate on the "article" edge with a given conditions (other predicates).
-func HasArticleWith(preds ...predicate.Article) predicate.Tag {
+// HasArticlesWith applies the HasEdge predicate on the "articles" edge with a given conditions (other predicates).
+func HasArticlesWith(preds ...predicate.Article) predicate.Tag {
 	return predicate.Tag(func(s *sql.Selector) {
-		step := newArticleStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
-// HasTagArticle applies the HasEdge predicate on the "tag_article" edge.
-func HasTagArticle() predicate.Tag {
-	return predicate.Tag(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, TagArticleTable, TagArticleColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasTagArticleWith applies the HasEdge predicate on the "tag_article" edge with a given conditions (other predicates).
-func HasTagArticleWith(preds ...predicate.ArticleTag) predicate.Tag {
-	return predicate.Tag(func(s *sql.Selector) {
-		step := newTagArticleStep()
+		step := newArticlesStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

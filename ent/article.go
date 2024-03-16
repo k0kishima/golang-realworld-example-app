@@ -11,7 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/article"
-	"github.com/k0kishima/golang-realworld-example-app/ent/user"
+	"github.com/k0kishima/golang-realworld-example-app/ent/comment"
 )
 
 // Article is the model entity for the Article schema.
@@ -35,83 +35,51 @@ type Article struct {
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ArticleQuery when eager-loading is set.
-	Edges        ArticleEdges `json:"edges"`
-	selectValues sql.SelectValues
+	Edges            ArticleEdges `json:"edges"`
+	article_comments *uuid.UUID
+	selectValues     sql.SelectValues
 }
 
 // ArticleEdges holds the relations/edges for other nodes in the graph.
 type ArticleEdges struct {
-	// ArticleAuthor holds the value of the articleAuthor edge.
-	ArticleAuthor *User `json:"articleAuthor,omitempty"`
 	// Tags holds the value of the tags edge.
 	Tags []*Tag `json:"tags,omitempty"`
 	// Comments holds the value of the comments edge.
-	Comments []*Comment `json:"comments,omitempty"`
-	// FavoritedUsers holds the value of the favoritedUsers edge.
-	FavoritedUsers []*User `json:"favoritedUsers,omitempty"`
-	// ArticleTags holds the value of the article_tags edge.
-	ArticleTags []*ArticleTag `json:"article_tags,omitempty"`
-	// UserFavorites holds the value of the user_favorites edge.
-	UserFavorites []*UserFavorite `json:"user_favorites,omitempty"`
+	Comments *Comment `json:"comments,omitempty"`
+	// Users holds the value of the users edge.
+	Users []*User `json:"users,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [6]bool
-}
-
-// ArticleAuthorOrErr returns the ArticleAuthor value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e ArticleEdges) ArticleAuthorOrErr() (*User, error) {
-	if e.ArticleAuthor != nil {
-		return e.ArticleAuthor, nil
-	} else if e.loadedTypes[0] {
-		return nil, &NotFoundError{label: user.Label}
-	}
-	return nil, &NotLoadedError{edge: "articleAuthor"}
+	loadedTypes [3]bool
 }
 
 // TagsOrErr returns the Tags value or an error if the edge
 // was not loaded in eager-loading.
 func (e ArticleEdges) TagsOrErr() ([]*Tag, error) {
-	if e.loadedTypes[1] {
+	if e.loadedTypes[0] {
 		return e.Tags, nil
 	}
 	return nil, &NotLoadedError{edge: "tags"}
 }
 
 // CommentsOrErr returns the Comments value or an error if the edge
-// was not loaded in eager-loading.
-func (e ArticleEdges) CommentsOrErr() ([]*Comment, error) {
-	if e.loadedTypes[2] {
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ArticleEdges) CommentsOrErr() (*Comment, error) {
+	if e.Comments != nil {
 		return e.Comments, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: comment.Label}
 	}
 	return nil, &NotLoadedError{edge: "comments"}
 }
 
-// FavoritedUsersOrErr returns the FavoritedUsers value or an error if the edge
+// UsersOrErr returns the Users value or an error if the edge
 // was not loaded in eager-loading.
-func (e ArticleEdges) FavoritedUsersOrErr() ([]*User, error) {
-	if e.loadedTypes[3] {
-		return e.FavoritedUsers, nil
+func (e ArticleEdges) UsersOrErr() ([]*User, error) {
+	if e.loadedTypes[2] {
+		return e.Users, nil
 	}
-	return nil, &NotLoadedError{edge: "favoritedUsers"}
-}
-
-// ArticleTagsOrErr returns the ArticleTags value or an error if the edge
-// was not loaded in eager-loading.
-func (e ArticleEdges) ArticleTagsOrErr() ([]*ArticleTag, error) {
-	if e.loadedTypes[4] {
-		return e.ArticleTags, nil
-	}
-	return nil, &NotLoadedError{edge: "article_tags"}
-}
-
-// UserFavoritesOrErr returns the UserFavorites value or an error if the edge
-// was not loaded in eager-loading.
-func (e ArticleEdges) UserFavoritesOrErr() ([]*UserFavorite, error) {
-	if e.loadedTypes[5] {
-		return e.UserFavorites, nil
-	}
-	return nil, &NotLoadedError{edge: "user_favorites"}
+	return nil, &NotLoadedError{edge: "users"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -125,6 +93,8 @@ func (*Article) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullTime)
 		case article.FieldID, article.FieldAuthorID:
 			values[i] = new(uuid.UUID)
+		case article.ForeignKeys[0]: // article_comments
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -188,6 +158,13 @@ func (a *Article) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				a.UpdatedAt = value.Time
 			}
+		case article.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field article_comments", values[i])
+			} else if value.Valid {
+				a.article_comments = new(uuid.UUID)
+				*a.article_comments = *value.S.(*uuid.UUID)
+			}
 		default:
 			a.selectValues.Set(columns[i], values[i])
 		}
@@ -201,11 +178,6 @@ func (a *Article) Value(name string) (ent.Value, error) {
 	return a.selectValues.Get(name)
 }
 
-// QueryArticleAuthor queries the "articleAuthor" edge of the Article entity.
-func (a *Article) QueryArticleAuthor() *UserQuery {
-	return NewArticleClient(a.config).QueryArticleAuthor(a)
-}
-
 // QueryTags queries the "tags" edge of the Article entity.
 func (a *Article) QueryTags() *TagQuery {
 	return NewArticleClient(a.config).QueryTags(a)
@@ -216,19 +188,9 @@ func (a *Article) QueryComments() *CommentQuery {
 	return NewArticleClient(a.config).QueryComments(a)
 }
 
-// QueryFavoritedUsers queries the "favoritedUsers" edge of the Article entity.
-func (a *Article) QueryFavoritedUsers() *UserQuery {
-	return NewArticleClient(a.config).QueryFavoritedUsers(a)
-}
-
-// QueryArticleTags queries the "article_tags" edge of the Article entity.
-func (a *Article) QueryArticleTags() *ArticleTagQuery {
-	return NewArticleClient(a.config).QueryArticleTags(a)
-}
-
-// QueryUserFavorites queries the "user_favorites" edge of the Article entity.
-func (a *Article) QueryUserFavorites() *UserFavoriteQuery {
-	return NewArticleClient(a.config).QueryUserFavorites(a)
+// QueryUsers queries the "users" edge of the Article entity.
+func (a *Article) QueryUsers() *UserQuery {
+	return NewArticleClient(a.config).QueryUsers(a)
 }
 
 // Update returns a builder for updating this Article.

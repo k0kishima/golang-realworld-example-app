@@ -6,7 +6,6 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
-	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
 )
 
@@ -27,19 +26,11 @@ func (User) Fields() []ent.Field {
 	}
 }
 
-func (User) Indexes() []ent.Index {
-	return []ent.Index{
-		index.Fields("username", "email").Unique(),
-	}
-}
-
 func (User) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("follows", UserFollow.Type),
-		edge.To("articles", Article.Type),
-		edge.To("comments", Comment.Type),
-		edge.From("favariteArticle", Article.Type).
-			Ref("favoritedUsers").
-			Through("user_favorites", UserFavorite.Type),
+		edge.To("articles", Article.Type).StorageKey(edge.Column("author_id")).Immutable().Unique(),
+		edge.To("comments", Comment.Type).StorageKey(edge.Column("author_id")).Immutable().Unique(),
+		edge.To("favoriteArticles", Article.Type).StorageKey(edge.Table("user_favorites")),
+		edge.To("following", User.Type).StorageKey(edge.Table("user_follows"), edge.Columns("follower_id", "followee_id")),
 	}
 }

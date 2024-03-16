@@ -9,9 +9,6 @@ import (
 // Article is the predicate function for article builders.
 type Article func(*sql.Selector)
 
-// ArticleTag is the predicate function for articletag builders.
-type ArticleTag func(*sql.Selector)
-
 // Comment is the predicate function for comment builders.
 type Comment func(*sql.Selector)
 
@@ -20,9 +17,3 @@ type Tag func(*sql.Selector)
 
 // User is the predicate function for user builders.
 type User func(*sql.Selector)
-
-// UserFavorite is the predicate function for userfavorite builders.
-type UserFavorite func(*sql.Selector)
-
-// UserFollow is the predicate function for userfollow builders.
-type UserFollow func(*sql.Selector)

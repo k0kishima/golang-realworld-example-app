@@ -11,13 +11,14 @@ var (
 	// ArticlesColumns holds the columns for the "articles" table.
 	ArticlesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
+		{Name: "author_id", Type: field.TypeUUID},
 		{Name: "slug", Type: field.TypeString, Unique: true, Size: 255},
 		{Name: "title", Type: field.TypeString, Size: 255},
 		{Name: "description", Type: field.TypeString, Size: 255},
 		{Name: "body", Type: field.TypeString, Size: 4096},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "author_id", Type: field.TypeUUID},
+		{Name: "article_comments", Type: field.TypeUUID, Nullable: true},
 	}
 	// ArticlesTable holds the schema information for the "articles" table.
 	ArticlesTable = &schema.Table{
@@ -26,82 +27,34 @@ var (
 		PrimaryKey: []*schema.Column{ArticlesColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "articles_users_articles",
-				Columns:    []*schema.Column{ArticlesColumns[7]},
-				RefColumns: []*schema.Column{UsersColumns[0]},
-				OnDelete:   schema.NoAction,
+				Symbol:     "articles_comments_comments",
+				Columns:    []*schema.Column{ArticlesColumns[8]},
+				RefColumns: []*schema.Column{CommentsColumns[0]},
+				OnDelete:   schema.SetNull,
 			},
 		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "article_slug",
 				Unique:  true,
-				Columns: []*schema.Column{ArticlesColumns[1]},
-			},
-		},
-	}
-	// ArticleTagsColumns holds the columns for the "article_tags" table.
-	ArticleTagsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "article_id", Type: field.TypeUUID},
-		{Name: "tag_id", Type: field.TypeUUID},
-	}
-	// ArticleTagsTable holds the schema information for the "article_tags" table.
-	ArticleTagsTable = &schema.Table{
-		Name:       "article_tags",
-		Columns:    ArticleTagsColumns,
-		PrimaryKey: []*schema.Column{ArticleTagsColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "article_tags_articles_article",
-				Columns:    []*schema.Column{ArticleTagsColumns[2]},
-				RefColumns: []*schema.Column{ArticlesColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-			{
-				Symbol:     "article_tags_tags_tag",
-				Columns:    []*schema.Column{ArticleTagsColumns[3]},
-				RefColumns: []*schema.Column{TagsColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "articletag_article_id_tag_id",
-				Unique:  true,
-				Columns: []*schema.Column{ArticleTagsColumns[2], ArticleTagsColumns[3]},
+				Columns: []*schema.Column{ArticlesColumns[2]},
 			},
 		},
 	}
 	// CommentsColumns holds the columns for the "comments" table.
 	CommentsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
+		{Name: "article_id", Type: field.TypeUUID},
+		{Name: "author_id", Type: field.TypeUUID},
 		{Name: "body", Type: field.TypeString, Size: 4096},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "article_id", Type: field.TypeUUID},
-		{Name: "author_id", Type: field.TypeUUID},
 	}
 	// CommentsTable holds the schema information for the "comments" table.
 	CommentsTable = &schema.Table{
 		Name:       "comments",
 		Columns:    CommentsColumns,
 		PrimaryKey: []*schema.Column{CommentsColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "comments_articles_comments",
-				Columns:    []*schema.Column{CommentsColumns[4]},
-				RefColumns: []*schema.Column{ArticlesColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-			{
-				Symbol:     "comments_users_comments",
-				Columns:    []*schema.Column{CommentsColumns[5]},
-				RefColumns: []*schema.Column{UsersColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-		},
 	}
 	// TagsColumns holds the columns for the "tags" table.
 	TagsColumns = []*schema.Column{
@@ -125,24 +78,55 @@ var (
 		{Name: "bio", Type: field.TypeString, Default: ""},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "author_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// UsersTable holds the schema information for the "users" table.
 	UsersTable = &schema.Table{
 		Name:       "users",
 		Columns:    UsersColumns,
 		PrimaryKey: []*schema.Column{UsersColumns[0]},
-		Indexes: []*schema.Index{
+		ForeignKeys: []*schema.ForeignKey{
 			{
-				Name:    "user_username_email",
-				Unique:  true,
-				Columns: []*schema.Column{UsersColumns[1], UsersColumns[2]},
+				Symbol:     "users_articles_articles",
+				Columns:    []*schema.Column{UsersColumns[8]},
+				RefColumns: []*schema.Column{ArticlesColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "users_comments_comments",
+				Columns:    []*schema.Column{UsersColumns[8]},
+				RefColumns: []*schema.Column{CommentsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+	}
+	// ArticleTagsColumns holds the columns for the "article_tags" table.
+	ArticleTagsColumns = []*schema.Column{
+		{Name: "article_id", Type: field.TypeUUID},
+		{Name: "tag_id", Type: field.TypeUUID},
+	}
+	// ArticleTagsTable holds the schema information for the "article_tags" table.
+	ArticleTagsTable = &schema.Table{
+		Name:       "article_tags",
+		Columns:    ArticleTagsColumns,
+		PrimaryKey: []*schema.Column{ArticleTagsColumns[0], ArticleTagsColumns[1]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "article_tags_article_id",
+				Columns:    []*schema.Column{ArticleTagsColumns[0]},
+				RefColumns: []*schema.Column{ArticlesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "article_tags_tag_id",
+				Columns:    []*schema.Column{ArticleTagsColumns[1]},
+				RefColumns: []*schema.Column{TagsColumns[0]},
+				OnDelete:   schema.Cascade,
 			},
 		},
 	}
 	// UserFavoritesColumns holds the columns for the "user_favorites" table.
 	UserFavoritesColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID},
-		{Name: "created_at", Type: field.TypeTime},
 		{Name: "user_id", Type: field.TypeUUID},
 		{Name: "article_id", Type: field.TypeUUID},
 	}
@@ -150,33 +134,24 @@ var (
 	UserFavoritesTable = &schema.Table{
 		Name:       "user_favorites",
 		Columns:    UserFavoritesColumns,
-		PrimaryKey: []*schema.Column{UserFavoritesColumns[0]},
+		PrimaryKey: []*schema.Column{UserFavoritesColumns[0], UserFavoritesColumns[1]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "user_favorites_users_user",
-				Columns:    []*schema.Column{UserFavoritesColumns[2]},
+				Symbol:     "user_favorites_user_id",
+				Columns:    []*schema.Column{UserFavoritesColumns[0]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
-				OnDelete:   schema.NoAction,
+				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "user_favorites_articles_article",
-				Columns:    []*schema.Column{UserFavoritesColumns[3]},
+				Symbol:     "user_favorites_article_id",
+				Columns:    []*schema.Column{UserFavoritesColumns[1]},
 				RefColumns: []*schema.Column{ArticlesColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "userfavorite_user_id_article_id",
-				Unique:  true,
-				Columns: []*schema.Column{UserFavoritesColumns[2], UserFavoritesColumns[3]},
+				OnDelete:   schema.Cascade,
 			},
 		},
 	}
 	// UserFollowsColumns holds the columns for the "user_follows" table.
 	UserFollowsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID},
-		{Name: "created_at", Type: field.TypeTime},
 		{Name: "follower_id", Type: field.TypeUUID},
 		{Name: "followee_id", Type: field.TypeUUID},
 	}
@@ -184,47 +159,40 @@ var (
 	UserFollowsTable = &schema.Table{
 		Name:       "user_follows",
 		Columns:    UserFollowsColumns,
-		PrimaryKey: []*schema.Column{UserFollowsColumns[0]},
+		PrimaryKey: []*schema.Column{UserFollowsColumns[0], UserFollowsColumns[1]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "user_follows_users_follows",
-				Columns:    []*schema.Column{UserFollowsColumns[2]},
+				Symbol:     "user_follows_follower_id",
+				Columns:    []*schema.Column{UserFollowsColumns[0]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
-				OnDelete:   schema.NoAction,
+				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "user_follows_users_followee",
-				Columns:    []*schema.Column{UserFollowsColumns[3]},
+				Symbol:     "user_follows_followee_id",
+				Columns:    []*schema.Column{UserFollowsColumns[1]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
-				OnDelete:   schema.NoAction,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "userfollow_follower_id_followee_id",
-				Unique:  true,
-				Columns: []*schema.Column{UserFollowsColumns[2], UserFollowsColumns[3]},
+				OnDelete:   schema.Cascade,
 			},
 		},
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		ArticlesTable,
-		ArticleTagsTable,
 		CommentsTable,
 		TagsTable,
 		UsersTable,
+		ArticleTagsTable,
 		UserFavoritesTable,
 		UserFollowsTable,
 	}
 )
 
 func init() {
-	ArticlesTable.ForeignKeys[0].RefTable = UsersTable
+	ArticlesTable.ForeignKeys[0].RefTable = CommentsTable
+	UsersTable.ForeignKeys[0].RefTable = ArticlesTable
+	UsersTable.ForeignKeys[1].RefTable = CommentsTable
 	ArticleTagsTable.ForeignKeys[0].RefTable = ArticlesTable
 	ArticleTagsTable.ForeignKeys[1].RefTable = TagsTable
-	CommentsTable.ForeignKeys[0].RefTable = ArticlesTable
-	CommentsTable.ForeignKeys[1].RefTable = UsersTable
 	UserFavoritesTable.ForeignKeys[0].RefTable = UsersTable
 	UserFavoritesTable.ForeignKeys[1].RefTable = ArticlesTable
 	UserFollowsTable.ForeignKeys[0].RefTable = UsersTable

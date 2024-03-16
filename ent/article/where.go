@@ -111,6 +111,26 @@ func AuthorIDNotIn(vs ...uuid.UUID) predicate.Article {
 	return predicate.Article(sql.FieldNotIn(FieldAuthorID, vs...))
 }
 
+// AuthorIDGT applies the GT predicate on the "author_id" field.
+func AuthorIDGT(v uuid.UUID) predicate.Article {
+	return predicate.Article(sql.FieldGT(FieldAuthorID, v))
+}
+
+// AuthorIDGTE applies the GTE predicate on the "author_id" field.
+func AuthorIDGTE(v uuid.UUID) predicate.Article {
+	return predicate.Article(sql.FieldGTE(FieldAuthorID, v))
+}
+
+// AuthorIDLT applies the LT predicate on the "author_id" field.
+func AuthorIDLT(v uuid.UUID) predicate.Article {
+	return predicate.Article(sql.FieldLT(FieldAuthorID, v))
+}
+
+// AuthorIDLTE applies the LTE predicate on the "author_id" field.
+func AuthorIDLTE(v uuid.UUID) predicate.Article {
+	return predicate.Article(sql.FieldLTE(FieldAuthorID, v))
+}
+
 // SlugEQ applies the EQ predicate on the "slug" field.
 func SlugEQ(v string) predicate.Article {
 	return predicate.Article(sql.FieldEQ(FieldSlug, v))
@@ -451,29 +471,6 @@ func UpdatedAtLTE(v time.Time) predicate.Article {
 	return predicate.Article(sql.FieldLTE(FieldUpdatedAt, v))
 }
 
-// HasArticleAuthor applies the HasEdge predicate on the "articleAuthor" edge.
-func HasArticleAuthor() predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, ArticleAuthorTable, ArticleAuthorColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasArticleAuthorWith applies the HasEdge predicate on the "articleAuthor" edge with a given conditions (other predicates).
-func HasArticleAuthorWith(preds ...predicate.User) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		step := newArticleAuthorStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
 // HasTags applies the HasEdge predicate on the "tags" edge.
 func HasTags() predicate.Article {
 	return predicate.Article(func(s *sql.Selector) {
@@ -502,7 +499,7 @@ func HasComments() predicate.Article {
 	return predicate.Article(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, CommentsTable, CommentsColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, CommentsTable, CommentsColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
@@ -520,67 +517,21 @@ func HasCommentsWith(preds ...predicate.Comment) predicate.Article {
 	})
 }
 
-// HasFavoritedUsers applies the HasEdge predicate on the "favoritedUsers" edge.
-func HasFavoritedUsers() predicate.Article {
+// HasUsers applies the HasEdge predicate on the "users" edge.
+func HasUsers() predicate.Article {
 	return predicate.Article(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, FavoritedUsersTable, FavoritedUsersPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2M, true, UsersTable, UsersPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasFavoritedUsersWith applies the HasEdge predicate on the "favoritedUsers" edge with a given conditions (other predicates).
-func HasFavoritedUsersWith(preds ...predicate.User) predicate.Article {
+// HasUsersWith applies the HasEdge predicate on the "users" edge with a given conditions (other predicates).
+func HasUsersWith(preds ...predicate.User) predicate.Article {
 	return predicate.Article(func(s *sql.Selector) {
-		step := newFavoritedUsersStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
-// HasArticleTags applies the HasEdge predicate on the "article_tags" edge.
-func HasArticleTags() predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, ArticleTagsTable, ArticleTagsColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasArticleTagsWith applies the HasEdge predicate on the "article_tags" edge with a given conditions (other predicates).
-func HasArticleTagsWith(preds ...predicate.ArticleTag) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		step := newArticleTagsStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
-// HasUserFavorites applies the HasEdge predicate on the "user_favorites" edge.
-func HasUserFavorites() predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, UserFavoritesTable, UserFavoritesColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasUserFavoritesWith applies the HasEdge predicate on the "user_favorites" edge with a given conditions (other predicates).
-func HasUserFavoritesWith(preds ...predicate.UserFavorite) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		step := newUserFavoritesStep()
+		step := newUsersStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

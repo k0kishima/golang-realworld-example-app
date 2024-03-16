@@ -13,13 +13,10 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/article"
-	"github.com/k0kishima/golang-realworld-example-app/ent/articletag"
 	"github.com/k0kishima/golang-realworld-example-app/ent/comment"
 	"github.com/k0kishima/golang-realworld-example-app/ent/predicate"
 	"github.com/k0kishima/golang-realworld-example-app/ent/tag"
 	"github.com/k0kishima/golang-realworld-example-app/ent/user"
-	"github.com/k0kishima/golang-realworld-example-app/ent/userfavorite"
-	"github.com/k0kishima/golang-realworld-example-app/ent/userfollow"
 )
 
 const (
@@ -31,48 +28,37 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeArticle      = "Article"
-	TypeArticleTag   = "ArticleTag"
-	TypeComment      = "Comment"
-	TypeTag          = "Tag"
-	TypeUser         = "User"
-	TypeUserFavorite = "UserFavorite"
-	TypeUserFollow   = "UserFollow"
+	TypeArticle = "Article"
+	TypeComment = "Comment"
+	TypeTag     = "Tag"
+	TypeUser    = "User"
 )
 
 // ArticleMutation represents an operation that mutates the Article nodes in the graph.
 type ArticleMutation struct {
 	config
-	op                    Op
-	typ                   string
-	id                    *uuid.UUID
-	slug                  *string
-	title                 *string
-	description           *string
-	body                  *string
-	created_at            *time.Time
-	updated_at            *time.Time
-	clearedFields         map[string]struct{}
-	articleAuthor         *uuid.UUID
-	clearedarticleAuthor  bool
-	tags                  map[uuid.UUID]struct{}
-	removedtags           map[uuid.UUID]struct{}
-	clearedtags           bool
-	comments              map[uuid.UUID]struct{}
-	removedcomments       map[uuid.UUID]struct{}
-	clearedcomments       bool
-	favoritedUsers        map[uuid.UUID]struct{}
-	removedfavoritedUsers map[uuid.UUID]struct{}
-	clearedfavoritedUsers bool
-	article_tags          map[uuid.UUID]struct{}
-	removedarticle_tags   map[uuid.UUID]struct{}
-	clearedarticle_tags   bool
-	user_favorites        map[uuid.UUID]struct{}
-	removeduser_favorites map[uuid.UUID]struct{}
-	cleareduser_favorites bool
-	done                  bool
-	oldValue              func(context.Context) (*Article, error)
-	predicates            []predicate.Article
+	op              Op
+	typ             string
+	id              *uuid.UUID
+	author_id       *uuid.UUID
+	slug            *string
+	title           *string
+	description     *string
+	body            *string
+	created_at      *time.Time
+	updated_at      *time.Time
+	clearedFields   map[string]struct{}
+	tags            map[uuid.UUID]struct{}
+	removedtags     map[uuid.UUID]struct{}
+	clearedtags     bool
+	comments        *uuid.UUID
+	clearedcomments bool
+	users           map[uuid.UUID]struct{}
+	removedusers    map[uuid.UUID]struct{}
+	clearedusers    bool
+	done            bool
+	oldValue        func(context.Context) (*Article, error)
+	predicates      []predicate.Article
 }
 
 var _ ent.Mutation = (*ArticleMutation)(nil)
@@ -181,12 +167,12 @@ func (m *ArticleMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 
 // SetAuthorID sets the "author_id" field.
 func (m *ArticleMutation) SetAuthorID(u uuid.UUID) {
-	m.articleAuthor = &u
+	m.author_id = &u
 }
 
 // AuthorID returns the value of the "author_id" field in the mutation.
 func (m *ArticleMutation) AuthorID() (r uuid.UUID, exists bool) {
-	v := m.articleAuthor
+	v := m.author_id
 	if v == nil {
 		return
 	}
@@ -212,7 +198,7 @@ func (m *ArticleMutation) OldAuthorID(ctx context.Context) (v uuid.UUID, err err
 
 // ResetAuthorID resets all changes to the "author_id" field.
 func (m *ArticleMutation) ResetAuthorID() {
-	m.articleAuthor = nil
+	m.author_id = nil
 }
 
 // SetSlug sets the "slug" field.
@@ -431,46 +417,6 @@ func (m *ArticleMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
-// SetArticleAuthorID sets the "articleAuthor" edge to the User entity by id.
-func (m *ArticleMutation) SetArticleAuthorID(id uuid.UUID) {
-	m.articleAuthor = &id
-}
-
-// ClearArticleAuthor clears the "articleAuthor" edge to the User entity.
-func (m *ArticleMutation) ClearArticleAuthor() {
-	m.clearedarticleAuthor = true
-	m.clearedFields[article.FieldAuthorID] = struct{}{}
-}
-
-// ArticleAuthorCleared reports if the "articleAuthor" edge to the User entity was cleared.
-func (m *ArticleMutation) ArticleAuthorCleared() bool {
-	return m.clearedarticleAuthor
-}
-
-// ArticleAuthorID returns the "articleAuthor" edge ID in the mutation.
-func (m *ArticleMutation) ArticleAuthorID() (id uuid.UUID, exists bool) {
-	if m.articleAuthor != nil {
-		return *m.articleAuthor, true
-	}
-	return
-}
-
-// ArticleAuthorIDs returns the "articleAuthor" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ArticleAuthorID instead. It exists only for internal usage by the builders.
-func (m *ArticleMutation) ArticleAuthorIDs() (ids []uuid.UUID) {
-	if id := m.articleAuthor; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetArticleAuthor resets all changes to the "articleAuthor" edge.
-func (m *ArticleMutation) ResetArticleAuthor() {
-	m.articleAuthor = nil
-	m.clearedarticleAuthor = false
-}
-
 // AddTagIDs adds the "tags" edge to the Tag entity by ids.
 func (m *ArticleMutation) AddTagIDs(ids ...uuid.UUID) {
 	if m.tags == nil {
@@ -525,14 +471,9 @@ func (m *ArticleMutation) ResetTags() {
 	m.removedtags = nil
 }
 
-// AddCommentIDs adds the "comments" edge to the Comment entity by ids.
-func (m *ArticleMutation) AddCommentIDs(ids ...uuid.UUID) {
-	if m.comments == nil {
-		m.comments = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		m.comments[ids[i]] = struct{}{}
-	}
+// SetCommentsID sets the "comments" edge to the Comment entity by id.
+func (m *ArticleMutation) SetCommentsID(id uuid.UUID) {
+	m.comments = &id
 }
 
 // ClearComments clears the "comments" edge to the Comment entity.
@@ -545,29 +486,20 @@ func (m *ArticleMutation) CommentsCleared() bool {
 	return m.clearedcomments
 }
 
-// RemoveCommentIDs removes the "comments" edge to the Comment entity by IDs.
-func (m *ArticleMutation) RemoveCommentIDs(ids ...uuid.UUID) {
-	if m.removedcomments == nil {
-		m.removedcomments = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		delete(m.comments, ids[i])
-		m.removedcomments[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedComments returns the removed IDs of the "comments" edge to the Comment entity.
-func (m *ArticleMutation) RemovedCommentsIDs() (ids []uuid.UUID) {
-	for id := range m.removedcomments {
-		ids = append(ids, id)
+// CommentsID returns the "comments" edge ID in the mutation.
+func (m *ArticleMutation) CommentsID() (id uuid.UUID, exists bool) {
+	if m.comments != nil {
+		return *m.comments, true
 	}
 	return
 }
 
 // CommentsIDs returns the "comments" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// CommentsID instead. It exists only for internal usage by the builders.
 func (m *ArticleMutation) CommentsIDs() (ids []uuid.UUID) {
-	for id := range m.comments {
-		ids = append(ids, id)
+	if id := m.comments; id != nil {
+		ids = append(ids, *id)
 	}
 	return
 }
@@ -576,169 +508,60 @@ func (m *ArticleMutation) CommentsIDs() (ids []uuid.UUID) {
 func (m *ArticleMutation) ResetComments() {
 	m.comments = nil
 	m.clearedcomments = false
-	m.removedcomments = nil
 }
 
-// AddFavoritedUserIDs adds the "favoritedUsers" edge to the User entity by ids.
-func (m *ArticleMutation) AddFavoritedUserIDs(ids ...uuid.UUID) {
-	if m.favoritedUsers == nil {
-		m.favoritedUsers = make(map[uuid.UUID]struct{})
+// AddUserIDs adds the "users" edge to the User entity by ids.
+func (m *ArticleMutation) AddUserIDs(ids ...uuid.UUID) {
+	if m.users == nil {
+		m.users = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m.favoritedUsers[ids[i]] = struct{}{}
+		m.users[ids[i]] = struct{}{}
 	}
 }
 
-// ClearFavoritedUsers clears the "favoritedUsers" edge to the User entity.
-func (m *ArticleMutation) ClearFavoritedUsers() {
-	m.clearedfavoritedUsers = true
+// ClearUsers clears the "users" edge to the User entity.
+func (m *ArticleMutation) ClearUsers() {
+	m.clearedusers = true
 }
 
-// FavoritedUsersCleared reports if the "favoritedUsers" edge to the User entity was cleared.
-func (m *ArticleMutation) FavoritedUsersCleared() bool {
-	return m.clearedfavoritedUsers
+// UsersCleared reports if the "users" edge to the User entity was cleared.
+func (m *ArticleMutation) UsersCleared() bool {
+	return m.clearedusers
 }
 
-// RemoveFavoritedUserIDs removes the "favoritedUsers" edge to the User entity by IDs.
-func (m *ArticleMutation) RemoveFavoritedUserIDs(ids ...uuid.UUID) {
-	if m.removedfavoritedUsers == nil {
-		m.removedfavoritedUsers = make(map[uuid.UUID]struct{})
+// RemoveUserIDs removes the "users" edge to the User entity by IDs.
+func (m *ArticleMutation) RemoveUserIDs(ids ...uuid.UUID) {
+	if m.removedusers == nil {
+		m.removedusers = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m.favoritedUsers, ids[i])
-		m.removedfavoritedUsers[ids[i]] = struct{}{}
+		delete(m.users, ids[i])
+		m.removedusers[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedFavoritedUsers returns the removed IDs of the "favoritedUsers" edge to the User entity.
-func (m *ArticleMutation) RemovedFavoritedUsersIDs() (ids []uuid.UUID) {
-	for id := range m.removedfavoritedUsers {
+// RemovedUsers returns the removed IDs of the "users" edge to the User entity.
+func (m *ArticleMutation) RemovedUsersIDs() (ids []uuid.UUID) {
+	for id := range m.removedusers {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// FavoritedUsersIDs returns the "favoritedUsers" edge IDs in the mutation.
-func (m *ArticleMutation) FavoritedUsersIDs() (ids []uuid.UUID) {
-	for id := range m.favoritedUsers {
+// UsersIDs returns the "users" edge IDs in the mutation.
+func (m *ArticleMutation) UsersIDs() (ids []uuid.UUID) {
+	for id := range m.users {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetFavoritedUsers resets all changes to the "favoritedUsers" edge.
-func (m *ArticleMutation) ResetFavoritedUsers() {
-	m.favoritedUsers = nil
-	m.clearedfavoritedUsers = false
-	m.removedfavoritedUsers = nil
-}
-
-// AddArticleTagIDs adds the "article_tags" edge to the ArticleTag entity by ids.
-func (m *ArticleMutation) AddArticleTagIDs(ids ...uuid.UUID) {
-	if m.article_tags == nil {
-		m.article_tags = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		m.article_tags[ids[i]] = struct{}{}
-	}
-}
-
-// ClearArticleTags clears the "article_tags" edge to the ArticleTag entity.
-func (m *ArticleMutation) ClearArticleTags() {
-	m.clearedarticle_tags = true
-}
-
-// ArticleTagsCleared reports if the "article_tags" edge to the ArticleTag entity was cleared.
-func (m *ArticleMutation) ArticleTagsCleared() bool {
-	return m.clearedarticle_tags
-}
-
-// RemoveArticleTagIDs removes the "article_tags" edge to the ArticleTag entity by IDs.
-func (m *ArticleMutation) RemoveArticleTagIDs(ids ...uuid.UUID) {
-	if m.removedarticle_tags == nil {
-		m.removedarticle_tags = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		delete(m.article_tags, ids[i])
-		m.removedarticle_tags[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedArticleTags returns the removed IDs of the "article_tags" edge to the ArticleTag entity.
-func (m *ArticleMutation) RemovedArticleTagsIDs() (ids []uuid.UUID) {
-	for id := range m.removedarticle_tags {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ArticleTagsIDs returns the "article_tags" edge IDs in the mutation.
-func (m *ArticleMutation) ArticleTagsIDs() (ids []uuid.UUID) {
-	for id := range m.article_tags {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetArticleTags resets all changes to the "article_tags" edge.
-func (m *ArticleMutation) ResetArticleTags() {
-	m.article_tags = nil
-	m.clearedarticle_tags = false
-	m.removedarticle_tags = nil
-}
-
-// AddUserFavoriteIDs adds the "user_favorites" edge to the UserFavorite entity by ids.
-func (m *ArticleMutation) AddUserFavoriteIDs(ids ...uuid.UUID) {
-	if m.user_favorites == nil {
-		m.user_favorites = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		m.user_favorites[ids[i]] = struct{}{}
-	}
-}
-
-// ClearUserFavorites clears the "user_favorites" edge to the UserFavorite entity.
-func (m *ArticleMutation) ClearUserFavorites() {
-	m.cleareduser_favorites = true
-}
-
-// UserFavoritesCleared reports if the "user_favorites" edge to the UserFavorite entity was cleared.
-func (m *ArticleMutation) UserFavoritesCleared() bool {
-	return m.cleareduser_favorites
-}
-
-// RemoveUserFavoriteIDs removes the "user_favorites" edge to the UserFavorite entity by IDs.
-func (m *ArticleMutation) RemoveUserFavoriteIDs(ids ...uuid.UUID) {
-	if m.removeduser_favorites == nil {
-		m.removeduser_favorites = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		delete(m.user_favorites, ids[i])
-		m.removeduser_favorites[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedUserFavorites returns the removed IDs of the "user_favorites" edge to the UserFavorite entity.
-func (m *ArticleMutation) RemovedUserFavoritesIDs() (ids []uuid.UUID) {
-	for id := range m.removeduser_favorites {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// UserFavoritesIDs returns the "user_favorites" edge IDs in the mutation.
-func (m *ArticleMutation) UserFavoritesIDs() (ids []uuid.UUID) {
-	for id := range m.user_favorites {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetUserFavorites resets all changes to the "user_favorites" edge.
-func (m *ArticleMutation) ResetUserFavorites() {
-	m.user_favorites = nil
-	m.cleareduser_favorites = false
-	m.removeduser_favorites = nil
+// ResetUsers resets all changes to the "users" edge.
+func (m *ArticleMutation) ResetUsers() {
+	m.users = nil
+	m.clearedusers = false
+	m.removedusers = nil
 }
 
 // Where appends a list predicates to the ArticleMutation builder.
@@ -776,7 +599,7 @@ func (m *ArticleMutation) Type() string {
 // AddedFields().
 func (m *ArticleMutation) Fields() []string {
 	fields := make([]string, 0, 7)
-	if m.articleAuthor != nil {
+	if m.author_id != nil {
 		fields = append(fields, article.FieldAuthorID)
 	}
 	if m.slug != nil {
@@ -976,24 +799,15 @@ func (m *ArticleMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ArticleMutation) AddedEdges() []string {
-	edges := make([]string, 0, 6)
-	if m.articleAuthor != nil {
-		edges = append(edges, article.EdgeArticleAuthor)
-	}
+	edges := make([]string, 0, 3)
 	if m.tags != nil {
 		edges = append(edges, article.EdgeTags)
 	}
 	if m.comments != nil {
 		edges = append(edges, article.EdgeComments)
 	}
-	if m.favoritedUsers != nil {
-		edges = append(edges, article.EdgeFavoritedUsers)
-	}
-	if m.article_tags != nil {
-		edges = append(edges, article.EdgeArticleTags)
-	}
-	if m.user_favorites != nil {
-		edges = append(edges, article.EdgeUserFavorites)
+	if m.users != nil {
+		edges = append(edges, article.EdgeUsers)
 	}
 	return edges
 }
@@ -1002,10 +816,6 @@ func (m *ArticleMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *ArticleMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case article.EdgeArticleAuthor:
-		if id := m.articleAuthor; id != nil {
-			return []ent.Value{*id}
-		}
 	case article.EdgeTags:
 		ids := make([]ent.Value, 0, len(m.tags))
 		for id := range m.tags {
@@ -1013,26 +823,12 @@ func (m *ArticleMutation) AddedIDs(name string) []ent.Value {
 		}
 		return ids
 	case article.EdgeComments:
-		ids := make([]ent.Value, 0, len(m.comments))
-		for id := range m.comments {
-			ids = append(ids, id)
+		if id := m.comments; id != nil {
+			return []ent.Value{*id}
 		}
-		return ids
-	case article.EdgeFavoritedUsers:
-		ids := make([]ent.Value, 0, len(m.favoritedUsers))
-		for id := range m.favoritedUsers {
-			ids = append(ids, id)
-		}
-		return ids
-	case article.EdgeArticleTags:
-		ids := make([]ent.Value, 0, len(m.article_tags))
-		for id := range m.article_tags {
-			ids = append(ids, id)
-		}
-		return ids
-	case article.EdgeUserFavorites:
-		ids := make([]ent.Value, 0, len(m.user_favorites))
-		for id := range m.user_favorites {
+	case article.EdgeUsers:
+		ids := make([]ent.Value, 0, len(m.users))
+		for id := range m.users {
 			ids = append(ids, id)
 		}
 		return ids
@@ -1042,21 +838,12 @@ func (m *ArticleMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ArticleMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 3)
 	if m.removedtags != nil {
 		edges = append(edges, article.EdgeTags)
 	}
-	if m.removedcomments != nil {
-		edges = append(edges, article.EdgeComments)
-	}
-	if m.removedfavoritedUsers != nil {
-		edges = append(edges, article.EdgeFavoritedUsers)
-	}
-	if m.removedarticle_tags != nil {
-		edges = append(edges, article.EdgeArticleTags)
-	}
-	if m.removeduser_favorites != nil {
-		edges = append(edges, article.EdgeUserFavorites)
+	if m.removedusers != nil {
+		edges = append(edges, article.EdgeUsers)
 	}
 	return edges
 }
@@ -1071,27 +858,9 @@ func (m *ArticleMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case article.EdgeComments:
-		ids := make([]ent.Value, 0, len(m.removedcomments))
-		for id := range m.removedcomments {
-			ids = append(ids, id)
-		}
-		return ids
-	case article.EdgeFavoritedUsers:
-		ids := make([]ent.Value, 0, len(m.removedfavoritedUsers))
-		for id := range m.removedfavoritedUsers {
-			ids = append(ids, id)
-		}
-		return ids
-	case article.EdgeArticleTags:
-		ids := make([]ent.Value, 0, len(m.removedarticle_tags))
-		for id := range m.removedarticle_tags {
-			ids = append(ids, id)
-		}
-		return ids
-	case article.EdgeUserFavorites:
-		ids := make([]ent.Value, 0, len(m.removeduser_favorites))
-		for id := range m.removeduser_favorites {
+	case article.EdgeUsers:
+		ids := make([]ent.Value, 0, len(m.removedusers))
+		for id := range m.removedusers {
 			ids = append(ids, id)
 		}
 		return ids
@@ -1101,24 +870,15 @@ func (m *ArticleMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ArticleMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 6)
-	if m.clearedarticleAuthor {
-		edges = append(edges, article.EdgeArticleAuthor)
-	}
+	edges := make([]string, 0, 3)
 	if m.clearedtags {
 		edges = append(edges, article.EdgeTags)
 	}
 	if m.clearedcomments {
 		edges = append(edges, article.EdgeComments)
 	}
-	if m.clearedfavoritedUsers {
-		edges = append(edges, article.EdgeFavoritedUsers)
-	}
-	if m.clearedarticle_tags {
-		edges = append(edges, article.EdgeArticleTags)
-	}
-	if m.cleareduser_favorites {
-		edges = append(edges, article.EdgeUserFavorites)
+	if m.clearedusers {
+		edges = append(edges, article.EdgeUsers)
 	}
 	return edges
 }
@@ -1127,18 +887,12 @@ func (m *ArticleMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *ArticleMutation) EdgeCleared(name string) bool {
 	switch name {
-	case article.EdgeArticleAuthor:
-		return m.clearedarticleAuthor
 	case article.EdgeTags:
 		return m.clearedtags
 	case article.EdgeComments:
 		return m.clearedcomments
-	case article.EdgeFavoritedUsers:
-		return m.clearedfavoritedUsers
-	case article.EdgeArticleTags:
-		return m.clearedarticle_tags
-	case article.EdgeUserFavorites:
-		return m.cleareduser_favorites
+	case article.EdgeUsers:
+		return m.clearedusers
 	}
 	return false
 }
@@ -1147,8 +901,8 @@ func (m *ArticleMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *ArticleMutation) ClearEdge(name string) error {
 	switch name {
-	case article.EdgeArticleAuthor:
-		m.ClearArticleAuthor()
+	case article.EdgeComments:
+		m.ClearComments()
 		return nil
 	}
 	return fmt.Errorf("unknown Article unique edge %s", name)
@@ -1158,585 +912,37 @@ func (m *ArticleMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *ArticleMutation) ResetEdge(name string) error {
 	switch name {
-	case article.EdgeArticleAuthor:
-		m.ResetArticleAuthor()
-		return nil
 	case article.EdgeTags:
 		m.ResetTags()
 		return nil
 	case article.EdgeComments:
 		m.ResetComments()
 		return nil
-	case article.EdgeFavoritedUsers:
-		m.ResetFavoritedUsers()
-		return nil
-	case article.EdgeArticleTags:
-		m.ResetArticleTags()
-		return nil
-	case article.EdgeUserFavorites:
-		m.ResetUserFavorites()
+	case article.EdgeUsers:
+		m.ResetUsers()
 		return nil
 	}
 	return fmt.Errorf("unknown Article edge %s", name)
 }
 
-// ArticleTagMutation represents an operation that mutates the ArticleTag nodes in the graph.
-type ArticleTagMutation struct {
+// CommentMutation represents an operation that mutates the Comment nodes in the graph.
+type CommentMutation struct {
 	config
 	op             Op
 	typ            string
 	id             *uuid.UUID
+	article_id     *uuid.UUID
+	author_id      *uuid.UUID
+	body           *string
 	created_at     *time.Time
+	updated_at     *time.Time
 	clearedFields  map[string]struct{}
-	article        *uuid.UUID
+	article        map[uuid.UUID]struct{}
+	removedarticle map[uuid.UUID]struct{}
 	clearedarticle bool
-	tag            *uuid.UUID
-	clearedtag     bool
 	done           bool
-	oldValue       func(context.Context) (*ArticleTag, error)
-	predicates     []predicate.ArticleTag
-}
-
-var _ ent.Mutation = (*ArticleTagMutation)(nil)
-
-// articletagOption allows management of the mutation configuration using functional options.
-type articletagOption func(*ArticleTagMutation)
-
-// newArticleTagMutation creates new mutation for the ArticleTag entity.
-func newArticleTagMutation(c config, op Op, opts ...articletagOption) *ArticleTagMutation {
-	m := &ArticleTagMutation{
-		config:        c,
-		op:            op,
-		typ:           TypeArticleTag,
-		clearedFields: make(map[string]struct{}),
-	}
-	for _, opt := range opts {
-		opt(m)
-	}
-	return m
-}
-
-// withArticleTagID sets the ID field of the mutation.
-func withArticleTagID(id uuid.UUID) articletagOption {
-	return func(m *ArticleTagMutation) {
-		var (
-			err   error
-			once  sync.Once
-			value *ArticleTag
-		)
-		m.oldValue = func(ctx context.Context) (*ArticleTag, error) {
-			once.Do(func() {
-				if m.done {
-					err = errors.New("querying old values post mutation is not allowed")
-				} else {
-					value, err = m.Client().ArticleTag.Get(ctx, id)
-				}
-			})
-			return value, err
-		}
-		m.id = &id
-	}
-}
-
-// withArticleTag sets the old ArticleTag of the mutation.
-func withArticleTag(node *ArticleTag) articletagOption {
-	return func(m *ArticleTagMutation) {
-		m.oldValue = func(context.Context) (*ArticleTag, error) {
-			return node, nil
-		}
-		m.id = &node.ID
-	}
-}
-
-// Client returns a new `ent.Client` from the mutation. If the mutation was
-// executed in a transaction (ent.Tx), a transactional client is returned.
-func (m ArticleTagMutation) Client() *Client {
-	client := &Client{config: m.config}
-	client.init()
-	return client
-}
-
-// Tx returns an `ent.Tx` for mutations that were executed in transactions;
-// it returns an error otherwise.
-func (m ArticleTagMutation) Tx() (*Tx, error) {
-	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, errors.New("ent: mutation is not running in a transaction")
-	}
-	tx := &Tx{config: m.config}
-	tx.init()
-	return tx, nil
-}
-
-// SetID sets the value of the id field. Note that this
-// operation is only accepted on creation of ArticleTag entities.
-func (m *ArticleTagMutation) SetID(id uuid.UUID) {
-	m.id = &id
-}
-
-// ID returns the ID value in the mutation. Note that the ID is only available
-// if it was provided to the builder or after it was returned from the database.
-func (m *ArticleTagMutation) ID() (id uuid.UUID, exists bool) {
-	if m.id == nil {
-		return
-	}
-	return *m.id, true
-}
-
-// IDs queries the database and returns the entity ids that match the mutation's predicate.
-// That means, if the mutation is applied within a transaction with an isolation level such
-// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
-// or updated by the mutation.
-func (m *ArticleTagMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	switch {
-	case m.op.Is(OpUpdateOne | OpDeleteOne):
-		id, exists := m.ID()
-		if exists {
-			return []uuid.UUID{id}, nil
-		}
-		fallthrough
-	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().ArticleTag.Query().Where(m.predicates...).IDs(ctx)
-	default:
-		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
-	}
-}
-
-// SetArticleID sets the "article_id" field.
-func (m *ArticleTagMutation) SetArticleID(u uuid.UUID) {
-	m.article = &u
-}
-
-// ArticleID returns the value of the "article_id" field in the mutation.
-func (m *ArticleTagMutation) ArticleID() (r uuid.UUID, exists bool) {
-	v := m.article
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldArticleID returns the old "article_id" field's value of the ArticleTag entity.
-// If the ArticleTag object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ArticleTagMutation) OldArticleID(ctx context.Context) (v uuid.UUID, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldArticleID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldArticleID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldArticleID: %w", err)
-	}
-	return oldValue.ArticleID, nil
-}
-
-// ResetArticleID resets all changes to the "article_id" field.
-func (m *ArticleTagMutation) ResetArticleID() {
-	m.article = nil
-}
-
-// SetTagID sets the "tag_id" field.
-func (m *ArticleTagMutation) SetTagID(u uuid.UUID) {
-	m.tag = &u
-}
-
-// TagID returns the value of the "tag_id" field in the mutation.
-func (m *ArticleTagMutation) TagID() (r uuid.UUID, exists bool) {
-	v := m.tag
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldTagID returns the old "tag_id" field's value of the ArticleTag entity.
-// If the ArticleTag object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ArticleTagMutation) OldTagID(ctx context.Context) (v uuid.UUID, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldTagID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldTagID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldTagID: %w", err)
-	}
-	return oldValue.TagID, nil
-}
-
-// ResetTagID resets all changes to the "tag_id" field.
-func (m *ArticleTagMutation) ResetTagID() {
-	m.tag = nil
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (m *ArticleTagMutation) SetCreatedAt(t time.Time) {
-	m.created_at = &t
-}
-
-// CreatedAt returns the value of the "created_at" field in the mutation.
-func (m *ArticleTagMutation) CreatedAt() (r time.Time, exists bool) {
-	v := m.created_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCreatedAt returns the old "created_at" field's value of the ArticleTag entity.
-// If the ArticleTag object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ArticleTagMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
-	}
-	return oldValue.CreatedAt, nil
-}
-
-// ResetCreatedAt resets all changes to the "created_at" field.
-func (m *ArticleTagMutation) ResetCreatedAt() {
-	m.created_at = nil
-}
-
-// ClearArticle clears the "article" edge to the Article entity.
-func (m *ArticleTagMutation) ClearArticle() {
-	m.clearedarticle = true
-	m.clearedFields[articletag.FieldArticleID] = struct{}{}
-}
-
-// ArticleCleared reports if the "article" edge to the Article entity was cleared.
-func (m *ArticleTagMutation) ArticleCleared() bool {
-	return m.clearedarticle
-}
-
-// ArticleIDs returns the "article" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ArticleID instead. It exists only for internal usage by the builders.
-func (m *ArticleTagMutation) ArticleIDs() (ids []uuid.UUID) {
-	if id := m.article; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetArticle resets all changes to the "article" edge.
-func (m *ArticleTagMutation) ResetArticle() {
-	m.article = nil
-	m.clearedarticle = false
-}
-
-// ClearTag clears the "tag" edge to the Tag entity.
-func (m *ArticleTagMutation) ClearTag() {
-	m.clearedtag = true
-	m.clearedFields[articletag.FieldTagID] = struct{}{}
-}
-
-// TagCleared reports if the "tag" edge to the Tag entity was cleared.
-func (m *ArticleTagMutation) TagCleared() bool {
-	return m.clearedtag
-}
-
-// TagIDs returns the "tag" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// TagID instead. It exists only for internal usage by the builders.
-func (m *ArticleTagMutation) TagIDs() (ids []uuid.UUID) {
-	if id := m.tag; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetTag resets all changes to the "tag" edge.
-func (m *ArticleTagMutation) ResetTag() {
-	m.tag = nil
-	m.clearedtag = false
-}
-
-// Where appends a list predicates to the ArticleTagMutation builder.
-func (m *ArticleTagMutation) Where(ps ...predicate.ArticleTag) {
-	m.predicates = append(m.predicates, ps...)
-}
-
-// WhereP appends storage-level predicates to the ArticleTagMutation builder. Using this method,
-// users can use type-assertion to append predicates that do not depend on any generated package.
-func (m *ArticleTagMutation) WhereP(ps ...func(*sql.Selector)) {
-	p := make([]predicate.ArticleTag, len(ps))
-	for i := range ps {
-		p[i] = ps[i]
-	}
-	m.Where(p...)
-}
-
-// Op returns the operation name.
-func (m *ArticleTagMutation) Op() Op {
-	return m.op
-}
-
-// SetOp allows setting the mutation operation.
-func (m *ArticleTagMutation) SetOp(op Op) {
-	m.op = op
-}
-
-// Type returns the node type of this mutation (ArticleTag).
-func (m *ArticleTagMutation) Type() string {
-	return m.typ
-}
-
-// Fields returns all fields that were changed during this mutation. Note that in
-// order to get all numeric fields that were incremented/decremented, call
-// AddedFields().
-func (m *ArticleTagMutation) Fields() []string {
-	fields := make([]string, 0, 3)
-	if m.article != nil {
-		fields = append(fields, articletag.FieldArticleID)
-	}
-	if m.tag != nil {
-		fields = append(fields, articletag.FieldTagID)
-	}
-	if m.created_at != nil {
-		fields = append(fields, articletag.FieldCreatedAt)
-	}
-	return fields
-}
-
-// Field returns the value of a field with the given name. The second boolean
-// return value indicates that this field was not set, or was not defined in the
-// schema.
-func (m *ArticleTagMutation) Field(name string) (ent.Value, bool) {
-	switch name {
-	case articletag.FieldArticleID:
-		return m.ArticleID()
-	case articletag.FieldTagID:
-		return m.TagID()
-	case articletag.FieldCreatedAt:
-		return m.CreatedAt()
-	}
-	return nil, false
-}
-
-// OldField returns the old value of the field from the database. An error is
-// returned if the mutation operation is not UpdateOne, or the query to the
-// database failed.
-func (m *ArticleTagMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
-	switch name {
-	case articletag.FieldArticleID:
-		return m.OldArticleID(ctx)
-	case articletag.FieldTagID:
-		return m.OldTagID(ctx)
-	case articletag.FieldCreatedAt:
-		return m.OldCreatedAt(ctx)
-	}
-	return nil, fmt.Errorf("unknown ArticleTag field %s", name)
-}
-
-// SetField sets the value of a field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *ArticleTagMutation) SetField(name string, value ent.Value) error {
-	switch name {
-	case articletag.FieldArticleID:
-		v, ok := value.(uuid.UUID)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetArticleID(v)
-		return nil
-	case articletag.FieldTagID:
-		v, ok := value.(uuid.UUID)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetTagID(v)
-		return nil
-	case articletag.FieldCreatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCreatedAt(v)
-		return nil
-	}
-	return fmt.Errorf("unknown ArticleTag field %s", name)
-}
-
-// AddedFields returns all numeric fields that were incremented/decremented during
-// this mutation.
-func (m *ArticleTagMutation) AddedFields() []string {
-	return nil
-}
-
-// AddedField returns the numeric value that was incremented/decremented on a field
-// with the given name. The second boolean return value indicates that this field
-// was not set, or was not defined in the schema.
-func (m *ArticleTagMutation) AddedField(name string) (ent.Value, bool) {
-	return nil, false
-}
-
-// AddField adds the value to the field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *ArticleTagMutation) AddField(name string, value ent.Value) error {
-	switch name {
-	}
-	return fmt.Errorf("unknown ArticleTag numeric field %s", name)
-}
-
-// ClearedFields returns all nullable fields that were cleared during this
-// mutation.
-func (m *ArticleTagMutation) ClearedFields() []string {
-	return nil
-}
-
-// FieldCleared returns a boolean indicating if a field with the given name was
-// cleared in this mutation.
-func (m *ArticleTagMutation) FieldCleared(name string) bool {
-	_, ok := m.clearedFields[name]
-	return ok
-}
-
-// ClearField clears the value of the field with the given name. It returns an
-// error if the field is not defined in the schema.
-func (m *ArticleTagMutation) ClearField(name string) error {
-	return fmt.Errorf("unknown ArticleTag nullable field %s", name)
-}
-
-// ResetField resets all changes in the mutation for the field with the given name.
-// It returns an error if the field is not defined in the schema.
-func (m *ArticleTagMutation) ResetField(name string) error {
-	switch name {
-	case articletag.FieldArticleID:
-		m.ResetArticleID()
-		return nil
-	case articletag.FieldTagID:
-		m.ResetTagID()
-		return nil
-	case articletag.FieldCreatedAt:
-		m.ResetCreatedAt()
-		return nil
-	}
-	return fmt.Errorf("unknown ArticleTag field %s", name)
-}
-
-// AddedEdges returns all edge names that were set/added in this mutation.
-func (m *ArticleTagMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
-	if m.article != nil {
-		edges = append(edges, articletag.EdgeArticle)
-	}
-	if m.tag != nil {
-		edges = append(edges, articletag.EdgeTag)
-	}
-	return edges
-}
-
-// AddedIDs returns all IDs (to other nodes) that were added for the given edge
-// name in this mutation.
-func (m *ArticleTagMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case articletag.EdgeArticle:
-		if id := m.article; id != nil {
-			return []ent.Value{*id}
-		}
-	case articletag.EdgeTag:
-		if id := m.tag; id != nil {
-			return []ent.Value{*id}
-		}
-	}
-	return nil
-}
-
-// RemovedEdges returns all edge names that were removed in this mutation.
-func (m *ArticleTagMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
-	return edges
-}
-
-// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
-// the given name in this mutation.
-func (m *ArticleTagMutation) RemovedIDs(name string) []ent.Value {
-	return nil
-}
-
-// ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *ArticleTagMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
-	if m.clearedarticle {
-		edges = append(edges, articletag.EdgeArticle)
-	}
-	if m.clearedtag {
-		edges = append(edges, articletag.EdgeTag)
-	}
-	return edges
-}
-
-// EdgeCleared returns a boolean which indicates if the edge with the given name
-// was cleared in this mutation.
-func (m *ArticleTagMutation) EdgeCleared(name string) bool {
-	switch name {
-	case articletag.EdgeArticle:
-		return m.clearedarticle
-	case articletag.EdgeTag:
-		return m.clearedtag
-	}
-	return false
-}
-
-// ClearEdge clears the value of the edge with the given name. It returns an error
-// if that edge is not defined in the schema.
-func (m *ArticleTagMutation) ClearEdge(name string) error {
-	switch name {
-	case articletag.EdgeArticle:
-		m.ClearArticle()
-		return nil
-	case articletag.EdgeTag:
-		m.ClearTag()
-		return nil
-	}
-	return fmt.Errorf("unknown ArticleTag unique edge %s", name)
-}
-
-// ResetEdge resets all changes to the edge with the given name in this mutation.
-// It returns an error if the edge is not defined in the schema.
-func (m *ArticleTagMutation) ResetEdge(name string) error {
-	switch name {
-	case articletag.EdgeArticle:
-		m.ResetArticle()
-		return nil
-	case articletag.EdgeTag:
-		m.ResetTag()
-		return nil
-	}
-	return fmt.Errorf("unknown ArticleTag edge %s", name)
-}
-
-// CommentMutation represents an operation that mutates the Comment nodes in the graph.
-type CommentMutation struct {
-	config
-	op                   Op
-	typ                  string
-	id                   *uuid.UUID
-	body                 *string
-	created_at           *time.Time
-	updated_at           *time.Time
-	clearedFields        map[string]struct{}
-	commentAuthor        *uuid.UUID
-	clearedcommentAuthor bool
-	article              *uuid.UUID
-	clearedarticle       bool
-	done                 bool
-	oldValue             func(context.Context) (*Comment, error)
-	predicates           []predicate.Comment
+	oldValue       func(context.Context) (*Comment, error)
+	predicates     []predicate.Comment
 }
 
 var _ ent.Mutation = (*CommentMutation)(nil)
@@ -1843,50 +1049,14 @@ func (m *CommentMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	}
 }
 
-// SetAuthorID sets the "author_id" field.
-func (m *CommentMutation) SetAuthorID(u uuid.UUID) {
-	m.commentAuthor = &u
-}
-
-// AuthorID returns the value of the "author_id" field in the mutation.
-func (m *CommentMutation) AuthorID() (r uuid.UUID, exists bool) {
-	v := m.commentAuthor
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldAuthorID returns the old "author_id" field's value of the Comment entity.
-// If the Comment object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CommentMutation) OldAuthorID(ctx context.Context) (v uuid.UUID, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldAuthorID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldAuthorID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAuthorID: %w", err)
-	}
-	return oldValue.AuthorID, nil
-}
-
-// ResetAuthorID resets all changes to the "author_id" field.
-func (m *CommentMutation) ResetAuthorID() {
-	m.commentAuthor = nil
-}
-
 // SetArticleID sets the "article_id" field.
 func (m *CommentMutation) SetArticleID(u uuid.UUID) {
-	m.article = &u
+	m.article_id = &u
 }
 
 // ArticleID returns the value of the "article_id" field in the mutation.
 func (m *CommentMutation) ArticleID() (r uuid.UUID, exists bool) {
-	v := m.article
+	v := m.article_id
 	if v == nil {
 		return
 	}
@@ -1912,7 +1082,43 @@ func (m *CommentMutation) OldArticleID(ctx context.Context) (v uuid.UUID, err er
 
 // ResetArticleID resets all changes to the "article_id" field.
 func (m *CommentMutation) ResetArticleID() {
-	m.article = nil
+	m.article_id = nil
+}
+
+// SetAuthorID sets the "author_id" field.
+func (m *CommentMutation) SetAuthorID(u uuid.UUID) {
+	m.author_id = &u
+}
+
+// AuthorID returns the value of the "author_id" field in the mutation.
+func (m *CommentMutation) AuthorID() (r uuid.UUID, exists bool) {
+	v := m.author_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAuthorID returns the old "author_id" field's value of the Comment entity.
+// If the Comment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CommentMutation) OldAuthorID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAuthorID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAuthorID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAuthorID: %w", err)
+	}
+	return oldValue.AuthorID, nil
+}
+
+// ResetAuthorID resets all changes to the "author_id" field.
+func (m *CommentMutation) ResetAuthorID() {
+	m.author_id = nil
 }
 
 // SetBody sets the "body" field.
@@ -2023,50 +1229,19 @@ func (m *CommentMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
-// SetCommentAuthorID sets the "commentAuthor" edge to the User entity by id.
-func (m *CommentMutation) SetCommentAuthorID(id uuid.UUID) {
-	m.commentAuthor = &id
-}
-
-// ClearCommentAuthor clears the "commentAuthor" edge to the User entity.
-func (m *CommentMutation) ClearCommentAuthor() {
-	m.clearedcommentAuthor = true
-	m.clearedFields[comment.FieldAuthorID] = struct{}{}
-}
-
-// CommentAuthorCleared reports if the "commentAuthor" edge to the User entity was cleared.
-func (m *CommentMutation) CommentAuthorCleared() bool {
-	return m.clearedcommentAuthor
-}
-
-// CommentAuthorID returns the "commentAuthor" edge ID in the mutation.
-func (m *CommentMutation) CommentAuthorID() (id uuid.UUID, exists bool) {
-	if m.commentAuthor != nil {
-		return *m.commentAuthor, true
+// AddArticleIDs adds the "article" edge to the Article entity by ids.
+func (m *CommentMutation) AddArticleIDs(ids ...uuid.UUID) {
+	if m.article == nil {
+		m.article = make(map[uuid.UUID]struct{})
 	}
-	return
-}
-
-// CommentAuthorIDs returns the "commentAuthor" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// CommentAuthorID instead. It exists only for internal usage by the builders.
-func (m *CommentMutation) CommentAuthorIDs() (ids []uuid.UUID) {
-	if id := m.commentAuthor; id != nil {
-		ids = append(ids, *id)
+	for i := range ids {
+		m.article[ids[i]] = struct{}{}
 	}
-	return
-}
-
-// ResetCommentAuthor resets all changes to the "commentAuthor" edge.
-func (m *CommentMutation) ResetCommentAuthor() {
-	m.commentAuthor = nil
-	m.clearedcommentAuthor = false
 }
 
 // ClearArticle clears the "article" edge to the Article entity.
 func (m *CommentMutation) ClearArticle() {
 	m.clearedarticle = true
-	m.clearedFields[comment.FieldArticleID] = struct{}{}
 }
 
 // ArticleCleared reports if the "article" edge to the Article entity was cleared.
@@ -2074,12 +1249,29 @@ func (m *CommentMutation) ArticleCleared() bool {
 	return m.clearedarticle
 }
 
+// RemoveArticleIDs removes the "article" edge to the Article entity by IDs.
+func (m *CommentMutation) RemoveArticleIDs(ids ...uuid.UUID) {
+	if m.removedarticle == nil {
+		m.removedarticle = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.article, ids[i])
+		m.removedarticle[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedArticle returns the removed IDs of the "article" edge to the Article entity.
+func (m *CommentMutation) RemovedArticleIDs() (ids []uuid.UUID) {
+	for id := range m.removedarticle {
+		ids = append(ids, id)
+	}
+	return
+}
+
 // ArticleIDs returns the "article" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ArticleID instead. It exists only for internal usage by the builders.
 func (m *CommentMutation) ArticleIDs() (ids []uuid.UUID) {
-	if id := m.article; id != nil {
-		ids = append(ids, *id)
+	for id := range m.article {
+		ids = append(ids, id)
 	}
 	return
 }
@@ -2088,6 +1280,7 @@ func (m *CommentMutation) ArticleIDs() (ids []uuid.UUID) {
 func (m *CommentMutation) ResetArticle() {
 	m.article = nil
 	m.clearedarticle = false
+	m.removedarticle = nil
 }
 
 // Where appends a list predicates to the CommentMutation builder.
@@ -2125,11 +1318,11 @@ func (m *CommentMutation) Type() string {
 // AddedFields().
 func (m *CommentMutation) Fields() []string {
 	fields := make([]string, 0, 5)
-	if m.commentAuthor != nil {
-		fields = append(fields, comment.FieldAuthorID)
-	}
-	if m.article != nil {
+	if m.article_id != nil {
 		fields = append(fields, comment.FieldArticleID)
+	}
+	if m.author_id != nil {
+		fields = append(fields, comment.FieldAuthorID)
 	}
 	if m.body != nil {
 		fields = append(fields, comment.FieldBody)
@@ -2148,10 +1341,10 @@ func (m *CommentMutation) Fields() []string {
 // schema.
 func (m *CommentMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case comment.FieldAuthorID:
-		return m.AuthorID()
 	case comment.FieldArticleID:
 		return m.ArticleID()
+	case comment.FieldAuthorID:
+		return m.AuthorID()
 	case comment.FieldBody:
 		return m.Body()
 	case comment.FieldCreatedAt:
@@ -2167,10 +1360,10 @@ func (m *CommentMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *CommentMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case comment.FieldAuthorID:
-		return m.OldAuthorID(ctx)
 	case comment.FieldArticleID:
 		return m.OldArticleID(ctx)
+	case comment.FieldAuthorID:
+		return m.OldAuthorID(ctx)
 	case comment.FieldBody:
 		return m.OldBody(ctx)
 	case comment.FieldCreatedAt:
@@ -2186,19 +1379,19 @@ func (m *CommentMutation) OldField(ctx context.Context, name string) (ent.Value,
 // type.
 func (m *CommentMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case comment.FieldAuthorID:
-		v, ok := value.(uuid.UUID)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetAuthorID(v)
-		return nil
 	case comment.FieldArticleID:
 		v, ok := value.(uuid.UUID)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetArticleID(v)
+		return nil
+	case comment.FieldAuthorID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAuthorID(v)
 		return nil
 	case comment.FieldBody:
 		v, ok := value.(string)
@@ -2270,11 +1463,11 @@ func (m *CommentMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *CommentMutation) ResetField(name string) error {
 	switch name {
-	case comment.FieldAuthorID:
-		m.ResetAuthorID()
-		return nil
 	case comment.FieldArticleID:
 		m.ResetArticleID()
+		return nil
+	case comment.FieldAuthorID:
+		m.ResetAuthorID()
 		return nil
 	case comment.FieldBody:
 		m.ResetBody()
@@ -2291,10 +1484,7 @@ func (m *CommentMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *CommentMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
-	if m.commentAuthor != nil {
-		edges = append(edges, comment.EdgeCommentAuthor)
-	}
+	edges := make([]string, 0, 1)
 	if m.article != nil {
 		edges = append(edges, comment.EdgeArticle)
 	}
@@ -2305,36 +1495,42 @@ func (m *CommentMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *CommentMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case comment.EdgeCommentAuthor:
-		if id := m.commentAuthor; id != nil {
-			return []ent.Value{*id}
-		}
 	case comment.EdgeArticle:
-		if id := m.article; id != nil {
-			return []ent.Value{*id}
+		ids := make([]ent.Value, 0, len(m.article))
+		for id := range m.article {
+			ids = append(ids, id)
 		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *CommentMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 1)
+	if m.removedarticle != nil {
+		edges = append(edges, comment.EdgeArticle)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *CommentMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case comment.EdgeArticle:
+		ids := make([]ent.Value, 0, len(m.removedarticle))
+		for id := range m.removedarticle {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *CommentMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
-	if m.clearedcommentAuthor {
-		edges = append(edges, comment.EdgeCommentAuthor)
-	}
+	edges := make([]string, 0, 1)
 	if m.clearedarticle {
 		edges = append(edges, comment.EdgeArticle)
 	}
@@ -2345,8 +1541,6 @@ func (m *CommentMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *CommentMutation) EdgeCleared(name string) bool {
 	switch name {
-	case comment.EdgeCommentAuthor:
-		return m.clearedcommentAuthor
 	case comment.EdgeArticle:
 		return m.clearedarticle
 	}
@@ -2357,12 +1551,6 @@ func (m *CommentMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *CommentMutation) ClearEdge(name string) error {
 	switch name {
-	case comment.EdgeCommentAuthor:
-		m.ClearCommentAuthor()
-		return nil
-	case comment.EdgeArticle:
-		m.ClearArticle()
-		return nil
 	}
 	return fmt.Errorf("unknown Comment unique edge %s", name)
 }
@@ -2371,9 +1559,6 @@ func (m *CommentMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *CommentMutation) ResetEdge(name string) error {
 	switch name {
-	case comment.EdgeCommentAuthor:
-		m.ResetCommentAuthor()
-		return nil
 	case comment.EdgeArticle:
 		m.ResetArticle()
 		return nil
@@ -2384,21 +1569,18 @@ func (m *CommentMutation) ResetEdge(name string) error {
 // TagMutation represents an operation that mutates the Tag nodes in the graph.
 type TagMutation struct {
 	config
-	op                 Op
-	typ                string
-	id                 *uuid.UUID
-	description        *string
-	created_at         *time.Time
-	clearedFields      map[string]struct{}
-	article            map[uuid.UUID]struct{}
-	removedarticle     map[uuid.UUID]struct{}
-	clearedarticle     bool
-	tag_article        map[uuid.UUID]struct{}
-	removedtag_article map[uuid.UUID]struct{}
-	clearedtag_article bool
-	done               bool
-	oldValue           func(context.Context) (*Tag, error)
-	predicates         []predicate.Tag
+	op              Op
+	typ             string
+	id              *uuid.UUID
+	description     *string
+	created_at      *time.Time
+	clearedFields   map[string]struct{}
+	articles        map[uuid.UUID]struct{}
+	removedarticles map[uuid.UUID]struct{}
+	clearedarticles bool
+	done            bool
+	oldValue        func(context.Context) (*Tag, error)
+	predicates      []predicate.Tag
 }
 
 var _ ent.Mutation = (*TagMutation)(nil)
@@ -2577,112 +1759,58 @@ func (m *TagMutation) ResetCreatedAt() {
 	m.created_at = nil
 }
 
-// AddArticleIDs adds the "article" edge to the Article entity by ids.
+// AddArticleIDs adds the "articles" edge to the Article entity by ids.
 func (m *TagMutation) AddArticleIDs(ids ...uuid.UUID) {
-	if m.article == nil {
-		m.article = make(map[uuid.UUID]struct{})
+	if m.articles == nil {
+		m.articles = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m.article[ids[i]] = struct{}{}
+		m.articles[ids[i]] = struct{}{}
 	}
 }
 
-// ClearArticle clears the "article" edge to the Article entity.
-func (m *TagMutation) ClearArticle() {
-	m.clearedarticle = true
+// ClearArticles clears the "articles" edge to the Article entity.
+func (m *TagMutation) ClearArticles() {
+	m.clearedarticles = true
 }
 
-// ArticleCleared reports if the "article" edge to the Article entity was cleared.
-func (m *TagMutation) ArticleCleared() bool {
-	return m.clearedarticle
+// ArticlesCleared reports if the "articles" edge to the Article entity was cleared.
+func (m *TagMutation) ArticlesCleared() bool {
+	return m.clearedarticles
 }
 
-// RemoveArticleIDs removes the "article" edge to the Article entity by IDs.
+// RemoveArticleIDs removes the "articles" edge to the Article entity by IDs.
 func (m *TagMutation) RemoveArticleIDs(ids ...uuid.UUID) {
-	if m.removedarticle == nil {
-		m.removedarticle = make(map[uuid.UUID]struct{})
+	if m.removedarticles == nil {
+		m.removedarticles = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m.article, ids[i])
-		m.removedarticle[ids[i]] = struct{}{}
+		delete(m.articles, ids[i])
+		m.removedarticles[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedArticle returns the removed IDs of the "article" edge to the Article entity.
-func (m *TagMutation) RemovedArticleIDs() (ids []uuid.UUID) {
-	for id := range m.removedarticle {
+// RemovedArticles returns the removed IDs of the "articles" edge to the Article entity.
+func (m *TagMutation) RemovedArticlesIDs() (ids []uuid.UUID) {
+	for id := range m.removedarticles {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ArticleIDs returns the "article" edge IDs in the mutation.
-func (m *TagMutation) ArticleIDs() (ids []uuid.UUID) {
-	for id := range m.article {
+// ArticlesIDs returns the "articles" edge IDs in the mutation.
+func (m *TagMutation) ArticlesIDs() (ids []uuid.UUID) {
+	for id := range m.articles {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetArticle resets all changes to the "article" edge.
-func (m *TagMutation) ResetArticle() {
-	m.article = nil
-	m.clearedarticle = false
-	m.removedarticle = nil
-}
-
-// AddTagArticleIDs adds the "tag_article" edge to the ArticleTag entity by ids.
-func (m *TagMutation) AddTagArticleIDs(ids ...uuid.UUID) {
-	if m.tag_article == nil {
-		m.tag_article = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		m.tag_article[ids[i]] = struct{}{}
-	}
-}
-
-// ClearTagArticle clears the "tag_article" edge to the ArticleTag entity.
-func (m *TagMutation) ClearTagArticle() {
-	m.clearedtag_article = true
-}
-
-// TagArticleCleared reports if the "tag_article" edge to the ArticleTag entity was cleared.
-func (m *TagMutation) TagArticleCleared() bool {
-	return m.clearedtag_article
-}
-
-// RemoveTagArticleIDs removes the "tag_article" edge to the ArticleTag entity by IDs.
-func (m *TagMutation) RemoveTagArticleIDs(ids ...uuid.UUID) {
-	if m.removedtag_article == nil {
-		m.removedtag_article = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		delete(m.tag_article, ids[i])
-		m.removedtag_article[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedTagArticle returns the removed IDs of the "tag_article" edge to the ArticleTag entity.
-func (m *TagMutation) RemovedTagArticleIDs() (ids []uuid.UUID) {
-	for id := range m.removedtag_article {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// TagArticleIDs returns the "tag_article" edge IDs in the mutation.
-func (m *TagMutation) TagArticleIDs() (ids []uuid.UUID) {
-	for id := range m.tag_article {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetTagArticle resets all changes to the "tag_article" edge.
-func (m *TagMutation) ResetTagArticle() {
-	m.tag_article = nil
-	m.clearedtag_article = false
-	m.removedtag_article = nil
+// ResetArticles resets all changes to the "articles" edge.
+func (m *TagMutation) ResetArticles() {
+	m.articles = nil
+	m.clearedarticles = false
+	m.removedarticles = nil
 }
 
 // Where appends a list predicates to the TagMutation builder.
@@ -2835,12 +1963,9 @@ func (m *TagMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *TagMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
-	if m.article != nil {
-		edges = append(edges, tag.EdgeArticle)
-	}
-	if m.tag_article != nil {
-		edges = append(edges, tag.EdgeTagArticle)
+	edges := make([]string, 0, 1)
+	if m.articles != nil {
+		edges = append(edges, tag.EdgeArticles)
 	}
 	return edges
 }
@@ -2849,15 +1974,9 @@ func (m *TagMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *TagMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case tag.EdgeArticle:
-		ids := make([]ent.Value, 0, len(m.article))
-		for id := range m.article {
-			ids = append(ids, id)
-		}
-		return ids
-	case tag.EdgeTagArticle:
-		ids := make([]ent.Value, 0, len(m.tag_article))
-		for id := range m.tag_article {
+	case tag.EdgeArticles:
+		ids := make([]ent.Value, 0, len(m.articles))
+		for id := range m.articles {
 			ids = append(ids, id)
 		}
 		return ids
@@ -2867,12 +1986,9 @@ func (m *TagMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *TagMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
-	if m.removedarticle != nil {
-		edges = append(edges, tag.EdgeArticle)
-	}
-	if m.removedtag_article != nil {
-		edges = append(edges, tag.EdgeTagArticle)
+	edges := make([]string, 0, 1)
+	if m.removedarticles != nil {
+		edges = append(edges, tag.EdgeArticles)
 	}
 	return edges
 }
@@ -2881,15 +1997,9 @@ func (m *TagMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *TagMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case tag.EdgeArticle:
-		ids := make([]ent.Value, 0, len(m.removedarticle))
-		for id := range m.removedarticle {
-			ids = append(ids, id)
-		}
-		return ids
-	case tag.EdgeTagArticle:
-		ids := make([]ent.Value, 0, len(m.removedtag_article))
-		for id := range m.removedtag_article {
+	case tag.EdgeArticles:
+		ids := make([]ent.Value, 0, len(m.removedarticles))
+		for id := range m.removedarticles {
 			ids = append(ids, id)
 		}
 		return ids
@@ -2899,12 +2009,9 @@ func (m *TagMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *TagMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
-	if m.clearedarticle {
-		edges = append(edges, tag.EdgeArticle)
-	}
-	if m.clearedtag_article {
-		edges = append(edges, tag.EdgeTagArticle)
+	edges := make([]string, 0, 1)
+	if m.clearedarticles {
+		edges = append(edges, tag.EdgeArticles)
 	}
 	return edges
 }
@@ -2913,10 +2020,8 @@ func (m *TagMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *TagMutation) EdgeCleared(name string) bool {
 	switch name {
-	case tag.EdgeArticle:
-		return m.clearedarticle
-	case tag.EdgeTagArticle:
-		return m.clearedtag_article
+	case tag.EdgeArticles:
+		return m.clearedarticles
 	}
 	return false
 }
@@ -2933,11 +2038,8 @@ func (m *TagMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *TagMutation) ResetEdge(name string) error {
 	switch name {
-	case tag.EdgeArticle:
-		m.ResetArticle()
-		return nil
-	case tag.EdgeTagArticle:
-		m.ResetTagArticle()
+	case tag.EdgeArticles:
+		m.ResetArticles()
 		return nil
 	}
 	return fmt.Errorf("unknown Tag edge %s", name)
@@ -2946,35 +2048,30 @@ func (m *TagMutation) ResetEdge(name string) error {
 // UserMutation represents an operation that mutates the User nodes in the graph.
 type UserMutation struct {
 	config
-	op                     Op
-	typ                    string
-	id                     *uuid.UUID
-	username               *string
-	email                  *string
-	password               *string
-	image                  *string
-	bio                    *string
-	created_at             *time.Time
-	updated_at             *time.Time
-	clearedFields          map[string]struct{}
-	follows                map[uuid.UUID]struct{}
-	removedfollows         map[uuid.UUID]struct{}
-	clearedfollows         bool
-	articles               map[uuid.UUID]struct{}
-	removedarticles        map[uuid.UUID]struct{}
-	clearedarticles        bool
-	comments               map[uuid.UUID]struct{}
-	removedcomments        map[uuid.UUID]struct{}
-	clearedcomments        bool
-	favariteArticle        map[uuid.UUID]struct{}
-	removedfavariteArticle map[uuid.UUID]struct{}
-	clearedfavariteArticle bool
-	user_favorites         map[uuid.UUID]struct{}
-	removeduser_favorites  map[uuid.UUID]struct{}
-	cleareduser_favorites  bool
-	done                   bool
-	oldValue               func(context.Context) (*User, error)
-	predicates             []predicate.User
+	op                      Op
+	typ                     string
+	id                      *uuid.UUID
+	username                *string
+	email                   *string
+	password                *string
+	image                   *string
+	bio                     *string
+	created_at              *time.Time
+	updated_at              *time.Time
+	clearedFields           map[string]struct{}
+	articles                *uuid.UUID
+	clearedarticles         bool
+	comments                *uuid.UUID
+	clearedcomments         bool
+	favoriteArticles        map[uuid.UUID]struct{}
+	removedfavoriteArticles map[uuid.UUID]struct{}
+	clearedfavoriteArticles bool
+	following               map[uuid.UUID]struct{}
+	removedfollowing        map[uuid.UUID]struct{}
+	clearedfollowing        bool
+	done                    bool
+	oldValue                func(context.Context) (*User, error)
+	predicates              []predicate.User
 }
 
 var _ ent.Mutation = (*UserMutation)(nil)
@@ -3333,68 +2430,9 @@ func (m *UserMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
-// AddFollowIDs adds the "follows" edge to the UserFollow entity by ids.
-func (m *UserMutation) AddFollowIDs(ids ...uuid.UUID) {
-	if m.follows == nil {
-		m.follows = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		m.follows[ids[i]] = struct{}{}
-	}
-}
-
-// ClearFollows clears the "follows" edge to the UserFollow entity.
-func (m *UserMutation) ClearFollows() {
-	m.clearedfollows = true
-}
-
-// FollowsCleared reports if the "follows" edge to the UserFollow entity was cleared.
-func (m *UserMutation) FollowsCleared() bool {
-	return m.clearedfollows
-}
-
-// RemoveFollowIDs removes the "follows" edge to the UserFollow entity by IDs.
-func (m *UserMutation) RemoveFollowIDs(ids ...uuid.UUID) {
-	if m.removedfollows == nil {
-		m.removedfollows = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		delete(m.follows, ids[i])
-		m.removedfollows[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedFollows returns the removed IDs of the "follows" edge to the UserFollow entity.
-func (m *UserMutation) RemovedFollowsIDs() (ids []uuid.UUID) {
-	for id := range m.removedfollows {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// FollowsIDs returns the "follows" edge IDs in the mutation.
-func (m *UserMutation) FollowsIDs() (ids []uuid.UUID) {
-	for id := range m.follows {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetFollows resets all changes to the "follows" edge.
-func (m *UserMutation) ResetFollows() {
-	m.follows = nil
-	m.clearedfollows = false
-	m.removedfollows = nil
-}
-
-// AddArticleIDs adds the "articles" edge to the Article entity by ids.
-func (m *UserMutation) AddArticleIDs(ids ...uuid.UUID) {
-	if m.articles == nil {
-		m.articles = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		m.articles[ids[i]] = struct{}{}
-	}
+// SetArticlesID sets the "articles" edge to the Article entity by id.
+func (m *UserMutation) SetArticlesID(id uuid.UUID) {
+	m.articles = &id
 }
 
 // ClearArticles clears the "articles" edge to the Article entity.
@@ -3407,29 +2445,20 @@ func (m *UserMutation) ArticlesCleared() bool {
 	return m.clearedarticles
 }
 
-// RemoveArticleIDs removes the "articles" edge to the Article entity by IDs.
-func (m *UserMutation) RemoveArticleIDs(ids ...uuid.UUID) {
-	if m.removedarticles == nil {
-		m.removedarticles = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		delete(m.articles, ids[i])
-		m.removedarticles[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedArticles returns the removed IDs of the "articles" edge to the Article entity.
-func (m *UserMutation) RemovedArticlesIDs() (ids []uuid.UUID) {
-	for id := range m.removedarticles {
-		ids = append(ids, id)
+// ArticlesID returns the "articles" edge ID in the mutation.
+func (m *UserMutation) ArticlesID() (id uuid.UUID, exists bool) {
+	if m.articles != nil {
+		return *m.articles, true
 	}
 	return
 }
 
 // ArticlesIDs returns the "articles" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ArticlesID instead. It exists only for internal usage by the builders.
 func (m *UserMutation) ArticlesIDs() (ids []uuid.UUID) {
-	for id := range m.articles {
-		ids = append(ids, id)
+	if id := m.articles; id != nil {
+		ids = append(ids, *id)
 	}
 	return
 }
@@ -3438,17 +2467,11 @@ func (m *UserMutation) ArticlesIDs() (ids []uuid.UUID) {
 func (m *UserMutation) ResetArticles() {
 	m.articles = nil
 	m.clearedarticles = false
-	m.removedarticles = nil
 }
 
-// AddCommentIDs adds the "comments" edge to the Comment entity by ids.
-func (m *UserMutation) AddCommentIDs(ids ...uuid.UUID) {
-	if m.comments == nil {
-		m.comments = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		m.comments[ids[i]] = struct{}{}
-	}
+// SetCommentsID sets the "comments" edge to the Comment entity by id.
+func (m *UserMutation) SetCommentsID(id uuid.UUID) {
+	m.comments = &id
 }
 
 // ClearComments clears the "comments" edge to the Comment entity.
@@ -3461,29 +2484,20 @@ func (m *UserMutation) CommentsCleared() bool {
 	return m.clearedcomments
 }
 
-// RemoveCommentIDs removes the "comments" edge to the Comment entity by IDs.
-func (m *UserMutation) RemoveCommentIDs(ids ...uuid.UUID) {
-	if m.removedcomments == nil {
-		m.removedcomments = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		delete(m.comments, ids[i])
-		m.removedcomments[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedComments returns the removed IDs of the "comments" edge to the Comment entity.
-func (m *UserMutation) RemovedCommentsIDs() (ids []uuid.UUID) {
-	for id := range m.removedcomments {
-		ids = append(ids, id)
+// CommentsID returns the "comments" edge ID in the mutation.
+func (m *UserMutation) CommentsID() (id uuid.UUID, exists bool) {
+	if m.comments != nil {
+		return *m.comments, true
 	}
 	return
 }
 
 // CommentsIDs returns the "comments" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// CommentsID instead. It exists only for internal usage by the builders.
 func (m *UserMutation) CommentsIDs() (ids []uuid.UUID) {
-	for id := range m.comments {
-		ids = append(ids, id)
+	if id := m.comments; id != nil {
+		ids = append(ids, *id)
 	}
 	return
 }
@@ -3492,115 +2506,114 @@ func (m *UserMutation) CommentsIDs() (ids []uuid.UUID) {
 func (m *UserMutation) ResetComments() {
 	m.comments = nil
 	m.clearedcomments = false
-	m.removedcomments = nil
 }
 
-// AddFavariteArticleIDs adds the "favariteArticle" edge to the Article entity by ids.
-func (m *UserMutation) AddFavariteArticleIDs(ids ...uuid.UUID) {
-	if m.favariteArticle == nil {
-		m.favariteArticle = make(map[uuid.UUID]struct{})
+// AddFavoriteArticleIDs adds the "favoriteArticles" edge to the Article entity by ids.
+func (m *UserMutation) AddFavoriteArticleIDs(ids ...uuid.UUID) {
+	if m.favoriteArticles == nil {
+		m.favoriteArticles = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m.favariteArticle[ids[i]] = struct{}{}
+		m.favoriteArticles[ids[i]] = struct{}{}
 	}
 }
 
-// ClearFavariteArticle clears the "favariteArticle" edge to the Article entity.
-func (m *UserMutation) ClearFavariteArticle() {
-	m.clearedfavariteArticle = true
+// ClearFavoriteArticles clears the "favoriteArticles" edge to the Article entity.
+func (m *UserMutation) ClearFavoriteArticles() {
+	m.clearedfavoriteArticles = true
 }
 
-// FavariteArticleCleared reports if the "favariteArticle" edge to the Article entity was cleared.
-func (m *UserMutation) FavariteArticleCleared() bool {
-	return m.clearedfavariteArticle
+// FavoriteArticlesCleared reports if the "favoriteArticles" edge to the Article entity was cleared.
+func (m *UserMutation) FavoriteArticlesCleared() bool {
+	return m.clearedfavoriteArticles
 }
 
-// RemoveFavariteArticleIDs removes the "favariteArticle" edge to the Article entity by IDs.
-func (m *UserMutation) RemoveFavariteArticleIDs(ids ...uuid.UUID) {
-	if m.removedfavariteArticle == nil {
-		m.removedfavariteArticle = make(map[uuid.UUID]struct{})
+// RemoveFavoriteArticleIDs removes the "favoriteArticles" edge to the Article entity by IDs.
+func (m *UserMutation) RemoveFavoriteArticleIDs(ids ...uuid.UUID) {
+	if m.removedfavoriteArticles == nil {
+		m.removedfavoriteArticles = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m.favariteArticle, ids[i])
-		m.removedfavariteArticle[ids[i]] = struct{}{}
+		delete(m.favoriteArticles, ids[i])
+		m.removedfavoriteArticles[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedFavariteArticle returns the removed IDs of the "favariteArticle" edge to the Article entity.
-func (m *UserMutation) RemovedFavariteArticleIDs() (ids []uuid.UUID) {
-	for id := range m.removedfavariteArticle {
+// RemovedFavoriteArticles returns the removed IDs of the "favoriteArticles" edge to the Article entity.
+func (m *UserMutation) RemovedFavoriteArticlesIDs() (ids []uuid.UUID) {
+	for id := range m.removedfavoriteArticles {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// FavariteArticleIDs returns the "favariteArticle" edge IDs in the mutation.
-func (m *UserMutation) FavariteArticleIDs() (ids []uuid.UUID) {
-	for id := range m.favariteArticle {
+// FavoriteArticlesIDs returns the "favoriteArticles" edge IDs in the mutation.
+func (m *UserMutation) FavoriteArticlesIDs() (ids []uuid.UUID) {
+	for id := range m.favoriteArticles {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetFavariteArticle resets all changes to the "favariteArticle" edge.
-func (m *UserMutation) ResetFavariteArticle() {
-	m.favariteArticle = nil
-	m.clearedfavariteArticle = false
-	m.removedfavariteArticle = nil
+// ResetFavoriteArticles resets all changes to the "favoriteArticles" edge.
+func (m *UserMutation) ResetFavoriteArticles() {
+	m.favoriteArticles = nil
+	m.clearedfavoriteArticles = false
+	m.removedfavoriteArticles = nil
 }
 
-// AddUserFavoriteIDs adds the "user_favorites" edge to the UserFavorite entity by ids.
-func (m *UserMutation) AddUserFavoriteIDs(ids ...uuid.UUID) {
-	if m.user_favorites == nil {
-		m.user_favorites = make(map[uuid.UUID]struct{})
+// AddFollowingIDs adds the "following" edge to the User entity by ids.
+func (m *UserMutation) AddFollowingIDs(ids ...uuid.UUID) {
+	if m.following == nil {
+		m.following = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		m.user_favorites[ids[i]] = struct{}{}
+		m.following[ids[i]] = struct{}{}
 	}
 }
 
-// ClearUserFavorites clears the "user_favorites" edge to the UserFavorite entity.
-func (m *UserMutation) ClearUserFavorites() {
-	m.cleareduser_favorites = true
+// ClearFollowing clears the "following" edge to the User entity.
+func (m *UserMutation) ClearFollowing() {
+	m.clearedfollowing = true
 }
 
-// UserFavoritesCleared reports if the "user_favorites" edge to the UserFavorite entity was cleared.
-func (m *UserMutation) UserFavoritesCleared() bool {
-	return m.cleareduser_favorites
+// FollowingCleared reports if the "following" edge to the User entity was cleared.
+func (m *UserMutation) FollowingCleared() bool {
+	return m.clearedfollowing
 }
 
-// RemoveUserFavoriteIDs removes the "user_favorites" edge to the UserFavorite entity by IDs.
-func (m *UserMutation) RemoveUserFavoriteIDs(ids ...uuid.UUID) {
-	if m.removeduser_favorites == nil {
-		m.removeduser_favorites = make(map[uuid.UUID]struct{})
+// RemoveFollowingIDs removes the "following" edge to the User entity by IDs.
+func (m *UserMutation) RemoveFollowingIDs(ids ...uuid.UUID) {
+	if m.removedfollowing == nil {
+		m.removedfollowing = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
-		delete(m.user_favorites, ids[i])
-		m.removeduser_favorites[ids[i]] = struct{}{}
+		delete(m.following, ids[i])
+		m.removedfollowing[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedUserFavorites returns the removed IDs of the "user_favorites" edge to the UserFavorite entity.
-func (m *UserMutation) RemovedUserFavoritesIDs() (ids []uuid.UUID) {
-	for id := range m.removeduser_favorites {
+// RemovedFollowing returns the removed IDs of the "following" edge to the User entity.
+func (m *UserMutation) RemovedFollowingIDs() (ids []uuid.UUID) {
+	for id := range m.removedfollowing {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// UserFavoritesIDs returns the "user_favorites" edge IDs in the mutation.
-func (m *UserMutation) UserFavoritesIDs() (ids []uuid.UUID) {
-	for id := range m.user_favorites {
+// FollowingIDs returns the "following" edge IDs in the mutation.
+func (m *UserMutation) FollowingIDs() (ids []uuid.UUID) {
+	for id := range m.following {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetUserFavorites resets all changes to the "user_favorites" edge.
-func (m *UserMutation) ResetUserFavorites() {
-	m.user_favorites = nil
-	m.cleareduser_favorites = false
-	m.removeduser_favorites = nil
+// ResetFollowing resets all changes to the "following" edge.
+func (m *UserMutation) ResetFollowing() {
+	m.following = nil
+	m.clearedfollowing = false
+	m.removedfollowing = nil
 }
 
 // Where appends a list predicates to the UserMutation builder.
@@ -3838,21 +2851,18 @@ func (m *UserMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
-	edges := make([]string, 0, 5)
-	if m.follows != nil {
-		edges = append(edges, user.EdgeFollows)
-	}
+	edges := make([]string, 0, 4)
 	if m.articles != nil {
 		edges = append(edges, user.EdgeArticles)
 	}
 	if m.comments != nil {
 		edges = append(edges, user.EdgeComments)
 	}
-	if m.favariteArticle != nil {
-		edges = append(edges, user.EdgeFavariteArticle)
+	if m.favoriteArticles != nil {
+		edges = append(edges, user.EdgeFavoriteArticles)
 	}
-	if m.user_favorites != nil {
-		edges = append(edges, user.EdgeUserFavorites)
+	if m.following != nil {
+		edges = append(edges, user.EdgeFollowing)
 	}
 	return edges
 }
@@ -3861,33 +2871,23 @@ func (m *UserMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *UserMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case user.EdgeFollows:
-		ids := make([]ent.Value, 0, len(m.follows))
-		for id := range m.follows {
-			ids = append(ids, id)
-		}
-		return ids
 	case user.EdgeArticles:
-		ids := make([]ent.Value, 0, len(m.articles))
-		for id := range m.articles {
-			ids = append(ids, id)
+		if id := m.articles; id != nil {
+			return []ent.Value{*id}
 		}
-		return ids
 	case user.EdgeComments:
-		ids := make([]ent.Value, 0, len(m.comments))
-		for id := range m.comments {
+		if id := m.comments; id != nil {
+			return []ent.Value{*id}
+		}
+	case user.EdgeFavoriteArticles:
+		ids := make([]ent.Value, 0, len(m.favoriteArticles))
+		for id := range m.favoriteArticles {
 			ids = append(ids, id)
 		}
 		return ids
-	case user.EdgeFavariteArticle:
-		ids := make([]ent.Value, 0, len(m.favariteArticle))
-		for id := range m.favariteArticle {
-			ids = append(ids, id)
-		}
-		return ids
-	case user.EdgeUserFavorites:
-		ids := make([]ent.Value, 0, len(m.user_favorites))
-		for id := range m.user_favorites {
+	case user.EdgeFollowing:
+		ids := make([]ent.Value, 0, len(m.following))
+		for id := range m.following {
 			ids = append(ids, id)
 		}
 		return ids
@@ -3897,21 +2897,12 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 5)
-	if m.removedfollows != nil {
-		edges = append(edges, user.EdgeFollows)
+	edges := make([]string, 0, 4)
+	if m.removedfavoriteArticles != nil {
+		edges = append(edges, user.EdgeFavoriteArticles)
 	}
-	if m.removedarticles != nil {
-		edges = append(edges, user.EdgeArticles)
-	}
-	if m.removedcomments != nil {
-		edges = append(edges, user.EdgeComments)
-	}
-	if m.removedfavariteArticle != nil {
-		edges = append(edges, user.EdgeFavariteArticle)
-	}
-	if m.removeduser_favorites != nil {
-		edges = append(edges, user.EdgeUserFavorites)
+	if m.removedfollowing != nil {
+		edges = append(edges, user.EdgeFollowing)
 	}
 	return edges
 }
@@ -3920,33 +2911,15 @@ func (m *UserMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case user.EdgeFollows:
-		ids := make([]ent.Value, 0, len(m.removedfollows))
-		for id := range m.removedfollows {
+	case user.EdgeFavoriteArticles:
+		ids := make([]ent.Value, 0, len(m.removedfavoriteArticles))
+		for id := range m.removedfavoriteArticles {
 			ids = append(ids, id)
 		}
 		return ids
-	case user.EdgeArticles:
-		ids := make([]ent.Value, 0, len(m.removedarticles))
-		for id := range m.removedarticles {
-			ids = append(ids, id)
-		}
-		return ids
-	case user.EdgeComments:
-		ids := make([]ent.Value, 0, len(m.removedcomments))
-		for id := range m.removedcomments {
-			ids = append(ids, id)
-		}
-		return ids
-	case user.EdgeFavariteArticle:
-		ids := make([]ent.Value, 0, len(m.removedfavariteArticle))
-		for id := range m.removedfavariteArticle {
-			ids = append(ids, id)
-		}
-		return ids
-	case user.EdgeUserFavorites:
-		ids := make([]ent.Value, 0, len(m.removeduser_favorites))
-		for id := range m.removeduser_favorites {
+	case user.EdgeFollowing:
+		ids := make([]ent.Value, 0, len(m.removedfollowing))
+		for id := range m.removedfollowing {
 			ids = append(ids, id)
 		}
 		return ids
@@ -3956,21 +2929,18 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 5)
-	if m.clearedfollows {
-		edges = append(edges, user.EdgeFollows)
-	}
+	edges := make([]string, 0, 4)
 	if m.clearedarticles {
 		edges = append(edges, user.EdgeArticles)
 	}
 	if m.clearedcomments {
 		edges = append(edges, user.EdgeComments)
 	}
-	if m.clearedfavariteArticle {
-		edges = append(edges, user.EdgeFavariteArticle)
+	if m.clearedfavoriteArticles {
+		edges = append(edges, user.EdgeFavoriteArticles)
 	}
-	if m.cleareduser_favorites {
-		edges = append(edges, user.EdgeUserFavorites)
+	if m.clearedfollowing {
+		edges = append(edges, user.EdgeFollowing)
 	}
 	return edges
 }
@@ -3979,16 +2949,14 @@ func (m *UserMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *UserMutation) EdgeCleared(name string) bool {
 	switch name {
-	case user.EdgeFollows:
-		return m.clearedfollows
 	case user.EdgeArticles:
 		return m.clearedarticles
 	case user.EdgeComments:
 		return m.clearedcomments
-	case user.EdgeFavariteArticle:
-		return m.clearedfavariteArticle
-	case user.EdgeUserFavorites:
-		return m.cleareduser_favorites
+	case user.EdgeFavoriteArticles:
+		return m.clearedfavoriteArticles
+	case user.EdgeFollowing:
+		return m.clearedfollowing
 	}
 	return false
 }
@@ -3997,6 +2965,12 @@ func (m *UserMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *UserMutation) ClearEdge(name string) error {
 	switch name {
+	case user.EdgeArticles:
+		m.ClearArticles()
+		return nil
+	case user.EdgeComments:
+		m.ClearComments()
+		return nil
 	}
 	return fmt.Errorf("unknown User unique edge %s", name)
 }
@@ -4005,1101 +2979,18 @@ func (m *UserMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *UserMutation) ResetEdge(name string) error {
 	switch name {
-	case user.EdgeFollows:
-		m.ResetFollows()
-		return nil
 	case user.EdgeArticles:
 		m.ResetArticles()
 		return nil
 	case user.EdgeComments:
 		m.ResetComments()
 		return nil
-	case user.EdgeFavariteArticle:
-		m.ResetFavariteArticle()
+	case user.EdgeFavoriteArticles:
+		m.ResetFavoriteArticles()
 		return nil
-	case user.EdgeUserFavorites:
-		m.ResetUserFavorites()
+	case user.EdgeFollowing:
+		m.ResetFollowing()
 		return nil
 	}
 	return fmt.Errorf("unknown User edge %s", name)
-}
-
-// UserFavoriteMutation represents an operation that mutates the UserFavorite nodes in the graph.
-type UserFavoriteMutation struct {
-	config
-	op             Op
-	typ            string
-	id             *uuid.UUID
-	created_at     *time.Time
-	clearedFields  map[string]struct{}
-	user           *uuid.UUID
-	cleareduser    bool
-	article        *uuid.UUID
-	clearedarticle bool
-	done           bool
-	oldValue       func(context.Context) (*UserFavorite, error)
-	predicates     []predicate.UserFavorite
-}
-
-var _ ent.Mutation = (*UserFavoriteMutation)(nil)
-
-// userfavoriteOption allows management of the mutation configuration using functional options.
-type userfavoriteOption func(*UserFavoriteMutation)
-
-// newUserFavoriteMutation creates new mutation for the UserFavorite entity.
-func newUserFavoriteMutation(c config, op Op, opts ...userfavoriteOption) *UserFavoriteMutation {
-	m := &UserFavoriteMutation{
-		config:        c,
-		op:            op,
-		typ:           TypeUserFavorite,
-		clearedFields: make(map[string]struct{}),
-	}
-	for _, opt := range opts {
-		opt(m)
-	}
-	return m
-}
-
-// withUserFavoriteID sets the ID field of the mutation.
-func withUserFavoriteID(id uuid.UUID) userfavoriteOption {
-	return func(m *UserFavoriteMutation) {
-		var (
-			err   error
-			once  sync.Once
-			value *UserFavorite
-		)
-		m.oldValue = func(ctx context.Context) (*UserFavorite, error) {
-			once.Do(func() {
-				if m.done {
-					err = errors.New("querying old values post mutation is not allowed")
-				} else {
-					value, err = m.Client().UserFavorite.Get(ctx, id)
-				}
-			})
-			return value, err
-		}
-		m.id = &id
-	}
-}
-
-// withUserFavorite sets the old UserFavorite of the mutation.
-func withUserFavorite(node *UserFavorite) userfavoriteOption {
-	return func(m *UserFavoriteMutation) {
-		m.oldValue = func(context.Context) (*UserFavorite, error) {
-			return node, nil
-		}
-		m.id = &node.ID
-	}
-}
-
-// Client returns a new `ent.Client` from the mutation. If the mutation was
-// executed in a transaction (ent.Tx), a transactional client is returned.
-func (m UserFavoriteMutation) Client() *Client {
-	client := &Client{config: m.config}
-	client.init()
-	return client
-}
-
-// Tx returns an `ent.Tx` for mutations that were executed in transactions;
-// it returns an error otherwise.
-func (m UserFavoriteMutation) Tx() (*Tx, error) {
-	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, errors.New("ent: mutation is not running in a transaction")
-	}
-	tx := &Tx{config: m.config}
-	tx.init()
-	return tx, nil
-}
-
-// SetID sets the value of the id field. Note that this
-// operation is only accepted on creation of UserFavorite entities.
-func (m *UserFavoriteMutation) SetID(id uuid.UUID) {
-	m.id = &id
-}
-
-// ID returns the ID value in the mutation. Note that the ID is only available
-// if it was provided to the builder or after it was returned from the database.
-func (m *UserFavoriteMutation) ID() (id uuid.UUID, exists bool) {
-	if m.id == nil {
-		return
-	}
-	return *m.id, true
-}
-
-// IDs queries the database and returns the entity ids that match the mutation's predicate.
-// That means, if the mutation is applied within a transaction with an isolation level such
-// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
-// or updated by the mutation.
-func (m *UserFavoriteMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	switch {
-	case m.op.Is(OpUpdateOne | OpDeleteOne):
-		id, exists := m.ID()
-		if exists {
-			return []uuid.UUID{id}, nil
-		}
-		fallthrough
-	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().UserFavorite.Query().Where(m.predicates...).IDs(ctx)
-	default:
-		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
-	}
-}
-
-// SetUserID sets the "user_id" field.
-func (m *UserFavoriteMutation) SetUserID(u uuid.UUID) {
-	m.user = &u
-}
-
-// UserID returns the value of the "user_id" field in the mutation.
-func (m *UserFavoriteMutation) UserID() (r uuid.UUID, exists bool) {
-	v := m.user
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldUserID returns the old "user_id" field's value of the UserFavorite entity.
-// If the UserFavorite object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UserFavoriteMutation) OldUserID(ctx context.Context) (v uuid.UUID, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldUserID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldUserID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldUserID: %w", err)
-	}
-	return oldValue.UserID, nil
-}
-
-// ResetUserID resets all changes to the "user_id" field.
-func (m *UserFavoriteMutation) ResetUserID() {
-	m.user = nil
-}
-
-// SetArticleID sets the "article_id" field.
-func (m *UserFavoriteMutation) SetArticleID(u uuid.UUID) {
-	m.article = &u
-}
-
-// ArticleID returns the value of the "article_id" field in the mutation.
-func (m *UserFavoriteMutation) ArticleID() (r uuid.UUID, exists bool) {
-	v := m.article
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldArticleID returns the old "article_id" field's value of the UserFavorite entity.
-// If the UserFavorite object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UserFavoriteMutation) OldArticleID(ctx context.Context) (v uuid.UUID, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldArticleID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldArticleID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldArticleID: %w", err)
-	}
-	return oldValue.ArticleID, nil
-}
-
-// ResetArticleID resets all changes to the "article_id" field.
-func (m *UserFavoriteMutation) ResetArticleID() {
-	m.article = nil
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (m *UserFavoriteMutation) SetCreatedAt(t time.Time) {
-	m.created_at = &t
-}
-
-// CreatedAt returns the value of the "created_at" field in the mutation.
-func (m *UserFavoriteMutation) CreatedAt() (r time.Time, exists bool) {
-	v := m.created_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCreatedAt returns the old "created_at" field's value of the UserFavorite entity.
-// If the UserFavorite object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UserFavoriteMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
-	}
-	return oldValue.CreatedAt, nil
-}
-
-// ResetCreatedAt resets all changes to the "created_at" field.
-func (m *UserFavoriteMutation) ResetCreatedAt() {
-	m.created_at = nil
-}
-
-// ClearUser clears the "user" edge to the User entity.
-func (m *UserFavoriteMutation) ClearUser() {
-	m.cleareduser = true
-	m.clearedFields[userfavorite.FieldUserID] = struct{}{}
-}
-
-// UserCleared reports if the "user" edge to the User entity was cleared.
-func (m *UserFavoriteMutation) UserCleared() bool {
-	return m.cleareduser
-}
-
-// UserIDs returns the "user" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// UserID instead. It exists only for internal usage by the builders.
-func (m *UserFavoriteMutation) UserIDs() (ids []uuid.UUID) {
-	if id := m.user; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetUser resets all changes to the "user" edge.
-func (m *UserFavoriteMutation) ResetUser() {
-	m.user = nil
-	m.cleareduser = false
-}
-
-// ClearArticle clears the "article" edge to the Article entity.
-func (m *UserFavoriteMutation) ClearArticle() {
-	m.clearedarticle = true
-	m.clearedFields[userfavorite.FieldArticleID] = struct{}{}
-}
-
-// ArticleCleared reports if the "article" edge to the Article entity was cleared.
-func (m *UserFavoriteMutation) ArticleCleared() bool {
-	return m.clearedarticle
-}
-
-// ArticleIDs returns the "article" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ArticleID instead. It exists only for internal usage by the builders.
-func (m *UserFavoriteMutation) ArticleIDs() (ids []uuid.UUID) {
-	if id := m.article; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetArticle resets all changes to the "article" edge.
-func (m *UserFavoriteMutation) ResetArticle() {
-	m.article = nil
-	m.clearedarticle = false
-}
-
-// Where appends a list predicates to the UserFavoriteMutation builder.
-func (m *UserFavoriteMutation) Where(ps ...predicate.UserFavorite) {
-	m.predicates = append(m.predicates, ps...)
-}
-
-// WhereP appends storage-level predicates to the UserFavoriteMutation builder. Using this method,
-// users can use type-assertion to append predicates that do not depend on any generated package.
-func (m *UserFavoriteMutation) WhereP(ps ...func(*sql.Selector)) {
-	p := make([]predicate.UserFavorite, len(ps))
-	for i := range ps {
-		p[i] = ps[i]
-	}
-	m.Where(p...)
-}
-
-// Op returns the operation name.
-func (m *UserFavoriteMutation) Op() Op {
-	return m.op
-}
-
-// SetOp allows setting the mutation operation.
-func (m *UserFavoriteMutation) SetOp(op Op) {
-	m.op = op
-}
-
-// Type returns the node type of this mutation (UserFavorite).
-func (m *UserFavoriteMutation) Type() string {
-	return m.typ
-}
-
-// Fields returns all fields that were changed during this mutation. Note that in
-// order to get all numeric fields that were incremented/decremented, call
-// AddedFields().
-func (m *UserFavoriteMutation) Fields() []string {
-	fields := make([]string, 0, 3)
-	if m.user != nil {
-		fields = append(fields, userfavorite.FieldUserID)
-	}
-	if m.article != nil {
-		fields = append(fields, userfavorite.FieldArticleID)
-	}
-	if m.created_at != nil {
-		fields = append(fields, userfavorite.FieldCreatedAt)
-	}
-	return fields
-}
-
-// Field returns the value of a field with the given name. The second boolean
-// return value indicates that this field was not set, or was not defined in the
-// schema.
-func (m *UserFavoriteMutation) Field(name string) (ent.Value, bool) {
-	switch name {
-	case userfavorite.FieldUserID:
-		return m.UserID()
-	case userfavorite.FieldArticleID:
-		return m.ArticleID()
-	case userfavorite.FieldCreatedAt:
-		return m.CreatedAt()
-	}
-	return nil, false
-}
-
-// OldField returns the old value of the field from the database. An error is
-// returned if the mutation operation is not UpdateOne, or the query to the
-// database failed.
-func (m *UserFavoriteMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
-	switch name {
-	case userfavorite.FieldUserID:
-		return m.OldUserID(ctx)
-	case userfavorite.FieldArticleID:
-		return m.OldArticleID(ctx)
-	case userfavorite.FieldCreatedAt:
-		return m.OldCreatedAt(ctx)
-	}
-	return nil, fmt.Errorf("unknown UserFavorite field %s", name)
-}
-
-// SetField sets the value of a field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *UserFavoriteMutation) SetField(name string, value ent.Value) error {
-	switch name {
-	case userfavorite.FieldUserID:
-		v, ok := value.(uuid.UUID)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetUserID(v)
-		return nil
-	case userfavorite.FieldArticleID:
-		v, ok := value.(uuid.UUID)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetArticleID(v)
-		return nil
-	case userfavorite.FieldCreatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCreatedAt(v)
-		return nil
-	}
-	return fmt.Errorf("unknown UserFavorite field %s", name)
-}
-
-// AddedFields returns all numeric fields that were incremented/decremented during
-// this mutation.
-func (m *UserFavoriteMutation) AddedFields() []string {
-	return nil
-}
-
-// AddedField returns the numeric value that was incremented/decremented on a field
-// with the given name. The second boolean return value indicates that this field
-// was not set, or was not defined in the schema.
-func (m *UserFavoriteMutation) AddedField(name string) (ent.Value, bool) {
-	return nil, false
-}
-
-// AddField adds the value to the field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *UserFavoriteMutation) AddField(name string, value ent.Value) error {
-	switch name {
-	}
-	return fmt.Errorf("unknown UserFavorite numeric field %s", name)
-}
-
-// ClearedFields returns all nullable fields that were cleared during this
-// mutation.
-func (m *UserFavoriteMutation) ClearedFields() []string {
-	return nil
-}
-
-// FieldCleared returns a boolean indicating if a field with the given name was
-// cleared in this mutation.
-func (m *UserFavoriteMutation) FieldCleared(name string) bool {
-	_, ok := m.clearedFields[name]
-	return ok
-}
-
-// ClearField clears the value of the field with the given name. It returns an
-// error if the field is not defined in the schema.
-func (m *UserFavoriteMutation) ClearField(name string) error {
-	return fmt.Errorf("unknown UserFavorite nullable field %s", name)
-}
-
-// ResetField resets all changes in the mutation for the field with the given name.
-// It returns an error if the field is not defined in the schema.
-func (m *UserFavoriteMutation) ResetField(name string) error {
-	switch name {
-	case userfavorite.FieldUserID:
-		m.ResetUserID()
-		return nil
-	case userfavorite.FieldArticleID:
-		m.ResetArticleID()
-		return nil
-	case userfavorite.FieldCreatedAt:
-		m.ResetCreatedAt()
-		return nil
-	}
-	return fmt.Errorf("unknown UserFavorite field %s", name)
-}
-
-// AddedEdges returns all edge names that were set/added in this mutation.
-func (m *UserFavoriteMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
-	if m.user != nil {
-		edges = append(edges, userfavorite.EdgeUser)
-	}
-	if m.article != nil {
-		edges = append(edges, userfavorite.EdgeArticle)
-	}
-	return edges
-}
-
-// AddedIDs returns all IDs (to other nodes) that were added for the given edge
-// name in this mutation.
-func (m *UserFavoriteMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case userfavorite.EdgeUser:
-		if id := m.user; id != nil {
-			return []ent.Value{*id}
-		}
-	case userfavorite.EdgeArticle:
-		if id := m.article; id != nil {
-			return []ent.Value{*id}
-		}
-	}
-	return nil
-}
-
-// RemovedEdges returns all edge names that were removed in this mutation.
-func (m *UserFavoriteMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
-	return edges
-}
-
-// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
-// the given name in this mutation.
-func (m *UserFavoriteMutation) RemovedIDs(name string) []ent.Value {
-	return nil
-}
-
-// ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *UserFavoriteMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
-	if m.cleareduser {
-		edges = append(edges, userfavorite.EdgeUser)
-	}
-	if m.clearedarticle {
-		edges = append(edges, userfavorite.EdgeArticle)
-	}
-	return edges
-}
-
-// EdgeCleared returns a boolean which indicates if the edge with the given name
-// was cleared in this mutation.
-func (m *UserFavoriteMutation) EdgeCleared(name string) bool {
-	switch name {
-	case userfavorite.EdgeUser:
-		return m.cleareduser
-	case userfavorite.EdgeArticle:
-		return m.clearedarticle
-	}
-	return false
-}
-
-// ClearEdge clears the value of the edge with the given name. It returns an error
-// if that edge is not defined in the schema.
-func (m *UserFavoriteMutation) ClearEdge(name string) error {
-	switch name {
-	case userfavorite.EdgeUser:
-		m.ClearUser()
-		return nil
-	case userfavorite.EdgeArticle:
-		m.ClearArticle()
-		return nil
-	}
-	return fmt.Errorf("unknown UserFavorite unique edge %s", name)
-}
-
-// ResetEdge resets all changes to the edge with the given name in this mutation.
-// It returns an error if the edge is not defined in the schema.
-func (m *UserFavoriteMutation) ResetEdge(name string) error {
-	switch name {
-	case userfavorite.EdgeUser:
-		m.ResetUser()
-		return nil
-	case userfavorite.EdgeArticle:
-		m.ResetArticle()
-		return nil
-	}
-	return fmt.Errorf("unknown UserFavorite edge %s", name)
-}
-
-// UserFollowMutation represents an operation that mutates the UserFollow nodes in the graph.
-type UserFollowMutation struct {
-	config
-	op              Op
-	typ             string
-	id              *uuid.UUID
-	created_at      *time.Time
-	clearedFields   map[string]struct{}
-	follower        *uuid.UUID
-	clearedfollower bool
-	followee        *uuid.UUID
-	clearedfollowee bool
-	done            bool
-	oldValue        func(context.Context) (*UserFollow, error)
-	predicates      []predicate.UserFollow
-}
-
-var _ ent.Mutation = (*UserFollowMutation)(nil)
-
-// userfollowOption allows management of the mutation configuration using functional options.
-type userfollowOption func(*UserFollowMutation)
-
-// newUserFollowMutation creates new mutation for the UserFollow entity.
-func newUserFollowMutation(c config, op Op, opts ...userfollowOption) *UserFollowMutation {
-	m := &UserFollowMutation{
-		config:        c,
-		op:            op,
-		typ:           TypeUserFollow,
-		clearedFields: make(map[string]struct{}),
-	}
-	for _, opt := range opts {
-		opt(m)
-	}
-	return m
-}
-
-// withUserFollowID sets the ID field of the mutation.
-func withUserFollowID(id uuid.UUID) userfollowOption {
-	return func(m *UserFollowMutation) {
-		var (
-			err   error
-			once  sync.Once
-			value *UserFollow
-		)
-		m.oldValue = func(ctx context.Context) (*UserFollow, error) {
-			once.Do(func() {
-				if m.done {
-					err = errors.New("querying old values post mutation is not allowed")
-				} else {
-					value, err = m.Client().UserFollow.Get(ctx, id)
-				}
-			})
-			return value, err
-		}
-		m.id = &id
-	}
-}
-
-// withUserFollow sets the old UserFollow of the mutation.
-func withUserFollow(node *UserFollow) userfollowOption {
-	return func(m *UserFollowMutation) {
-		m.oldValue = func(context.Context) (*UserFollow, error) {
-			return node, nil
-		}
-		m.id = &node.ID
-	}
-}
-
-// Client returns a new `ent.Client` from the mutation. If the mutation was
-// executed in a transaction (ent.Tx), a transactional client is returned.
-func (m UserFollowMutation) Client() *Client {
-	client := &Client{config: m.config}
-	client.init()
-	return client
-}
-
-// Tx returns an `ent.Tx` for mutations that were executed in transactions;
-// it returns an error otherwise.
-func (m UserFollowMutation) Tx() (*Tx, error) {
-	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, errors.New("ent: mutation is not running in a transaction")
-	}
-	tx := &Tx{config: m.config}
-	tx.init()
-	return tx, nil
-}
-
-// SetID sets the value of the id field. Note that this
-// operation is only accepted on creation of UserFollow entities.
-func (m *UserFollowMutation) SetID(id uuid.UUID) {
-	m.id = &id
-}
-
-// ID returns the ID value in the mutation. Note that the ID is only available
-// if it was provided to the builder or after it was returned from the database.
-func (m *UserFollowMutation) ID() (id uuid.UUID, exists bool) {
-	if m.id == nil {
-		return
-	}
-	return *m.id, true
-}
-
-// IDs queries the database and returns the entity ids that match the mutation's predicate.
-// That means, if the mutation is applied within a transaction with an isolation level such
-// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
-// or updated by the mutation.
-func (m *UserFollowMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	switch {
-	case m.op.Is(OpUpdateOne | OpDeleteOne):
-		id, exists := m.ID()
-		if exists {
-			return []uuid.UUID{id}, nil
-		}
-		fallthrough
-	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().UserFollow.Query().Where(m.predicates...).IDs(ctx)
-	default:
-		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
-	}
-}
-
-// SetFollowerID sets the "follower_id" field.
-func (m *UserFollowMutation) SetFollowerID(u uuid.UUID) {
-	m.follower = &u
-}
-
-// FollowerID returns the value of the "follower_id" field in the mutation.
-func (m *UserFollowMutation) FollowerID() (r uuid.UUID, exists bool) {
-	v := m.follower
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldFollowerID returns the old "follower_id" field's value of the UserFollow entity.
-// If the UserFollow object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UserFollowMutation) OldFollowerID(ctx context.Context) (v uuid.UUID, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldFollowerID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldFollowerID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldFollowerID: %w", err)
-	}
-	return oldValue.FollowerID, nil
-}
-
-// ResetFollowerID resets all changes to the "follower_id" field.
-func (m *UserFollowMutation) ResetFollowerID() {
-	m.follower = nil
-}
-
-// SetFolloweeID sets the "followee_id" field.
-func (m *UserFollowMutation) SetFolloweeID(u uuid.UUID) {
-	m.followee = &u
-}
-
-// FolloweeID returns the value of the "followee_id" field in the mutation.
-func (m *UserFollowMutation) FolloweeID() (r uuid.UUID, exists bool) {
-	v := m.followee
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldFolloweeID returns the old "followee_id" field's value of the UserFollow entity.
-// If the UserFollow object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UserFollowMutation) OldFolloweeID(ctx context.Context) (v uuid.UUID, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldFolloweeID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldFolloweeID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldFolloweeID: %w", err)
-	}
-	return oldValue.FolloweeID, nil
-}
-
-// ResetFolloweeID resets all changes to the "followee_id" field.
-func (m *UserFollowMutation) ResetFolloweeID() {
-	m.followee = nil
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (m *UserFollowMutation) SetCreatedAt(t time.Time) {
-	m.created_at = &t
-}
-
-// CreatedAt returns the value of the "created_at" field in the mutation.
-func (m *UserFollowMutation) CreatedAt() (r time.Time, exists bool) {
-	v := m.created_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCreatedAt returns the old "created_at" field's value of the UserFollow entity.
-// If the UserFollow object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UserFollowMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
-	}
-	return oldValue.CreatedAt, nil
-}
-
-// ResetCreatedAt resets all changes to the "created_at" field.
-func (m *UserFollowMutation) ResetCreatedAt() {
-	m.created_at = nil
-}
-
-// ClearFollower clears the "follower" edge to the User entity.
-func (m *UserFollowMutation) ClearFollower() {
-	m.clearedfollower = true
-	m.clearedFields[userfollow.FieldFollowerID] = struct{}{}
-}
-
-// FollowerCleared reports if the "follower" edge to the User entity was cleared.
-func (m *UserFollowMutation) FollowerCleared() bool {
-	return m.clearedfollower
-}
-
-// FollowerIDs returns the "follower" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// FollowerID instead. It exists only for internal usage by the builders.
-func (m *UserFollowMutation) FollowerIDs() (ids []uuid.UUID) {
-	if id := m.follower; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetFollower resets all changes to the "follower" edge.
-func (m *UserFollowMutation) ResetFollower() {
-	m.follower = nil
-	m.clearedfollower = false
-}
-
-// ClearFollowee clears the "followee" edge to the User entity.
-func (m *UserFollowMutation) ClearFollowee() {
-	m.clearedfollowee = true
-	m.clearedFields[userfollow.FieldFolloweeID] = struct{}{}
-}
-
-// FolloweeCleared reports if the "followee" edge to the User entity was cleared.
-func (m *UserFollowMutation) FolloweeCleared() bool {
-	return m.clearedfollowee
-}
-
-// FolloweeIDs returns the "followee" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// FolloweeID instead. It exists only for internal usage by the builders.
-func (m *UserFollowMutation) FolloweeIDs() (ids []uuid.UUID) {
-	if id := m.followee; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetFollowee resets all changes to the "followee" edge.
-func (m *UserFollowMutation) ResetFollowee() {
-	m.followee = nil
-	m.clearedfollowee = false
-}
-
-// Where appends a list predicates to the UserFollowMutation builder.
-func (m *UserFollowMutation) Where(ps ...predicate.UserFollow) {
-	m.predicates = append(m.predicates, ps...)
-}
-
-// WhereP appends storage-level predicates to the UserFollowMutation builder. Using this method,
-// users can use type-assertion to append predicates that do not depend on any generated package.
-func (m *UserFollowMutation) WhereP(ps ...func(*sql.Selector)) {
-	p := make([]predicate.UserFollow, len(ps))
-	for i := range ps {
-		p[i] = ps[i]
-	}
-	m.Where(p...)
-}
-
-// Op returns the operation name.
-func (m *UserFollowMutation) Op() Op {
-	return m.op
-}
-
-// SetOp allows setting the mutation operation.
-func (m *UserFollowMutation) SetOp(op Op) {
-	m.op = op
-}
-
-// Type returns the node type of this mutation (UserFollow).
-func (m *UserFollowMutation) Type() string {
-	return m.typ
-}
-
-// Fields returns all fields that were changed during this mutation. Note that in
-// order to get all numeric fields that were incremented/decremented, call
-// AddedFields().
-func (m *UserFollowMutation) Fields() []string {
-	fields := make([]string, 0, 3)
-	if m.follower != nil {
-		fields = append(fields, userfollow.FieldFollowerID)
-	}
-	if m.followee != nil {
-		fields = append(fields, userfollow.FieldFolloweeID)
-	}
-	if m.created_at != nil {
-		fields = append(fields, userfollow.FieldCreatedAt)
-	}
-	return fields
-}
-
-// Field returns the value of a field with the given name. The second boolean
-// return value indicates that this field was not set, or was not defined in the
-// schema.
-func (m *UserFollowMutation) Field(name string) (ent.Value, bool) {
-	switch name {
-	case userfollow.FieldFollowerID:
-		return m.FollowerID()
-	case userfollow.FieldFolloweeID:
-		return m.FolloweeID()
-	case userfollow.FieldCreatedAt:
-		return m.CreatedAt()
-	}
-	return nil, false
-}
-
-// OldField returns the old value of the field from the database. An error is
-// returned if the mutation operation is not UpdateOne, or the query to the
-// database failed.
-func (m *UserFollowMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
-	switch name {
-	case userfollow.FieldFollowerID:
-		return m.OldFollowerID(ctx)
-	case userfollow.FieldFolloweeID:
-		return m.OldFolloweeID(ctx)
-	case userfollow.FieldCreatedAt:
-		return m.OldCreatedAt(ctx)
-	}
-	return nil, fmt.Errorf("unknown UserFollow field %s", name)
-}
-
-// SetField sets the value of a field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *UserFollowMutation) SetField(name string, value ent.Value) error {
-	switch name {
-	case userfollow.FieldFollowerID:
-		v, ok := value.(uuid.UUID)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetFollowerID(v)
-		return nil
-	case userfollow.FieldFolloweeID:
-		v, ok := value.(uuid.UUID)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetFolloweeID(v)
-		return nil
-	case userfollow.FieldCreatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCreatedAt(v)
-		return nil
-	}
-	return fmt.Errorf("unknown UserFollow field %s", name)
-}
-
-// AddedFields returns all numeric fields that were incremented/decremented during
-// this mutation.
-func (m *UserFollowMutation) AddedFields() []string {
-	return nil
-}
-
-// AddedField returns the numeric value that was incremented/decremented on a field
-// with the given name. The second boolean return value indicates that this field
-// was not set, or was not defined in the schema.
-func (m *UserFollowMutation) AddedField(name string) (ent.Value, bool) {
-	return nil, false
-}
-
-// AddField adds the value to the field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *UserFollowMutation) AddField(name string, value ent.Value) error {
-	switch name {
-	}
-	return fmt.Errorf("unknown UserFollow numeric field %s", name)
-}
-
-// ClearedFields returns all nullable fields that were cleared during this
-// mutation.
-func (m *UserFollowMutation) ClearedFields() []string {
-	return nil
-}
-
-// FieldCleared returns a boolean indicating if a field with the given name was
-// cleared in this mutation.
-func (m *UserFollowMutation) FieldCleared(name string) bool {
-	_, ok := m.clearedFields[name]
-	return ok
-}
-
-// ClearField clears the value of the field with the given name. It returns an
-// error if the field is not defined in the schema.
-func (m *UserFollowMutation) ClearField(name string) error {
-	return fmt.Errorf("unknown UserFollow nullable field %s", name)
-}
-
-// ResetField resets all changes in the mutation for the field with the given name.
-// It returns an error if the field is not defined in the schema.
-func (m *UserFollowMutation) ResetField(name string) error {
-	switch name {
-	case userfollow.FieldFollowerID:
-		m.ResetFollowerID()
-		return nil
-	case userfollow.FieldFolloweeID:
-		m.ResetFolloweeID()
-		return nil
-	case userfollow.FieldCreatedAt:
-		m.ResetCreatedAt()
-		return nil
-	}
-	return fmt.Errorf("unknown UserFollow field %s", name)
-}
-
-// AddedEdges returns all edge names that were set/added in this mutation.
-func (m *UserFollowMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
-	if m.follower != nil {
-		edges = append(edges, userfollow.EdgeFollower)
-	}
-	if m.followee != nil {
-		edges = append(edges, userfollow.EdgeFollowee)
-	}
-	return edges
-}
-
-// AddedIDs returns all IDs (to other nodes) that were added for the given edge
-// name in this mutation.
-func (m *UserFollowMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case userfollow.EdgeFollower:
-		if id := m.follower; id != nil {
-			return []ent.Value{*id}
-		}
-	case userfollow.EdgeFollowee:
-		if id := m.followee; id != nil {
-			return []ent.Value{*id}
-		}
-	}
-	return nil
-}
-
-// RemovedEdges returns all edge names that were removed in this mutation.
-func (m *UserFollowMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
-	return edges
-}
-
-// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
-// the given name in this mutation.
-func (m *UserFollowMutation) RemovedIDs(name string) []ent.Value {
-	return nil
-}
-
-// ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *UserFollowMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
-	if m.clearedfollower {
-		edges = append(edges, userfollow.EdgeFollower)
-	}
-	if m.clearedfollowee {
-		edges = append(edges, userfollow.EdgeFollowee)
-	}
-	return edges
-}
-
-// EdgeCleared returns a boolean which indicates if the edge with the given name
-// was cleared in this mutation.
-func (m *UserFollowMutation) EdgeCleared(name string) bool {
-	switch name {
-	case userfollow.EdgeFollower:
-		return m.clearedfollower
-	case userfollow.EdgeFollowee:
-		return m.clearedfollowee
-	}
-	return false
-}
-
-// ClearEdge clears the value of the edge with the given name. It returns an error
-// if that edge is not defined in the schema.
-func (m *UserFollowMutation) ClearEdge(name string) error {
-	switch name {
-	case userfollow.EdgeFollower:
-		m.ClearFollower()
-		return nil
-	case userfollow.EdgeFollowee:
-		m.ClearFollowee()
-		return nil
-	}
-	return fmt.Errorf("unknown UserFollow unique edge %s", name)
-}
-
-// ResetEdge resets all changes to the edge with the given name in this mutation.
-// It returns an error if the edge is not defined in the schema.
-func (m *UserFollowMutation) ResetEdge(name string) error {
-	switch name {
-	case userfollow.EdgeFollower:
-		m.ResetFollower()
-		return nil
-	case userfollow.EdgeFollowee:
-		m.ResetFollowee()
-		return nil
-	}
-	return fmt.Errorf("unknown UserFollow edge %s", name)
 }

@@ -30,31 +30,20 @@ type Tag struct {
 
 // TagEdges holds the relations/edges for other nodes in the graph.
 type TagEdges struct {
-	// Article holds the value of the article edge.
-	Article []*Article `json:"article,omitempty"`
-	// TagArticle holds the value of the tag_article edge.
-	TagArticle []*ArticleTag `json:"tag_article,omitempty"`
+	// Articles holds the value of the articles edge.
+	Articles []*Article `json:"articles,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [1]bool
 }
 
-// ArticleOrErr returns the Article value or an error if the edge
+// ArticlesOrErr returns the Articles value or an error if the edge
 // was not loaded in eager-loading.
-func (e TagEdges) ArticleOrErr() ([]*Article, error) {
+func (e TagEdges) ArticlesOrErr() ([]*Article, error) {
 	if e.loadedTypes[0] {
-		return e.Article, nil
+		return e.Articles, nil
 	}
-	return nil, &NotLoadedError{edge: "article"}
-}
-
-// TagArticleOrErr returns the TagArticle value or an error if the edge
-// was not loaded in eager-loading.
-func (e TagEdges) TagArticleOrErr() ([]*ArticleTag, error) {
-	if e.loadedTypes[1] {
-		return e.TagArticle, nil
-	}
-	return nil, &NotLoadedError{edge: "tag_article"}
+	return nil, &NotLoadedError{edge: "articles"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -114,14 +103,9 @@ func (t *Tag) Value(name string) (ent.Value, error) {
 	return t.selectValues.Get(name)
 }
 
-// QueryArticle queries the "article" edge of the Tag entity.
-func (t *Tag) QueryArticle() *ArticleQuery {
-	return NewTagClient(t.config).QueryArticle(t)
-}
-
-// QueryTagArticle queries the "tag_article" edge of the Tag entity.
-func (t *Tag) QueryTagArticle() *ArticleTagQuery {
-	return NewTagClient(t.config).QueryTagArticle(t)
+// QueryArticles queries the "articles" edge of the Tag entity.
+func (t *Tag) QueryArticles() *ArticleQuery {
+	return NewTagClient(t.config).QueryArticles(t)
 }
 
 // Update returns a builder for updating this Tag.

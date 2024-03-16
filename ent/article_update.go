@@ -13,12 +13,8 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/article"
-	"github.com/k0kishima/golang-realworld-example-app/ent/articletag"
-	"github.com/k0kishima/golang-realworld-example-app/ent/comment"
 	"github.com/k0kishima/golang-realworld-example-app/ent/predicate"
 	"github.com/k0kishima/golang-realworld-example-app/ent/tag"
-	"github.com/k0kishima/golang-realworld-example-app/ent/user"
-	"github.com/k0kishima/golang-realworld-example-app/ent/userfavorite"
 )
 
 // ArticleUpdate is the builder for updating Article entities.
@@ -111,66 +107,6 @@ func (au *ArticleUpdate) AddTags(t ...*Tag) *ArticleUpdate {
 	return au.AddTagIDs(ids...)
 }
 
-// AddCommentIDs adds the "comments" edge to the Comment entity by IDs.
-func (au *ArticleUpdate) AddCommentIDs(ids ...uuid.UUID) *ArticleUpdate {
-	au.mutation.AddCommentIDs(ids...)
-	return au
-}
-
-// AddComments adds the "comments" edges to the Comment entity.
-func (au *ArticleUpdate) AddComments(c ...*Comment) *ArticleUpdate {
-	ids := make([]uuid.UUID, len(c))
-	for i := range c {
-		ids[i] = c[i].ID
-	}
-	return au.AddCommentIDs(ids...)
-}
-
-// AddFavoritedUserIDs adds the "favoritedUsers" edge to the User entity by IDs.
-func (au *ArticleUpdate) AddFavoritedUserIDs(ids ...uuid.UUID) *ArticleUpdate {
-	au.mutation.AddFavoritedUserIDs(ids...)
-	return au
-}
-
-// AddFavoritedUsers adds the "favoritedUsers" edges to the User entity.
-func (au *ArticleUpdate) AddFavoritedUsers(u ...*User) *ArticleUpdate {
-	ids := make([]uuid.UUID, len(u))
-	for i := range u {
-		ids[i] = u[i].ID
-	}
-	return au.AddFavoritedUserIDs(ids...)
-}
-
-// AddArticleTagIDs adds the "article_tags" edge to the ArticleTag entity by IDs.
-func (au *ArticleUpdate) AddArticleTagIDs(ids ...uuid.UUID) *ArticleUpdate {
-	au.mutation.AddArticleTagIDs(ids...)
-	return au
-}
-
-// AddArticleTags adds the "article_tags" edges to the ArticleTag entity.
-func (au *ArticleUpdate) AddArticleTags(a ...*ArticleTag) *ArticleUpdate {
-	ids := make([]uuid.UUID, len(a))
-	for i := range a {
-		ids[i] = a[i].ID
-	}
-	return au.AddArticleTagIDs(ids...)
-}
-
-// AddUserFavoriteIDs adds the "user_favorites" edge to the UserFavorite entity by IDs.
-func (au *ArticleUpdate) AddUserFavoriteIDs(ids ...uuid.UUID) *ArticleUpdate {
-	au.mutation.AddUserFavoriteIDs(ids...)
-	return au
-}
-
-// AddUserFavorites adds the "user_favorites" edges to the UserFavorite entity.
-func (au *ArticleUpdate) AddUserFavorites(u ...*UserFavorite) *ArticleUpdate {
-	ids := make([]uuid.UUID, len(u))
-	for i := range u {
-		ids[i] = u[i].ID
-	}
-	return au.AddUserFavoriteIDs(ids...)
-}
-
 // Mutation returns the ArticleMutation object of the builder.
 func (au *ArticleUpdate) Mutation() *ArticleMutation {
 	return au.mutation
@@ -195,90 +131,6 @@ func (au *ArticleUpdate) RemoveTags(t ...*Tag) *ArticleUpdate {
 		ids[i] = t[i].ID
 	}
 	return au.RemoveTagIDs(ids...)
-}
-
-// ClearComments clears all "comments" edges to the Comment entity.
-func (au *ArticleUpdate) ClearComments() *ArticleUpdate {
-	au.mutation.ClearComments()
-	return au
-}
-
-// RemoveCommentIDs removes the "comments" edge to Comment entities by IDs.
-func (au *ArticleUpdate) RemoveCommentIDs(ids ...uuid.UUID) *ArticleUpdate {
-	au.mutation.RemoveCommentIDs(ids...)
-	return au
-}
-
-// RemoveComments removes "comments" edges to Comment entities.
-func (au *ArticleUpdate) RemoveComments(c ...*Comment) *ArticleUpdate {
-	ids := make([]uuid.UUID, len(c))
-	for i := range c {
-		ids[i] = c[i].ID
-	}
-	return au.RemoveCommentIDs(ids...)
-}
-
-// ClearFavoritedUsers clears all "favoritedUsers" edges to the User entity.
-func (au *ArticleUpdate) ClearFavoritedUsers() *ArticleUpdate {
-	au.mutation.ClearFavoritedUsers()
-	return au
-}
-
-// RemoveFavoritedUserIDs removes the "favoritedUsers" edge to User entities by IDs.
-func (au *ArticleUpdate) RemoveFavoritedUserIDs(ids ...uuid.UUID) *ArticleUpdate {
-	au.mutation.RemoveFavoritedUserIDs(ids...)
-	return au
-}
-
-// RemoveFavoritedUsers removes "favoritedUsers" edges to User entities.
-func (au *ArticleUpdate) RemoveFavoritedUsers(u ...*User) *ArticleUpdate {
-	ids := make([]uuid.UUID, len(u))
-	for i := range u {
-		ids[i] = u[i].ID
-	}
-	return au.RemoveFavoritedUserIDs(ids...)
-}
-
-// ClearArticleTags clears all "article_tags" edges to the ArticleTag entity.
-func (au *ArticleUpdate) ClearArticleTags() *ArticleUpdate {
-	au.mutation.ClearArticleTags()
-	return au
-}
-
-// RemoveArticleTagIDs removes the "article_tags" edge to ArticleTag entities by IDs.
-func (au *ArticleUpdate) RemoveArticleTagIDs(ids ...uuid.UUID) *ArticleUpdate {
-	au.mutation.RemoveArticleTagIDs(ids...)
-	return au
-}
-
-// RemoveArticleTags removes "article_tags" edges to ArticleTag entities.
-func (au *ArticleUpdate) RemoveArticleTags(a ...*ArticleTag) *ArticleUpdate {
-	ids := make([]uuid.UUID, len(a))
-	for i := range a {
-		ids[i] = a[i].ID
-	}
-	return au.RemoveArticleTagIDs(ids...)
-}
-
-// ClearUserFavorites clears all "user_favorites" edges to the UserFavorite entity.
-func (au *ArticleUpdate) ClearUserFavorites() *ArticleUpdate {
-	au.mutation.ClearUserFavorites()
-	return au
-}
-
-// RemoveUserFavoriteIDs removes the "user_favorites" edge to UserFavorite entities by IDs.
-func (au *ArticleUpdate) RemoveUserFavoriteIDs(ids ...uuid.UUID) *ArticleUpdate {
-	au.mutation.RemoveUserFavoriteIDs(ids...)
-	return au
-}
-
-// RemoveUserFavorites removes "user_favorites" edges to UserFavorite entities.
-func (au *ArticleUpdate) RemoveUserFavorites(u ...*UserFavorite) *ArticleUpdate {
-	ids := make([]uuid.UUID, len(u))
-	for i := range u {
-		ids[i] = u[i].ID
-	}
-	return au.RemoveUserFavoriteIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -339,9 +191,6 @@ func (au *ArticleUpdate) check() error {
 			return &ValidationError{Name: "body", err: fmt.Errorf(`ent: validator failed for field "Article.body": %w`, err)}
 		}
 	}
-	if _, ok := au.mutation.ArticleAuthorID(); au.mutation.ArticleAuthorCleared() && !ok {
-		return errors.New(`ent: clearing a required unique edge "Article.articleAuthor"`)
-	}
 	return nil
 }
 
@@ -383,13 +232,6 @@ func (au *ArticleUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				IDSpec: sqlgraph.NewFieldSpec(tag.FieldID, field.TypeUUID),
 			},
 		}
-		createE := &ArticleTagCreate{config: au.config, mutation: newArticleTagMutation(au.config, OpCreate)}
-		createE.defaults()
-		_, specE := createE.createSpec()
-		edge.Target.Fields = specE.Fields
-		if specE.ID.Value != nil {
-			edge.Target.Fields = append(edge.Target.Fields, specE.ID)
-		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
 	if nodes := au.mutation.RemovedTagsIDs(); len(nodes) > 0 && !au.mutation.TagsCleared() {
@@ -406,13 +248,6 @@ func (au *ArticleUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		createE := &ArticleTagCreate{config: au.config, mutation: newArticleTagMutation(au.config, OpCreate)}
-		createE.defaults()
-		_, specE := createE.createSpec()
-		edge.Target.Fields = specE.Fields
-		if specE.ID.Value != nil {
-			edge.Target.Fields = append(edge.Target.Fields, specE.ID)
-		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
 	if nodes := au.mutation.TagsIDs(); len(nodes) > 0 {
@@ -424,214 +259,6 @@ func (au *ArticleUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(tag.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		createE := &ArticleTagCreate{config: au.config, mutation: newArticleTagMutation(au.config, OpCreate)}
-		createE.defaults()
-		_, specE := createE.createSpec()
-		edge.Target.Fields = specE.Fields
-		if specE.ID.Value != nil {
-			edge.Target.Fields = append(edge.Target.Fields, specE.ID)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if au.mutation.CommentsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   article.CommentsTable,
-			Columns: []string{article.CommentsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(comment.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := au.mutation.RemovedCommentsIDs(); len(nodes) > 0 && !au.mutation.CommentsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   article.CommentsTable,
-			Columns: []string{article.CommentsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(comment.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := au.mutation.CommentsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   article.CommentsTable,
-			Columns: []string{article.CommentsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(comment.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if au.mutation.FavoritedUsersCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: false,
-			Table:   article.FavoritedUsersTable,
-			Columns: article.FavoritedUsersPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		createE := &UserFavoriteCreate{config: au.config, mutation: newUserFavoriteMutation(au.config, OpCreate)}
-		createE.defaults()
-		_, specE := createE.createSpec()
-		edge.Target.Fields = specE.Fields
-		if specE.ID.Value != nil {
-			edge.Target.Fields = append(edge.Target.Fields, specE.ID)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := au.mutation.RemovedFavoritedUsersIDs(); len(nodes) > 0 && !au.mutation.FavoritedUsersCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: false,
-			Table:   article.FavoritedUsersTable,
-			Columns: article.FavoritedUsersPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		createE := &UserFavoriteCreate{config: au.config, mutation: newUserFavoriteMutation(au.config, OpCreate)}
-		createE.defaults()
-		_, specE := createE.createSpec()
-		edge.Target.Fields = specE.Fields
-		if specE.ID.Value != nil {
-			edge.Target.Fields = append(edge.Target.Fields, specE.ID)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := au.mutation.FavoritedUsersIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: false,
-			Table:   article.FavoritedUsersTable,
-			Columns: article.FavoritedUsersPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		createE := &UserFavoriteCreate{config: au.config, mutation: newUserFavoriteMutation(au.config, OpCreate)}
-		createE.defaults()
-		_, specE := createE.createSpec()
-		edge.Target.Fields = specE.Fields
-		if specE.ID.Value != nil {
-			edge.Target.Fields = append(edge.Target.Fields, specE.ID)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if au.mutation.ArticleTagsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   article.ArticleTagsTable,
-			Columns: []string{article.ArticleTagsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(articletag.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := au.mutation.RemovedArticleTagsIDs(); len(nodes) > 0 && !au.mutation.ArticleTagsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   article.ArticleTagsTable,
-			Columns: []string{article.ArticleTagsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(articletag.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := au.mutation.ArticleTagsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   article.ArticleTagsTable,
-			Columns: []string{article.ArticleTagsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(articletag.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if au.mutation.UserFavoritesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   article.UserFavoritesTable,
-			Columns: []string{article.UserFavoritesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(userfavorite.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := au.mutation.RemovedUserFavoritesIDs(); len(nodes) > 0 && !au.mutation.UserFavoritesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   article.UserFavoritesTable,
-			Columns: []string{article.UserFavoritesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(userfavorite.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := au.mutation.UserFavoritesIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   article.UserFavoritesTable,
-			Columns: []string{article.UserFavoritesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(userfavorite.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -736,66 +363,6 @@ func (auo *ArticleUpdateOne) AddTags(t ...*Tag) *ArticleUpdateOne {
 	return auo.AddTagIDs(ids...)
 }
 
-// AddCommentIDs adds the "comments" edge to the Comment entity by IDs.
-func (auo *ArticleUpdateOne) AddCommentIDs(ids ...uuid.UUID) *ArticleUpdateOne {
-	auo.mutation.AddCommentIDs(ids...)
-	return auo
-}
-
-// AddComments adds the "comments" edges to the Comment entity.
-func (auo *ArticleUpdateOne) AddComments(c ...*Comment) *ArticleUpdateOne {
-	ids := make([]uuid.UUID, len(c))
-	for i := range c {
-		ids[i] = c[i].ID
-	}
-	return auo.AddCommentIDs(ids...)
-}
-
-// AddFavoritedUserIDs adds the "favoritedUsers" edge to the User entity by IDs.
-func (auo *ArticleUpdateOne) AddFavoritedUserIDs(ids ...uuid.UUID) *ArticleUpdateOne {
-	auo.mutation.AddFavoritedUserIDs(ids...)
-	return auo
-}
-
-// AddFavoritedUsers adds the "favoritedUsers" edges to the User entity.
-func (auo *ArticleUpdateOne) AddFavoritedUsers(u ...*User) *ArticleUpdateOne {
-	ids := make([]uuid.UUID, len(u))
-	for i := range u {
-		ids[i] = u[i].ID
-	}
-	return auo.AddFavoritedUserIDs(ids...)
-}
-
-// AddArticleTagIDs adds the "article_tags" edge to the ArticleTag entity by IDs.
-func (auo *ArticleUpdateOne) AddArticleTagIDs(ids ...uuid.UUID) *ArticleUpdateOne {
-	auo.mutation.AddArticleTagIDs(ids...)
-	return auo
-}
-
-// AddArticleTags adds the "article_tags" edges to the ArticleTag entity.
-func (auo *ArticleUpdateOne) AddArticleTags(a ...*ArticleTag) *ArticleUpdateOne {
-	ids := make([]uuid.UUID, len(a))
-	for i := range a {
-		ids[i] = a[i].ID
-	}
-	return auo.AddArticleTagIDs(ids...)
-}
-
-// AddUserFavoriteIDs adds the "user_favorites" edge to the UserFavorite entity by IDs.
-func (auo *ArticleUpdateOne) AddUserFavoriteIDs(ids ...uuid.UUID) *ArticleUpdateOne {
-	auo.mutation.AddUserFavoriteIDs(ids...)
-	return auo
-}
-
-// AddUserFavorites adds the "user_favorites" edges to the UserFavorite entity.
-func (auo *ArticleUpdateOne) AddUserFavorites(u ...*UserFavorite) *ArticleUpdateOne {
-	ids := make([]uuid.UUID, len(u))
-	for i := range u {
-		ids[i] = u[i].ID
-	}
-	return auo.AddUserFavoriteIDs(ids...)
-}
-
 // Mutation returns the ArticleMutation object of the builder.
 func (auo *ArticleUpdateOne) Mutation() *ArticleMutation {
 	return auo.mutation
@@ -820,90 +387,6 @@ func (auo *ArticleUpdateOne) RemoveTags(t ...*Tag) *ArticleUpdateOne {
 		ids[i] = t[i].ID
 	}
 	return auo.RemoveTagIDs(ids...)
-}
-
-// ClearComments clears all "comments" edges to the Comment entity.
-func (auo *ArticleUpdateOne) ClearComments() *ArticleUpdateOne {
-	auo.mutation.ClearComments()
-	return auo
-}
-
-// RemoveCommentIDs removes the "comments" edge to Comment entities by IDs.
-func (auo *ArticleUpdateOne) RemoveCommentIDs(ids ...uuid.UUID) *ArticleUpdateOne {
-	auo.mutation.RemoveCommentIDs(ids...)
-	return auo
-}
-
-// RemoveComments removes "comments" edges to Comment entities.
-func (auo *ArticleUpdateOne) RemoveComments(c ...*Comment) *ArticleUpdateOne {
-	ids := make([]uuid.UUID, len(c))
-	for i := range c {
-		ids[i] = c[i].ID
-	}
-	return auo.RemoveCommentIDs(ids...)
-}
-
-// ClearFavoritedUsers clears all "favoritedUsers" edges to the User entity.
-func (auo *ArticleUpdateOne) ClearFavoritedUsers() *ArticleUpdateOne {
-	auo.mutation.ClearFavoritedUsers()
-	return auo
-}
-
-// RemoveFavoritedUserIDs removes the "favoritedUsers" edge to User entities by IDs.
-func (auo *ArticleUpdateOne) RemoveFavoritedUserIDs(ids ...uuid.UUID) *ArticleUpdateOne {
-	auo.mutation.RemoveFavoritedUserIDs(ids...)
-	return auo
-}
-
-// RemoveFavoritedUsers removes "favoritedUsers" edges to User entities.
-func (auo *ArticleUpdateOne) RemoveFavoritedUsers(u ...*User) *ArticleUpdateOne {
-	ids := make([]uuid.UUID, len(u))
-	for i := range u {
-		ids[i] = u[i].ID
-	}
-	return auo.RemoveFavoritedUserIDs(ids...)
-}
-
-// ClearArticleTags clears all "article_tags" edges to the ArticleTag entity.
-func (auo *ArticleUpdateOne) ClearArticleTags() *ArticleUpdateOne {
-	auo.mutation.ClearArticleTags()
-	return auo
-}
-
-// RemoveArticleTagIDs removes the "article_tags" edge to ArticleTag entities by IDs.
-func (auo *ArticleUpdateOne) RemoveArticleTagIDs(ids ...uuid.UUID) *ArticleUpdateOne {
-	auo.mutation.RemoveArticleTagIDs(ids...)
-	return auo
-}
-
-// RemoveArticleTags removes "article_tags" edges to ArticleTag entities.
-func (auo *ArticleUpdateOne) RemoveArticleTags(a ...*ArticleTag) *ArticleUpdateOne {
-	ids := make([]uuid.UUID, len(a))
-	for i := range a {
-		ids[i] = a[i].ID
-	}
-	return auo.RemoveArticleTagIDs(ids...)
-}
-
-// ClearUserFavorites clears all "user_favorites" edges to the UserFavorite entity.
-func (auo *ArticleUpdateOne) ClearUserFavorites() *ArticleUpdateOne {
-	auo.mutation.ClearUserFavorites()
-	return auo
-}
-
-// RemoveUserFavoriteIDs removes the "user_favorites" edge to UserFavorite entities by IDs.
-func (auo *ArticleUpdateOne) RemoveUserFavoriteIDs(ids ...uuid.UUID) *ArticleUpdateOne {
-	auo.mutation.RemoveUserFavoriteIDs(ids...)
-	return auo
-}
-
-// RemoveUserFavorites removes "user_favorites" edges to UserFavorite entities.
-func (auo *ArticleUpdateOne) RemoveUserFavorites(u ...*UserFavorite) *ArticleUpdateOne {
-	ids := make([]uuid.UUID, len(u))
-	for i := range u {
-		ids[i] = u[i].ID
-	}
-	return auo.RemoveUserFavoriteIDs(ids...)
 }
 
 // Where appends a list predicates to the ArticleUpdate builder.
@@ -977,9 +460,6 @@ func (auo *ArticleUpdateOne) check() error {
 			return &ValidationError{Name: "body", err: fmt.Errorf(`ent: validator failed for field "Article.body": %w`, err)}
 		}
 	}
-	if _, ok := auo.mutation.ArticleAuthorID(); auo.mutation.ArticleAuthorCleared() && !ok {
-		return errors.New(`ent: clearing a required unique edge "Article.articleAuthor"`)
-	}
 	return nil
 }
 
@@ -1038,13 +518,6 @@ func (auo *ArticleUpdateOne) sqlSave(ctx context.Context) (_node *Article, err e
 				IDSpec: sqlgraph.NewFieldSpec(tag.FieldID, field.TypeUUID),
 			},
 		}
-		createE := &ArticleTagCreate{config: auo.config, mutation: newArticleTagMutation(auo.config, OpCreate)}
-		createE.defaults()
-		_, specE := createE.createSpec()
-		edge.Target.Fields = specE.Fields
-		if specE.ID.Value != nil {
-			edge.Target.Fields = append(edge.Target.Fields, specE.ID)
-		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
 	if nodes := auo.mutation.RemovedTagsIDs(); len(nodes) > 0 && !auo.mutation.TagsCleared() {
@@ -1061,13 +534,6 @@ func (auo *ArticleUpdateOne) sqlSave(ctx context.Context) (_node *Article, err e
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		createE := &ArticleTagCreate{config: auo.config, mutation: newArticleTagMutation(auo.config, OpCreate)}
-		createE.defaults()
-		_, specE := createE.createSpec()
-		edge.Target.Fields = specE.Fields
-		if specE.ID.Value != nil {
-			edge.Target.Fields = append(edge.Target.Fields, specE.ID)
-		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
 	if nodes := auo.mutation.TagsIDs(); len(nodes) > 0 {
@@ -1079,214 +545,6 @@ func (auo *ArticleUpdateOne) sqlSave(ctx context.Context) (_node *Article, err e
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(tag.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		createE := &ArticleTagCreate{config: auo.config, mutation: newArticleTagMutation(auo.config, OpCreate)}
-		createE.defaults()
-		_, specE := createE.createSpec()
-		edge.Target.Fields = specE.Fields
-		if specE.ID.Value != nil {
-			edge.Target.Fields = append(edge.Target.Fields, specE.ID)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if auo.mutation.CommentsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   article.CommentsTable,
-			Columns: []string{article.CommentsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(comment.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := auo.mutation.RemovedCommentsIDs(); len(nodes) > 0 && !auo.mutation.CommentsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   article.CommentsTable,
-			Columns: []string{article.CommentsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(comment.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := auo.mutation.CommentsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   article.CommentsTable,
-			Columns: []string{article.CommentsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(comment.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if auo.mutation.FavoritedUsersCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: false,
-			Table:   article.FavoritedUsersTable,
-			Columns: article.FavoritedUsersPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		createE := &UserFavoriteCreate{config: auo.config, mutation: newUserFavoriteMutation(auo.config, OpCreate)}
-		createE.defaults()
-		_, specE := createE.createSpec()
-		edge.Target.Fields = specE.Fields
-		if specE.ID.Value != nil {
-			edge.Target.Fields = append(edge.Target.Fields, specE.ID)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := auo.mutation.RemovedFavoritedUsersIDs(); len(nodes) > 0 && !auo.mutation.FavoritedUsersCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: false,
-			Table:   article.FavoritedUsersTable,
-			Columns: article.FavoritedUsersPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		createE := &UserFavoriteCreate{config: auo.config, mutation: newUserFavoriteMutation(auo.config, OpCreate)}
-		createE.defaults()
-		_, specE := createE.createSpec()
-		edge.Target.Fields = specE.Fields
-		if specE.ID.Value != nil {
-			edge.Target.Fields = append(edge.Target.Fields, specE.ID)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := auo.mutation.FavoritedUsersIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: false,
-			Table:   article.FavoritedUsersTable,
-			Columns: article.FavoritedUsersPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		createE := &UserFavoriteCreate{config: auo.config, mutation: newUserFavoriteMutation(auo.config, OpCreate)}
-		createE.defaults()
-		_, specE := createE.createSpec()
-		edge.Target.Fields = specE.Fields
-		if specE.ID.Value != nil {
-			edge.Target.Fields = append(edge.Target.Fields, specE.ID)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if auo.mutation.ArticleTagsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   article.ArticleTagsTable,
-			Columns: []string{article.ArticleTagsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(articletag.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := auo.mutation.RemovedArticleTagsIDs(); len(nodes) > 0 && !auo.mutation.ArticleTagsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   article.ArticleTagsTable,
-			Columns: []string{article.ArticleTagsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(articletag.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := auo.mutation.ArticleTagsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   article.ArticleTagsTable,
-			Columns: []string{article.ArticleTagsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(articletag.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if auo.mutation.UserFavoritesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   article.UserFavoritesTable,
-			Columns: []string{article.UserFavoritesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(userfavorite.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := auo.mutation.RemovedUserFavoritesIDs(); len(nodes) > 0 && !auo.mutation.UserFavoritesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   article.UserFavoritesTable,
-			Columns: []string{article.UserFavoritesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(userfavorite.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := auo.mutation.UserFavoritesIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   article.UserFavoritesTable,
-			Columns: []string{article.UserFavoritesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(userfavorite.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

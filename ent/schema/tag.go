@@ -23,8 +23,7 @@ func (Tag) Fields() []ent.Field {
 
 func (Tag) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("article", Article.Type).
-			Ref("tags").
-			Through("tag_article", ArticleTag.Type),
+		edge.From("articles", Article.Type).
+			Ref("tags"),
 	}
 }

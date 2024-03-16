@@ -5,8 +5,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/k0kishima/golang-realworld-example-app/ent"
-	"github.com/k0kishima/golang-realworld-example-app/ent/user"
-	"github.com/k0kishima/golang-realworld-example-app/ent/userfollow"
 )
 
 func GetProfile(client *ent.Client) gin.HandlerFunc {
@@ -23,14 +21,15 @@ func GetProfile(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		following := false
 		currentUser, _ := c.Get("currentUser")
-		currentUserEntity, exists := currentUser.(*ent.User)
-		if exists {
-			exists, err := currentUserEntity.QueryFollows().Where(userfollow.FolloweeIDEQ(targetUser.ID)).Exist(c.Request.Context())
-			if err == nil && exists {
-				following = true
+		currentUserEntity, ok := currentUser.(*ent.User)
+		following := false
+		if ok {
+			isFollowing, err := isFollowing(c, currentUserEntity, targetUser)
+			if err != nil {
+				respondWithError(c, http.StatusInternalServerError, "Error checking if user is following")
 			}
+			following = isFollowing
 		}
 
 		c.JSON(http.StatusOK, gin.H{
@@ -59,7 +58,7 @@ func FollowUser(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		if err := followUser(client, c, currentUserEntity, targetUser); err != nil {
+		if err := followUser(c, currentUserEntity, targetUser); err != nil {
 			return
 		}
 
@@ -89,7 +88,7 @@ func UnfollowUser(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		if err := unfollowUser(client, c, currentUserEntity, targetUser); err != nil {
+		if err := unfollowUser(c, currentUserEntity, targetUser); err != nil {
 			return
 		}
 
@@ -104,24 +103,8 @@ func UnfollowUser(client *ent.Client) gin.HandlerFunc {
 	}
 }
 
-func getUserByUsername(client *ent.Client, c *gin.Context, username string) (*ent.User, error) {
-	targetUser, err := client.User.Query().Where(user.UsernameEQ(username)).Only(c.Request.Context())
-	if err != nil {
-		if ent.IsNotFound(err) {
-			respondWithError(c, http.StatusNotFound, "User not found")
-		} else {
-			respondWithError(c, http.StatusInternalServerError, "Internal server error")
-		}
-		return nil, err
-	}
-	return targetUser, nil
-}
-
-func followUser(client *ent.Client, c *gin.Context, currentUserEntity, targetUser *ent.User) error {
-	_, err := client.UserFollow.Create().
-		SetFollower(currentUserEntity).
-		SetFollowee(targetUser).
-		Save(c.Request.Context())
+func followUser(c *gin.Context, currentUserEntity, targetUser *ent.User) error {
+	err := currentUserEntity.Update().AddFollowing(targetUser).Exec(c.Request.Context())
 	if err != nil {
 		if ent.IsConstraintError(err) {
 			respondWithError(c, http.StatusConflict, "User is already followed")
@@ -133,13 +116,8 @@ func followUser(client *ent.Client, c *gin.Context, currentUserEntity, targetUse
 	return nil
 }
 
-func unfollowUser(client *ent.Client, c *gin.Context, currentUserEntity, targetUser *ent.User) error {
-	_, err := client.UserFollow.Delete().Where(
-		userfollow.And(
-			userfollow.FollowerIDEQ(currentUserEntity.ID),
-			userfollow.FolloweeIDEQ(targetUser.ID),
-		),
-	).Exec(c.Request.Context())
+func unfollowUser(c *gin.Context, currentUserEntity, targetUser *ent.User) error {
+	err := currentUserEntity.Update().RemoveFollowing(targetUser).Exec(c.Request.Context())
 	if err != nil {
 		respondWithError(c, http.StatusInternalServerError, "Error unfollowing user")
 		return err
