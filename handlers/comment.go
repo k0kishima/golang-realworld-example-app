@@ -115,8 +115,9 @@ func PostComment(client *ent.Client) gin.HandlerFunc {
 		comment, err := client.Comment.Create().
 			SetBody(req.Comment.Body).
 			SetAuthorID(currentUserEntity.ID).
-			SetArticleID(targetArticle.ID).
 			Save(c.Request.Context())
+		targetArticle.Update().AddComments(comment).Save(c.Request.Context())
+
 		if err != nil {
 			log.Printf("Error: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error creating comment"})
