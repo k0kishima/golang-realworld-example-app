@@ -496,35 +496,12 @@ func UpdatedAtLTE(v time.Time) predicate.User {
 	return predicate.User(sql.FieldLTE(FieldUpdatedAt, v))
 }
 
-// HasFollows applies the HasEdge predicate on the "follows" edge.
-func HasFollows() predicate.User {
-	return predicate.User(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, FollowsTable, FollowsColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasFollowsWith applies the HasEdge predicate on the "follows" edge with a given conditions (other predicates).
-func HasFollowsWith(preds ...predicate.UserFollow) predicate.User {
-	return predicate.User(func(s *sql.Selector) {
-		step := newFollowsStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
 // HasArticles applies the HasEdge predicate on the "articles" edge.
 func HasArticles() predicate.User {
 	return predicate.User(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, ArticlesTable, ArticlesColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, ArticlesTable, ArticlesColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
@@ -547,7 +524,7 @@ func HasComments() predicate.User {
 	return predicate.User(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, CommentsTable, CommentsColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, CommentsTable, CommentsColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
@@ -565,21 +542,21 @@ func HasCommentsWith(preds ...predicate.Comment) predicate.User {
 	})
 }
 
-// HasFavariteArticle applies the HasEdge predicate on the "favariteArticle" edge.
-func HasFavariteArticle() predicate.User {
+// HasFavoriteArticles applies the HasEdge predicate on the "favoriteArticles" edge.
+func HasFavoriteArticles() predicate.User {
 	return predicate.User(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, FavariteArticleTable, FavariteArticlePrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2M, false, FavoriteArticlesTable, FavoriteArticlesPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasFavariteArticleWith applies the HasEdge predicate on the "favariteArticle" edge with a given conditions (other predicates).
-func HasFavariteArticleWith(preds ...predicate.Article) predicate.User {
+// HasFavoriteArticlesWith applies the HasEdge predicate on the "favoriteArticles" edge with a given conditions (other predicates).
+func HasFavoriteArticlesWith(preds ...predicate.Article) predicate.User {
 	return predicate.User(func(s *sql.Selector) {
-		step := newFavariteArticleStep()
+		step := newFavoriteArticlesStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
@@ -588,21 +565,21 @@ func HasFavariteArticleWith(preds ...predicate.Article) predicate.User {
 	})
 }
 
-// HasUserFavorites applies the HasEdge predicate on the "user_favorites" edge.
-func HasUserFavorites() predicate.User {
+// HasFollowing applies the HasEdge predicate on the "following" edge.
+func HasFollowing() predicate.User {
 	return predicate.User(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, UserFavoritesTable, UserFavoritesColumn),
+			sqlgraph.Edge(sqlgraph.M2M, false, FollowingTable, FollowingPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasUserFavoritesWith applies the HasEdge predicate on the "user_favorites" edge with a given conditions (other predicates).
-func HasUserFavoritesWith(preds ...predicate.UserFavorite) predicate.User {
+// HasFollowingWith applies the HasEdge predicate on the "following" edge with a given conditions (other predicates).
+func HasFollowingWith(preds ...predicate.User) predicate.User {
 	return predicate.User(func(s *sql.Selector) {
-		step := newUserFavoritesStep()
+		step := newFollowingStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

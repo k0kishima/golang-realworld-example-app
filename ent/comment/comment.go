@@ -15,43 +15,34 @@ const (
 	Label = "comment"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
-	// FieldAuthorID holds the string denoting the author_id field in the database.
-	FieldAuthorID = "author_id"
 	// FieldArticleID holds the string denoting the article_id field in the database.
 	FieldArticleID = "article_id"
+	// FieldAuthorID holds the string denoting the author_id field in the database.
+	FieldAuthorID = "author_id"
 	// FieldBody holds the string denoting the body field in the database.
 	FieldBody = "body"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
-	// EdgeCommentAuthor holds the string denoting the commentauthor edge name in mutations.
-	EdgeCommentAuthor = "commentAuthor"
 	// EdgeArticle holds the string denoting the article edge name in mutations.
 	EdgeArticle = "article"
 	// Table holds the table name of the comment in the database.
 	Table = "comments"
-	// CommentAuthorTable is the table that holds the commentAuthor relation/edge.
-	CommentAuthorTable = "comments"
-	// CommentAuthorInverseTable is the table name for the User entity.
-	// It exists in this package in order to avoid circular dependency with the "user" package.
-	CommentAuthorInverseTable = "users"
-	// CommentAuthorColumn is the table column denoting the commentAuthor relation/edge.
-	CommentAuthorColumn = "author_id"
 	// ArticleTable is the table that holds the article relation/edge.
-	ArticleTable = "comments"
+	ArticleTable = "articles"
 	// ArticleInverseTable is the table name for the Article entity.
 	// It exists in this package in order to avoid circular dependency with the "article" package.
 	ArticleInverseTable = "articles"
 	// ArticleColumn is the table column denoting the article relation/edge.
-	ArticleColumn = "article_id"
+	ArticleColumn = "article_comments"
 )
 
 // Columns holds all SQL columns for comment fields.
 var Columns = []string{
 	FieldID,
-	FieldAuthorID,
 	FieldArticleID,
+	FieldAuthorID,
 	FieldBody,
 	FieldCreatedAt,
 	FieldUpdatedAt,
@@ -88,14 +79,14 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
 }
 
-// ByAuthorID orders the results by the author_id field.
-func ByAuthorID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldAuthorID, opts...).ToFunc()
-}
-
 // ByArticleID orders the results by the article_id field.
 func ByArticleID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldArticleID, opts...).ToFunc()
+}
+
+// ByAuthorID orders the results by the author_id field.
+func ByAuthorID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAuthorID, opts...).ToFunc()
 }
 
 // ByBody orders the results by the body field.
@@ -113,30 +104,23 @@ func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
 }
 
-// ByCommentAuthorField orders the results by commentAuthor field.
-func ByCommentAuthorField(field string, opts ...sql.OrderTermOption) OrderOption {
+// ByArticleCount orders the results by article count.
+func ByArticleCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newCommentAuthorStep(), sql.OrderByField(field, opts...))
+		sqlgraph.OrderByNeighborsCount(s, newArticleStep(), opts...)
 	}
 }
 
-// ByArticleField orders the results by article field.
-func ByArticleField(field string, opts ...sql.OrderTermOption) OrderOption {
+// ByArticle orders the results by article terms.
+func ByArticle(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newArticleStep(), sql.OrderByField(field, opts...))
+		sqlgraph.OrderByNeighborTerms(s, newArticleStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
-}
-func newCommentAuthorStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(CommentAuthorInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, true, CommentAuthorTable, CommentAuthorColumn),
-	)
 }
 func newArticleStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ArticleInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, true, ArticleTable, ArticleColumn),
+		sqlgraph.Edge(sqlgraph.O2M, true, ArticleTable, ArticleColumn),
 	)
 }

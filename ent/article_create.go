@@ -12,11 +12,9 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/article"
-	"github.com/k0kishima/golang-realworld-example-app/ent/articletag"
 	"github.com/k0kishima/golang-realworld-example-app/ent/comment"
 	"github.com/k0kishima/golang-realworld-example-app/ent/tag"
 	"github.com/k0kishima/golang-realworld-example-app/ent/user"
-	"github.com/k0kishima/golang-realworld-example-app/ent/userfavorite"
 )
 
 // ArticleCreate is the builder for creating a Article entity.
@@ -98,17 +96,6 @@ func (ac *ArticleCreate) SetNillableID(u *uuid.UUID) *ArticleCreate {
 	return ac
 }
 
-// SetArticleAuthorID sets the "articleAuthor" edge to the User entity by ID.
-func (ac *ArticleCreate) SetArticleAuthorID(id uuid.UUID) *ArticleCreate {
-	ac.mutation.SetArticleAuthorID(id)
-	return ac
-}
-
-// SetArticleAuthor sets the "articleAuthor" edge to the User entity.
-func (ac *ArticleCreate) SetArticleAuthor(u *User) *ArticleCreate {
-	return ac.SetArticleAuthorID(u.ID)
-}
-
 // AddTagIDs adds the "tags" edge to the Tag entity by IDs.
 func (ac *ArticleCreate) AddTagIDs(ids ...uuid.UUID) *ArticleCreate {
 	ac.mutation.AddTagIDs(ids...)
@@ -124,64 +111,38 @@ func (ac *ArticleCreate) AddTags(t ...*Tag) *ArticleCreate {
 	return ac.AddTagIDs(ids...)
 }
 
-// AddCommentIDs adds the "comments" edge to the Comment entity by IDs.
-func (ac *ArticleCreate) AddCommentIDs(ids ...uuid.UUID) *ArticleCreate {
-	ac.mutation.AddCommentIDs(ids...)
+// SetCommentsID sets the "comments" edge to the Comment entity by ID.
+func (ac *ArticleCreate) SetCommentsID(id uuid.UUID) *ArticleCreate {
+	ac.mutation.SetCommentsID(id)
 	return ac
 }
 
-// AddComments adds the "comments" edges to the Comment entity.
-func (ac *ArticleCreate) AddComments(c ...*Comment) *ArticleCreate {
-	ids := make([]uuid.UUID, len(c))
-	for i := range c {
-		ids[i] = c[i].ID
+// SetNillableCommentsID sets the "comments" edge to the Comment entity by ID if the given value is not nil.
+func (ac *ArticleCreate) SetNillableCommentsID(id *uuid.UUID) *ArticleCreate {
+	if id != nil {
+		ac = ac.SetCommentsID(*id)
 	}
-	return ac.AddCommentIDs(ids...)
-}
-
-// AddFavoritedUserIDs adds the "favoritedUsers" edge to the User entity by IDs.
-func (ac *ArticleCreate) AddFavoritedUserIDs(ids ...uuid.UUID) *ArticleCreate {
-	ac.mutation.AddFavoritedUserIDs(ids...)
 	return ac
 }
 
-// AddFavoritedUsers adds the "favoritedUsers" edges to the User entity.
-func (ac *ArticleCreate) AddFavoritedUsers(u ...*User) *ArticleCreate {
+// SetComments sets the "comments" edge to the Comment entity.
+func (ac *ArticleCreate) SetComments(c *Comment) *ArticleCreate {
+	return ac.SetCommentsID(c.ID)
+}
+
+// AddUserIDs adds the "users" edge to the User entity by IDs.
+func (ac *ArticleCreate) AddUserIDs(ids ...uuid.UUID) *ArticleCreate {
+	ac.mutation.AddUserIDs(ids...)
+	return ac
+}
+
+// AddUsers adds the "users" edges to the User entity.
+func (ac *ArticleCreate) AddUsers(u ...*User) *ArticleCreate {
 	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
 	}
-	return ac.AddFavoritedUserIDs(ids...)
-}
-
-// AddArticleTagIDs adds the "article_tags" edge to the ArticleTag entity by IDs.
-func (ac *ArticleCreate) AddArticleTagIDs(ids ...uuid.UUID) *ArticleCreate {
-	ac.mutation.AddArticleTagIDs(ids...)
-	return ac
-}
-
-// AddArticleTags adds the "article_tags" edges to the ArticleTag entity.
-func (ac *ArticleCreate) AddArticleTags(a ...*ArticleTag) *ArticleCreate {
-	ids := make([]uuid.UUID, len(a))
-	for i := range a {
-		ids[i] = a[i].ID
-	}
-	return ac.AddArticleTagIDs(ids...)
-}
-
-// AddUserFavoriteIDs adds the "user_favorites" edge to the UserFavorite entity by IDs.
-func (ac *ArticleCreate) AddUserFavoriteIDs(ids ...uuid.UUID) *ArticleCreate {
-	ac.mutation.AddUserFavoriteIDs(ids...)
-	return ac
-}
-
-// AddUserFavorites adds the "user_favorites" edges to the UserFavorite entity.
-func (ac *ArticleCreate) AddUserFavorites(u ...*UserFavorite) *ArticleCreate {
-	ids := make([]uuid.UUID, len(u))
-	for i := range u {
-		ids[i] = u[i].ID
-	}
-	return ac.AddUserFavoriteIDs(ids...)
+	return ac.AddUserIDs(ids...)
 }
 
 // Mutation returns the ArticleMutation object of the builder.
@@ -276,9 +237,6 @@ func (ac *ArticleCreate) check() error {
 	if _, ok := ac.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "Article.updated_at"`)}
 	}
-	if _, ok := ac.mutation.ArticleAuthorID(); !ok {
-		return &ValidationError{Name: "articleAuthor", err: errors.New(`ent: missing required edge "Article.articleAuthor"`)}
-	}
 	return nil
 }
 
@@ -314,6 +272,10 @@ func (ac *ArticleCreate) createSpec() (*Article, *sqlgraph.CreateSpec) {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
+	if value, ok := ac.mutation.AuthorID(); ok {
+		_spec.SetField(article.FieldAuthorID, field.TypeUUID, value)
+		_node.AuthorID = value
+	}
 	if value, ok := ac.mutation.Slug(); ok {
 		_spec.SetField(article.FieldSlug, field.TypeString, value)
 		_node.Slug = value
@@ -338,23 +300,6 @@ func (ac *ArticleCreate) createSpec() (*Article, *sqlgraph.CreateSpec) {
 		_spec.SetField(article.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if nodes := ac.mutation.ArticleAuthorIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   article.ArticleAuthorTable,
-			Columns: []string{article.ArticleAuthorColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.AuthorID = nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
-	}
 	if nodes := ac.mutation.TagsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
@@ -369,18 +314,11 @@ func (ac *ArticleCreate) createSpec() (*Article, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		createE := &ArticleTagCreate{config: ac.config, mutation: newArticleTagMutation(ac.config, OpCreate)}
-		createE.defaults()
-		_, specE := createE.createSpec()
-		edge.Target.Fields = specE.Fields
-		if specE.ID.Value != nil {
-			edge.Target.Fields = append(edge.Target.Fields, specE.ID)
-		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := ac.mutation.CommentsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2O,
 			Inverse: false,
 			Table:   article.CommentsTable,
 			Columns: []string{article.CommentsColumn},
@@ -392,56 +330,18 @@ func (ac *ArticleCreate) createSpec() (*Article, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_node.article_comments = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ac.mutation.FavoritedUsersIDs(); len(nodes) > 0 {
+	if nodes := ac.mutation.UsersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
-			Inverse: false,
-			Table:   article.FavoritedUsersTable,
-			Columns: article.FavoritedUsersPrimaryKey,
+			Inverse: true,
+			Table:   article.UsersTable,
+			Columns: article.UsersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		createE := &UserFavoriteCreate{config: ac.config, mutation: newUserFavoriteMutation(ac.config, OpCreate)}
-		createE.defaults()
-		_, specE := createE.createSpec()
-		edge.Target.Fields = specE.Fields
-		if specE.ID.Value != nil {
-			edge.Target.Fields = append(edge.Target.Fields, specE.ID)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := ac.mutation.ArticleTagsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   article.ArticleTagsTable,
-			Columns: []string{article.ArticleTagsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(articletag.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := ac.mutation.UserFavoritesIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   article.UserFavoritesTable,
-			Columns: []string{article.UserFavoritesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(userfavorite.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

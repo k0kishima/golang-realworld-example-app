@@ -16,8 +16,8 @@ type Comment struct {
 func (Comment) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(uuid.New).Immutable(),
-		field.UUID("author_id", uuid.UUID{}).Immutable(),
 		field.UUID("article_id", uuid.UUID{}).Immutable(),
+		field.UUID("author_id", uuid.UUID{}).Immutable(),
 		field.String("body").NotEmpty().MaxLen(4096),
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
@@ -26,17 +26,8 @@ func (Comment) Fields() []ent.Field {
 
 func (Comment) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("commentAuthor", User.Type).
-			Ref("comments").
-			Field("author_id").
-			Unique().
-			Required().
-			Immutable(),
 		edge.From("article", Article.Type).
 			Ref("comments").
-			Unique().
-			Required().
-			Field("article_id").
 			Immutable(),
 	}
 }

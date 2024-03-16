@@ -17,12 +17,9 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/k0kishima/golang-realworld-example-app/ent/article"
-	"github.com/k0kishima/golang-realworld-example-app/ent/articletag"
 	"github.com/k0kishima/golang-realworld-example-app/ent/comment"
 	"github.com/k0kishima/golang-realworld-example-app/ent/tag"
 	"github.com/k0kishima/golang-realworld-example-app/ent/user"
-	"github.com/k0kishima/golang-realworld-example-app/ent/userfavorite"
-	"github.com/k0kishima/golang-realworld-example-app/ent/userfollow"
 )
 
 // Client is the client that holds all ent builders.
@@ -32,18 +29,12 @@ type Client struct {
 	Schema *migrate.Schema
 	// Article is the client for interacting with the Article builders.
 	Article *ArticleClient
-	// ArticleTag is the client for interacting with the ArticleTag builders.
-	ArticleTag *ArticleTagClient
 	// Comment is the client for interacting with the Comment builders.
 	Comment *CommentClient
 	// Tag is the client for interacting with the Tag builders.
 	Tag *TagClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
-	// UserFavorite is the client for interacting with the UserFavorite builders.
-	UserFavorite *UserFavoriteClient
-	// UserFollow is the client for interacting with the UserFollow builders.
-	UserFollow *UserFollowClient
 }
 
 // NewClient creates a new client configured with the given options.
@@ -56,12 +47,9 @@ func NewClient(opts ...Option) *Client {
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.Article = NewArticleClient(c.config)
-	c.ArticleTag = NewArticleTagClient(c.config)
 	c.Comment = NewCommentClient(c.config)
 	c.Tag = NewTagClient(c.config)
 	c.User = NewUserClient(c.config)
-	c.UserFavorite = NewUserFavoriteClient(c.config)
-	c.UserFollow = NewUserFollowClient(c.config)
 }
 
 type (
@@ -152,15 +140,12 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:          ctx,
-		config:       cfg,
-		Article:      NewArticleClient(cfg),
-		ArticleTag:   NewArticleTagClient(cfg),
-		Comment:      NewCommentClient(cfg),
-		Tag:          NewTagClient(cfg),
-		User:         NewUserClient(cfg),
-		UserFavorite: NewUserFavoriteClient(cfg),
-		UserFollow:   NewUserFollowClient(cfg),
+		ctx:     ctx,
+		config:  cfg,
+		Article: NewArticleClient(cfg),
+		Comment: NewCommentClient(cfg),
+		Tag:     NewTagClient(cfg),
+		User:    NewUserClient(cfg),
 	}, nil
 }
 
@@ -178,15 +163,12 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:          ctx,
-		config:       cfg,
-		Article:      NewArticleClient(cfg),
-		ArticleTag:   NewArticleTagClient(cfg),
-		Comment:      NewCommentClient(cfg),
-		Tag:          NewTagClient(cfg),
-		User:         NewUserClient(cfg),
-		UserFavorite: NewUserFavoriteClient(cfg),
-		UserFollow:   NewUserFollowClient(cfg),
+		ctx:     ctx,
+		config:  cfg,
+		Article: NewArticleClient(cfg),
+		Comment: NewCommentClient(cfg),
+		Tag:     NewTagClient(cfg),
+		User:    NewUserClient(cfg),
 	}, nil
 }
 
@@ -215,21 +197,19 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
-	for _, n := range []interface{ Use(...Hook) }{
-		c.Article, c.ArticleTag, c.Comment, c.Tag, c.User, c.UserFavorite, c.UserFollow,
-	} {
-		n.Use(hooks...)
-	}
+	c.Article.Use(hooks...)
+	c.Comment.Use(hooks...)
+	c.Tag.Use(hooks...)
+	c.User.Use(hooks...)
 }
 
 // Intercept adds the query interceptors to all the entity clients.
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
-	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.Article, c.ArticleTag, c.Comment, c.Tag, c.User, c.UserFavorite, c.UserFollow,
-	} {
-		n.Intercept(interceptors...)
-	}
+	c.Article.Intercept(interceptors...)
+	c.Comment.Intercept(interceptors...)
+	c.Tag.Intercept(interceptors...)
+	c.User.Intercept(interceptors...)
 }
 
 // Mutate implements the ent.Mutator interface.
@@ -237,18 +217,12 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
 	case *ArticleMutation:
 		return c.Article.mutate(ctx, m)
-	case *ArticleTagMutation:
-		return c.ArticleTag.mutate(ctx, m)
 	case *CommentMutation:
 		return c.Comment.mutate(ctx, m)
 	case *TagMutation:
 		return c.Tag.mutate(ctx, m)
 	case *UserMutation:
 		return c.User.mutate(ctx, m)
-	case *UserFavoriteMutation:
-		return c.UserFavorite.mutate(ctx, m)
-	case *UserFollowMutation:
-		return c.UserFollow.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
 	}
@@ -362,22 +336,6 @@ func (c *ArticleClient) GetX(ctx context.Context, id uuid.UUID) *Article {
 	return obj
 }
 
-// QueryArticleAuthor queries the articleAuthor edge of a Article.
-func (c *ArticleClient) QueryArticleAuthor(a *Article) *UserQuery {
-	query := (&UserClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := a.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(article.Table, article.FieldID, id),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, article.ArticleAuthorTable, article.ArticleAuthorColumn),
-		)
-		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // QueryTags queries the tags edge of a Article.
 func (c *ArticleClient) QueryTags(a *Article) *TagQuery {
 	query := (&TagClient{config: c.config}).Query()
@@ -402,7 +360,7 @@ func (c *ArticleClient) QueryComments(a *Article) *CommentQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(article.Table, article.FieldID, id),
 			sqlgraph.To(comment.Table, comment.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, article.CommentsTable, article.CommentsColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, article.CommentsTable, article.CommentsColumn),
 		)
 		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
 		return fromV, nil
@@ -410,47 +368,15 @@ func (c *ArticleClient) QueryComments(a *Article) *CommentQuery {
 	return query
 }
 
-// QueryFavoritedUsers queries the favoritedUsers edge of a Article.
-func (c *ArticleClient) QueryFavoritedUsers(a *Article) *UserQuery {
+// QueryUsers queries the users edge of a Article.
+func (c *ArticleClient) QueryUsers(a *Article) *UserQuery {
 	query := (&UserClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := a.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(article.Table, article.FieldID, id),
 			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, article.FavoritedUsersTable, article.FavoritedUsersPrimaryKey...),
-		)
-		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryArticleTags queries the article_tags edge of a Article.
-func (c *ArticleClient) QueryArticleTags(a *Article) *ArticleTagQuery {
-	query := (&ArticleTagClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := a.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(article.Table, article.FieldID, id),
-			sqlgraph.To(articletag.Table, articletag.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, article.ArticleTagsTable, article.ArticleTagsColumn),
-		)
-		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryUserFavorites queries the user_favorites edge of a Article.
-func (c *ArticleClient) QueryUserFavorites(a *Article) *UserFavoriteQuery {
-	query := (&UserFavoriteClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := a.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(article.Table, article.FieldID, id),
-			sqlgraph.To(userfavorite.Table, userfavorite.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, article.UserFavoritesTable, article.UserFavoritesColumn),
+			sqlgraph.Edge(sqlgraph.M2M, true, article.UsersTable, article.UsersPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
 		return fromV, nil
@@ -480,171 +406,6 @@ func (c *ArticleClient) mutate(ctx context.Context, m *ArticleMutation) (Value, 
 		return (&ArticleDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Article mutation op: %q", m.Op())
-	}
-}
-
-// ArticleTagClient is a client for the ArticleTag schema.
-type ArticleTagClient struct {
-	config
-}
-
-// NewArticleTagClient returns a client for the ArticleTag from the given config.
-func NewArticleTagClient(c config) *ArticleTagClient {
-	return &ArticleTagClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `articletag.Hooks(f(g(h())))`.
-func (c *ArticleTagClient) Use(hooks ...Hook) {
-	c.hooks.ArticleTag = append(c.hooks.ArticleTag, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `articletag.Intercept(f(g(h())))`.
-func (c *ArticleTagClient) Intercept(interceptors ...Interceptor) {
-	c.inters.ArticleTag = append(c.inters.ArticleTag, interceptors...)
-}
-
-// Create returns a builder for creating a ArticleTag entity.
-func (c *ArticleTagClient) Create() *ArticleTagCreate {
-	mutation := newArticleTagMutation(c.config, OpCreate)
-	return &ArticleTagCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of ArticleTag entities.
-func (c *ArticleTagClient) CreateBulk(builders ...*ArticleTagCreate) *ArticleTagCreateBulk {
-	return &ArticleTagCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *ArticleTagClient) MapCreateBulk(slice any, setFunc func(*ArticleTagCreate, int)) *ArticleTagCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &ArticleTagCreateBulk{err: fmt.Errorf("calling to ArticleTagClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*ArticleTagCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &ArticleTagCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for ArticleTag.
-func (c *ArticleTagClient) Update() *ArticleTagUpdate {
-	mutation := newArticleTagMutation(c.config, OpUpdate)
-	return &ArticleTagUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *ArticleTagClient) UpdateOne(at *ArticleTag) *ArticleTagUpdateOne {
-	mutation := newArticleTagMutation(c.config, OpUpdateOne, withArticleTag(at))
-	return &ArticleTagUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *ArticleTagClient) UpdateOneID(id uuid.UUID) *ArticleTagUpdateOne {
-	mutation := newArticleTagMutation(c.config, OpUpdateOne, withArticleTagID(id))
-	return &ArticleTagUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for ArticleTag.
-func (c *ArticleTagClient) Delete() *ArticleTagDelete {
-	mutation := newArticleTagMutation(c.config, OpDelete)
-	return &ArticleTagDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *ArticleTagClient) DeleteOne(at *ArticleTag) *ArticleTagDeleteOne {
-	return c.DeleteOneID(at.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *ArticleTagClient) DeleteOneID(id uuid.UUID) *ArticleTagDeleteOne {
-	builder := c.Delete().Where(articletag.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &ArticleTagDeleteOne{builder}
-}
-
-// Query returns a query builder for ArticleTag.
-func (c *ArticleTagClient) Query() *ArticleTagQuery {
-	return &ArticleTagQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeArticleTag},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a ArticleTag entity by its id.
-func (c *ArticleTagClient) Get(ctx context.Context, id uuid.UUID) (*ArticleTag, error) {
-	return c.Query().Where(articletag.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *ArticleTagClient) GetX(ctx context.Context, id uuid.UUID) *ArticleTag {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryArticle queries the article edge of a ArticleTag.
-func (c *ArticleTagClient) QueryArticle(at *ArticleTag) *ArticleQuery {
-	query := (&ArticleClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := at.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(articletag.Table, articletag.FieldID, id),
-			sqlgraph.To(article.Table, article.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, articletag.ArticleTable, articletag.ArticleColumn),
-		)
-		fromV = sqlgraph.Neighbors(at.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryTag queries the tag edge of a ArticleTag.
-func (c *ArticleTagClient) QueryTag(at *ArticleTag) *TagQuery {
-	query := (&TagClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := at.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(articletag.Table, articletag.FieldID, id),
-			sqlgraph.To(tag.Table, tag.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, articletag.TagTable, articletag.TagColumn),
-		)
-		fromV = sqlgraph.Neighbors(at.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *ArticleTagClient) Hooks() []Hook {
-	return c.hooks.ArticleTag
-}
-
-// Interceptors returns the client interceptors.
-func (c *ArticleTagClient) Interceptors() []Interceptor {
-	return c.inters.ArticleTag
-}
-
-func (c *ArticleTagClient) mutate(ctx context.Context, m *ArticleTagMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&ArticleTagCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&ArticleTagUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&ArticleTagUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&ArticleTagDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown ArticleTag mutation op: %q", m.Op())
 	}
 }
 
@@ -756,22 +517,6 @@ func (c *CommentClient) GetX(ctx context.Context, id uuid.UUID) *Comment {
 	return obj
 }
 
-// QueryCommentAuthor queries the commentAuthor edge of a Comment.
-func (c *CommentClient) QueryCommentAuthor(co *Comment) *UserQuery {
-	query := (&UserClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := co.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(comment.Table, comment.FieldID, id),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, comment.CommentAuthorTable, comment.CommentAuthorColumn),
-		)
-		fromV = sqlgraph.Neighbors(co.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // QueryArticle queries the article edge of a Comment.
 func (c *CommentClient) QueryArticle(co *Comment) *ArticleQuery {
 	query := (&ArticleClient{config: c.config}).Query()
@@ -780,7 +525,7 @@ func (c *CommentClient) QueryArticle(co *Comment) *ArticleQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(comment.Table, comment.FieldID, id),
 			sqlgraph.To(article.Table, article.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, comment.ArticleTable, comment.ArticleColumn),
+			sqlgraph.Edge(sqlgraph.O2M, true, comment.ArticleTable, comment.ArticleColumn),
 		)
 		fromV = sqlgraph.Neighbors(co.driver.Dialect(), step)
 		return fromV, nil
@@ -921,31 +666,15 @@ func (c *TagClient) GetX(ctx context.Context, id uuid.UUID) *Tag {
 	return obj
 }
 
-// QueryArticle queries the article edge of a Tag.
-func (c *TagClient) QueryArticle(t *Tag) *ArticleQuery {
+// QueryArticles queries the articles edge of a Tag.
+func (c *TagClient) QueryArticles(t *Tag) *ArticleQuery {
 	query := (&ArticleClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := t.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(tag.Table, tag.FieldID, id),
 			sqlgraph.To(article.Table, article.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, tag.ArticleTable, tag.ArticlePrimaryKey...),
-		)
-		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryTagArticle queries the tag_article edge of a Tag.
-func (c *TagClient) QueryTagArticle(t *Tag) *ArticleTagQuery {
-	query := (&ArticleTagClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := t.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(tag.Table, tag.FieldID, id),
-			sqlgraph.To(articletag.Table, articletag.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, tag.TagArticleTable, tag.TagArticleColumn),
+			sqlgraph.Edge(sqlgraph.M2M, true, tag.ArticlesTable, tag.ArticlesPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
 		return fromV, nil
@@ -1086,22 +815,6 @@ func (c *UserClient) GetX(ctx context.Context, id uuid.UUID) *User {
 	return obj
 }
 
-// QueryFollows queries the follows edge of a User.
-func (c *UserClient) QueryFollows(u *User) *UserFollowQuery {
-	query := (&UserFollowClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := u.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, id),
-			sqlgraph.To(userfollow.Table, userfollow.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.FollowsTable, user.FollowsColumn),
-		)
-		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // QueryArticles queries the articles edge of a User.
 func (c *UserClient) QueryArticles(u *User) *ArticleQuery {
 	query := (&ArticleClient{config: c.config}).Query()
@@ -1110,7 +823,7 @@ func (c *UserClient) QueryArticles(u *User) *ArticleQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(article.Table, article.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.ArticlesTable, user.ArticlesColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, user.ArticlesTable, user.ArticlesColumn),
 		)
 		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
 		return fromV, nil
@@ -1126,7 +839,7 @@ func (c *UserClient) QueryComments(u *User) *CommentQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(comment.Table, comment.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.CommentsTable, user.CommentsColumn),
+			sqlgraph.Edge(sqlgraph.M2O, false, user.CommentsTable, user.CommentsColumn),
 		)
 		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
 		return fromV, nil
@@ -1134,15 +847,15 @@ func (c *UserClient) QueryComments(u *User) *CommentQuery {
 	return query
 }
 
-// QueryFavariteArticle queries the favariteArticle edge of a User.
-func (c *UserClient) QueryFavariteArticle(u *User) *ArticleQuery {
+// QueryFavoriteArticles queries the favoriteArticles edge of a User.
+func (c *UserClient) QueryFavoriteArticles(u *User) *ArticleQuery {
 	query := (&ArticleClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := u.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(article.Table, article.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, user.FavariteArticleTable, user.FavariteArticlePrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2M, false, user.FavoriteArticlesTable, user.FavoriteArticlesPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
 		return fromV, nil
@@ -1150,15 +863,15 @@ func (c *UserClient) QueryFavariteArticle(u *User) *ArticleQuery {
 	return query
 }
 
-// QueryUserFavorites queries the user_favorites edge of a User.
-func (c *UserClient) QueryUserFavorites(u *User) *UserFavoriteQuery {
-	query := (&UserFavoriteClient{config: c.config}).Query()
+// QueryFollowing queries the following edge of a User.
+func (c *UserClient) QueryFollowing(u *User) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := u.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(user.Table, user.FieldID, id),
-			sqlgraph.To(userfavorite.Table, userfavorite.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, user.UserFavoritesTable, user.UserFavoritesColumn),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, user.FollowingTable, user.FollowingPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
 		return fromV, nil
@@ -1191,343 +904,12 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 	}
 }
 
-// UserFavoriteClient is a client for the UserFavorite schema.
-type UserFavoriteClient struct {
-	config
-}
-
-// NewUserFavoriteClient returns a client for the UserFavorite from the given config.
-func NewUserFavoriteClient(c config) *UserFavoriteClient {
-	return &UserFavoriteClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `userfavorite.Hooks(f(g(h())))`.
-func (c *UserFavoriteClient) Use(hooks ...Hook) {
-	c.hooks.UserFavorite = append(c.hooks.UserFavorite, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `userfavorite.Intercept(f(g(h())))`.
-func (c *UserFavoriteClient) Intercept(interceptors ...Interceptor) {
-	c.inters.UserFavorite = append(c.inters.UserFavorite, interceptors...)
-}
-
-// Create returns a builder for creating a UserFavorite entity.
-func (c *UserFavoriteClient) Create() *UserFavoriteCreate {
-	mutation := newUserFavoriteMutation(c.config, OpCreate)
-	return &UserFavoriteCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of UserFavorite entities.
-func (c *UserFavoriteClient) CreateBulk(builders ...*UserFavoriteCreate) *UserFavoriteCreateBulk {
-	return &UserFavoriteCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *UserFavoriteClient) MapCreateBulk(slice any, setFunc func(*UserFavoriteCreate, int)) *UserFavoriteCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &UserFavoriteCreateBulk{err: fmt.Errorf("calling to UserFavoriteClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*UserFavoriteCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &UserFavoriteCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for UserFavorite.
-func (c *UserFavoriteClient) Update() *UserFavoriteUpdate {
-	mutation := newUserFavoriteMutation(c.config, OpUpdate)
-	return &UserFavoriteUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *UserFavoriteClient) UpdateOne(uf *UserFavorite) *UserFavoriteUpdateOne {
-	mutation := newUserFavoriteMutation(c.config, OpUpdateOne, withUserFavorite(uf))
-	return &UserFavoriteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *UserFavoriteClient) UpdateOneID(id uuid.UUID) *UserFavoriteUpdateOne {
-	mutation := newUserFavoriteMutation(c.config, OpUpdateOne, withUserFavoriteID(id))
-	return &UserFavoriteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for UserFavorite.
-func (c *UserFavoriteClient) Delete() *UserFavoriteDelete {
-	mutation := newUserFavoriteMutation(c.config, OpDelete)
-	return &UserFavoriteDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *UserFavoriteClient) DeleteOne(uf *UserFavorite) *UserFavoriteDeleteOne {
-	return c.DeleteOneID(uf.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *UserFavoriteClient) DeleteOneID(id uuid.UUID) *UserFavoriteDeleteOne {
-	builder := c.Delete().Where(userfavorite.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &UserFavoriteDeleteOne{builder}
-}
-
-// Query returns a query builder for UserFavorite.
-func (c *UserFavoriteClient) Query() *UserFavoriteQuery {
-	return &UserFavoriteQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeUserFavorite},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a UserFavorite entity by its id.
-func (c *UserFavoriteClient) Get(ctx context.Context, id uuid.UUID) (*UserFavorite, error) {
-	return c.Query().Where(userfavorite.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *UserFavoriteClient) GetX(ctx context.Context, id uuid.UUID) *UserFavorite {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryUser queries the user edge of a UserFavorite.
-func (c *UserFavoriteClient) QueryUser(uf *UserFavorite) *UserQuery {
-	query := (&UserClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := uf.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(userfavorite.Table, userfavorite.FieldID, id),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, userfavorite.UserTable, userfavorite.UserColumn),
-		)
-		fromV = sqlgraph.Neighbors(uf.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryArticle queries the article edge of a UserFavorite.
-func (c *UserFavoriteClient) QueryArticle(uf *UserFavorite) *ArticleQuery {
-	query := (&ArticleClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := uf.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(userfavorite.Table, userfavorite.FieldID, id),
-			sqlgraph.To(article.Table, article.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, userfavorite.ArticleTable, userfavorite.ArticleColumn),
-		)
-		fromV = sqlgraph.Neighbors(uf.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *UserFavoriteClient) Hooks() []Hook {
-	return c.hooks.UserFavorite
-}
-
-// Interceptors returns the client interceptors.
-func (c *UserFavoriteClient) Interceptors() []Interceptor {
-	return c.inters.UserFavorite
-}
-
-func (c *UserFavoriteClient) mutate(ctx context.Context, m *UserFavoriteMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&UserFavoriteCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&UserFavoriteUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&UserFavoriteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&UserFavoriteDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown UserFavorite mutation op: %q", m.Op())
-	}
-}
-
-// UserFollowClient is a client for the UserFollow schema.
-type UserFollowClient struct {
-	config
-}
-
-// NewUserFollowClient returns a client for the UserFollow from the given config.
-func NewUserFollowClient(c config) *UserFollowClient {
-	return &UserFollowClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `userfollow.Hooks(f(g(h())))`.
-func (c *UserFollowClient) Use(hooks ...Hook) {
-	c.hooks.UserFollow = append(c.hooks.UserFollow, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `userfollow.Intercept(f(g(h())))`.
-func (c *UserFollowClient) Intercept(interceptors ...Interceptor) {
-	c.inters.UserFollow = append(c.inters.UserFollow, interceptors...)
-}
-
-// Create returns a builder for creating a UserFollow entity.
-func (c *UserFollowClient) Create() *UserFollowCreate {
-	mutation := newUserFollowMutation(c.config, OpCreate)
-	return &UserFollowCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of UserFollow entities.
-func (c *UserFollowClient) CreateBulk(builders ...*UserFollowCreate) *UserFollowCreateBulk {
-	return &UserFollowCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *UserFollowClient) MapCreateBulk(slice any, setFunc func(*UserFollowCreate, int)) *UserFollowCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &UserFollowCreateBulk{err: fmt.Errorf("calling to UserFollowClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*UserFollowCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &UserFollowCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for UserFollow.
-func (c *UserFollowClient) Update() *UserFollowUpdate {
-	mutation := newUserFollowMutation(c.config, OpUpdate)
-	return &UserFollowUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *UserFollowClient) UpdateOne(uf *UserFollow) *UserFollowUpdateOne {
-	mutation := newUserFollowMutation(c.config, OpUpdateOne, withUserFollow(uf))
-	return &UserFollowUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *UserFollowClient) UpdateOneID(id uuid.UUID) *UserFollowUpdateOne {
-	mutation := newUserFollowMutation(c.config, OpUpdateOne, withUserFollowID(id))
-	return &UserFollowUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for UserFollow.
-func (c *UserFollowClient) Delete() *UserFollowDelete {
-	mutation := newUserFollowMutation(c.config, OpDelete)
-	return &UserFollowDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *UserFollowClient) DeleteOne(uf *UserFollow) *UserFollowDeleteOne {
-	return c.DeleteOneID(uf.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *UserFollowClient) DeleteOneID(id uuid.UUID) *UserFollowDeleteOne {
-	builder := c.Delete().Where(userfollow.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &UserFollowDeleteOne{builder}
-}
-
-// Query returns a query builder for UserFollow.
-func (c *UserFollowClient) Query() *UserFollowQuery {
-	return &UserFollowQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeUserFollow},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a UserFollow entity by its id.
-func (c *UserFollowClient) Get(ctx context.Context, id uuid.UUID) (*UserFollow, error) {
-	return c.Query().Where(userfollow.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *UserFollowClient) GetX(ctx context.Context, id uuid.UUID) *UserFollow {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryFollower queries the follower edge of a UserFollow.
-func (c *UserFollowClient) QueryFollower(uf *UserFollow) *UserQuery {
-	query := (&UserClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := uf.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(userfollow.Table, userfollow.FieldID, id),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, userfollow.FollowerTable, userfollow.FollowerColumn),
-		)
-		fromV = sqlgraph.Neighbors(uf.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryFollowee queries the followee edge of a UserFollow.
-func (c *UserFollowClient) QueryFollowee(uf *UserFollow) *UserQuery {
-	query := (&UserClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := uf.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(userfollow.Table, userfollow.FieldID, id),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, userfollow.FolloweeTable, userfollow.FolloweeColumn),
-		)
-		fromV = sqlgraph.Neighbors(uf.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *UserFollowClient) Hooks() []Hook {
-	return c.hooks.UserFollow
-}
-
-// Interceptors returns the client interceptors.
-func (c *UserFollowClient) Interceptors() []Interceptor {
-	return c.inters.UserFollow
-}
-
-func (c *UserFollowClient) mutate(ctx context.Context, m *UserFollowMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&UserFollowCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&UserFollowUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&UserFollowUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&UserFollowDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown UserFollow mutation op: %q", m.Op())
-	}
-}
-
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Article, ArticleTag, Comment, Tag, User, UserFavorite, UserFollow []ent.Hook
+		Article, Comment, Tag, User []ent.Hook
 	}
 	inters struct {
-		Article, ArticleTag, Comment, Tag, User, UserFavorite,
-		UserFollow []ent.Interceptor
+		Article, Comment, Tag, User []ent.Interceptor
 	}
 )

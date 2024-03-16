@@ -29,51 +29,37 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
-	// EdgeFollows holds the string denoting the follows edge name in mutations.
-	EdgeFollows = "follows"
 	// EdgeArticles holds the string denoting the articles edge name in mutations.
 	EdgeArticles = "articles"
 	// EdgeComments holds the string denoting the comments edge name in mutations.
 	EdgeComments = "comments"
-	// EdgeFavariteArticle holds the string denoting the favaritearticle edge name in mutations.
-	EdgeFavariteArticle = "favariteArticle"
-	// EdgeUserFavorites holds the string denoting the user_favorites edge name in mutations.
-	EdgeUserFavorites = "user_favorites"
+	// EdgeFavoriteArticles holds the string denoting the favoritearticles edge name in mutations.
+	EdgeFavoriteArticles = "favoriteArticles"
+	// EdgeFollowing holds the string denoting the following edge name in mutations.
+	EdgeFollowing = "following"
 	// Table holds the table name of the user in the database.
 	Table = "users"
-	// FollowsTable is the table that holds the follows relation/edge.
-	FollowsTable = "user_follows"
-	// FollowsInverseTable is the table name for the UserFollow entity.
-	// It exists in this package in order to avoid circular dependency with the "userfollow" package.
-	FollowsInverseTable = "user_follows"
-	// FollowsColumn is the table column denoting the follows relation/edge.
-	FollowsColumn = "follower_id"
 	// ArticlesTable is the table that holds the articles relation/edge.
-	ArticlesTable = "articles"
+	ArticlesTable = "users"
 	// ArticlesInverseTable is the table name for the Article entity.
 	// It exists in this package in order to avoid circular dependency with the "article" package.
 	ArticlesInverseTable = "articles"
 	// ArticlesColumn is the table column denoting the articles relation/edge.
 	ArticlesColumn = "author_id"
 	// CommentsTable is the table that holds the comments relation/edge.
-	CommentsTable = "comments"
+	CommentsTable = "users"
 	// CommentsInverseTable is the table name for the Comment entity.
 	// It exists in this package in order to avoid circular dependency with the "comment" package.
 	CommentsInverseTable = "comments"
 	// CommentsColumn is the table column denoting the comments relation/edge.
 	CommentsColumn = "author_id"
-	// FavariteArticleTable is the table that holds the favariteArticle relation/edge. The primary key declared below.
-	FavariteArticleTable = "user_favorites"
-	// FavariteArticleInverseTable is the table name for the Article entity.
+	// FavoriteArticlesTable is the table that holds the favoriteArticles relation/edge. The primary key declared below.
+	FavoriteArticlesTable = "user_favorites"
+	// FavoriteArticlesInverseTable is the table name for the Article entity.
 	// It exists in this package in order to avoid circular dependency with the "article" package.
-	FavariteArticleInverseTable = "articles"
-	// UserFavoritesTable is the table that holds the user_favorites relation/edge.
-	UserFavoritesTable = "user_favorites"
-	// UserFavoritesInverseTable is the table name for the UserFavorite entity.
-	// It exists in this package in order to avoid circular dependency with the "userfavorite" package.
-	UserFavoritesInverseTable = "user_favorites"
-	// UserFavoritesColumn is the table column denoting the user_favorites relation/edge.
-	UserFavoritesColumn = "user_id"
+	FavoriteArticlesInverseTable = "articles"
+	// FollowingTable is the table that holds the following relation/edge. The primary key declared below.
+	FollowingTable = "user_follows"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -88,16 +74,30 @@ var Columns = []string{
 	FieldUpdatedAt,
 }
 
+// ForeignKeys holds the SQL foreign-keys that are owned by the "users"
+// table and are not defined as standalone fields in the schema.
+var ForeignKeys = []string{
+	"author_id",
+}
+
 var (
-	// FavariteArticlePrimaryKey and FavariteArticleColumn2 are the table columns denoting the
-	// primary key for the favariteArticle relation (M2M).
-	FavariteArticlePrimaryKey = []string{"article_id", "user_id"}
+	// FavoriteArticlesPrimaryKey and FavoriteArticlesColumn2 are the table columns denoting the
+	// primary key for the favoriteArticles relation (M2M).
+	FavoriteArticlesPrimaryKey = []string{"user_id", "article_id"}
+	// FollowingPrimaryKey and FollowingColumn2 are the table columns denoting the
+	// primary key for the following relation (M2M).
+	FollowingPrimaryKey = []string{"follower_id", "followee_id"}
 )
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
+			return true
+		}
+	}
+	for i := range ForeignKeys {
+		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -168,107 +168,72 @@ func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
 }
 
-// ByFollowsCount orders the results by follows count.
-func ByFollowsCount(opts ...sql.OrderTermOption) OrderOption {
+// ByArticlesField orders the results by articles field.
+func ByArticlesField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newFollowsStep(), opts...)
+		sqlgraph.OrderByNeighborTerms(s, newArticlesStep(), sql.OrderByField(field, opts...))
 	}
 }
 
-// ByFollows orders the results by follows terms.
-func ByFollows(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+// ByCommentsField orders the results by comments field.
+func ByCommentsField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newFollowsStep(), append([]sql.OrderTerm{term}, terms...)...)
+		sqlgraph.OrderByNeighborTerms(s, newCommentsStep(), sql.OrderByField(field, opts...))
 	}
 }
 
-// ByArticlesCount orders the results by articles count.
-func ByArticlesCount(opts ...sql.OrderTermOption) OrderOption {
+// ByFavoriteArticlesCount orders the results by favoriteArticles count.
+func ByFavoriteArticlesCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newArticlesStep(), opts...)
+		sqlgraph.OrderByNeighborsCount(s, newFavoriteArticlesStep(), opts...)
 	}
 }
 
-// ByArticles orders the results by articles terms.
-func ByArticles(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+// ByFavoriteArticles orders the results by favoriteArticles terms.
+func ByFavoriteArticles(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newArticlesStep(), append([]sql.OrderTerm{term}, terms...)...)
+		sqlgraph.OrderByNeighborTerms(s, newFavoriteArticlesStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 
-// ByCommentsCount orders the results by comments count.
-func ByCommentsCount(opts ...sql.OrderTermOption) OrderOption {
+// ByFollowingCount orders the results by following count.
+func ByFollowingCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newCommentsStep(), opts...)
+		sqlgraph.OrderByNeighborsCount(s, newFollowingStep(), opts...)
 	}
 }
 
-// ByComments orders the results by comments terms.
-func ByComments(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+// ByFollowing orders the results by following terms.
+func ByFollowing(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newCommentsStep(), append([]sql.OrderTerm{term}, terms...)...)
+		sqlgraph.OrderByNeighborTerms(s, newFollowingStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
-}
-
-// ByFavariteArticleCount orders the results by favariteArticle count.
-func ByFavariteArticleCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newFavariteArticleStep(), opts...)
-	}
-}
-
-// ByFavariteArticle orders the results by favariteArticle terms.
-func ByFavariteArticle(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newFavariteArticleStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-
-// ByUserFavoritesCount orders the results by user_favorites count.
-func ByUserFavoritesCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newUserFavoritesStep(), opts...)
-	}
-}
-
-// ByUserFavorites orders the results by user_favorites terms.
-func ByUserFavorites(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newUserFavoritesStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-func newFollowsStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(FollowsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, FollowsTable, FollowsColumn),
-	)
 }
 func newArticlesStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ArticlesInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, ArticlesTable, ArticlesColumn),
+		sqlgraph.Edge(sqlgraph.M2O, false, ArticlesTable, ArticlesColumn),
 	)
 }
 func newCommentsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(CommentsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, CommentsTable, CommentsColumn),
+		sqlgraph.Edge(sqlgraph.M2O, false, CommentsTable, CommentsColumn),
 	)
 }
-func newFavariteArticleStep() *sqlgraph.Step {
+func newFavoriteArticlesStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(FavariteArticleInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2M, true, FavariteArticleTable, FavariteArticlePrimaryKey...),
+		sqlgraph.To(FavoriteArticlesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, false, FavoriteArticlesTable, FavoriteArticlesPrimaryKey...),
 	)
 }
-func newUserFavoritesStep() *sqlgraph.Step {
+func newFollowingStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(UserFavoritesInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, true, UserFavoritesTable, UserFavoritesColumn),
+		sqlgraph.To(Table, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, false, FollowingTable, FollowingPrimaryKey...),
 	)
 }

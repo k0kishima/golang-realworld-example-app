@@ -10,9 +10,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
-	"github.com/k0kishima/golang-realworld-example-app/ent/article"
 	"github.com/k0kishima/golang-realworld-example-app/ent/comment"
-	"github.com/k0kishima/golang-realworld-example-app/ent/user"
 )
 
 // Comment is the model entity for the Comment schema.
@@ -20,10 +18,10 @@ type Comment struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
-	// AuthorID holds the value of the "author_id" field.
-	AuthorID uuid.UUID `json:"author_id,omitempty"`
 	// ArticleID holds the value of the "article_id" field.
 	ArticleID uuid.UUID `json:"article_id,omitempty"`
+	// AuthorID holds the value of the "author_id" field.
+	AuthorID uuid.UUID `json:"author_id,omitempty"`
 	// Body holds the value of the "body" field.
 	Body string `json:"body,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -38,33 +36,18 @@ type Comment struct {
 
 // CommentEdges holds the relations/edges for other nodes in the graph.
 type CommentEdges struct {
-	// CommentAuthor holds the value of the commentAuthor edge.
-	CommentAuthor *User `json:"commentAuthor,omitempty"`
 	// Article holds the value of the article edge.
-	Article *Article `json:"article,omitempty"`
+	Article []*Article `json:"article,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
-}
-
-// CommentAuthorOrErr returns the CommentAuthor value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e CommentEdges) CommentAuthorOrErr() (*User, error) {
-	if e.CommentAuthor != nil {
-		return e.CommentAuthor, nil
-	} else if e.loadedTypes[0] {
-		return nil, &NotFoundError{label: user.Label}
-	}
-	return nil, &NotLoadedError{edge: "commentAuthor"}
+	loadedTypes [1]bool
 }
 
 // ArticleOrErr returns the Article value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e CommentEdges) ArticleOrErr() (*Article, error) {
-	if e.Article != nil {
+// was not loaded in eager-loading.
+func (e CommentEdges) ArticleOrErr() ([]*Article, error) {
+	if e.loadedTypes[0] {
 		return e.Article, nil
-	} else if e.loadedTypes[1] {
-		return nil, &NotFoundError{label: article.Label}
 	}
 	return nil, &NotLoadedError{edge: "article"}
 }
@@ -78,7 +61,7 @@ func (*Comment) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case comment.FieldCreatedAt, comment.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
-		case comment.FieldID, comment.FieldAuthorID, comment.FieldArticleID:
+		case comment.FieldID, comment.FieldArticleID, comment.FieldAuthorID:
 			values[i] = new(uuid.UUID)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -101,17 +84,17 @@ func (c *Comment) assignValues(columns []string, values []any) error {
 			} else if value != nil {
 				c.ID = *value
 			}
-		case comment.FieldAuthorID:
-			if value, ok := values[i].(*uuid.UUID); !ok {
-				return fmt.Errorf("unexpected type %T for field author_id", values[i])
-			} else if value != nil {
-				c.AuthorID = *value
-			}
 		case comment.FieldArticleID:
 			if value, ok := values[i].(*uuid.UUID); !ok {
 				return fmt.Errorf("unexpected type %T for field article_id", values[i])
 			} else if value != nil {
 				c.ArticleID = *value
+			}
+		case comment.FieldAuthorID:
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field author_id", values[i])
+			} else if value != nil {
+				c.AuthorID = *value
 			}
 		case comment.FieldBody:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -144,11 +127,6 @@ func (c *Comment) Value(name string) (ent.Value, error) {
 	return c.selectValues.Get(name)
 }
 
-// QueryCommentAuthor queries the "commentAuthor" edge of the Comment entity.
-func (c *Comment) QueryCommentAuthor() *UserQuery {
-	return NewCommentClient(c.config).QueryCommentAuthor(c)
-}
-
 // QueryArticle queries the "article" edge of the Comment entity.
 func (c *Comment) QueryArticle() *ArticleQuery {
 	return NewCommentClient(c.config).QueryArticle(c)
@@ -177,11 +155,11 @@ func (c *Comment) String() string {
 	var builder strings.Builder
 	builder.WriteString("Comment(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", c.ID))
-	builder.WriteString("author_id=")
-	builder.WriteString(fmt.Sprintf("%v", c.AuthorID))
-	builder.WriteString(", ")
 	builder.WriteString("article_id=")
 	builder.WriteString(fmt.Sprintf("%v", c.ArticleID))
+	builder.WriteString(", ")
+	builder.WriteString("author_id=")
+	builder.WriteString(fmt.Sprintf("%v", c.AuthorID))
 	builder.WriteString(", ")
 	builder.WriteString("body=")
 	builder.WriteString(c.Body)

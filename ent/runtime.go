@@ -7,13 +7,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/article"
-	"github.com/k0kishima/golang-realworld-example-app/ent/articletag"
 	"github.com/k0kishima/golang-realworld-example-app/ent/comment"
 	"github.com/k0kishima/golang-realworld-example-app/ent/schema"
 	"github.com/k0kishima/golang-realworld-example-app/ent/tag"
 	"github.com/k0kishima/golang-realworld-example-app/ent/user"
-	"github.com/k0kishima/golang-realworld-example-app/ent/userfavorite"
-	"github.com/k0kishima/golang-realworld-example-app/ent/userfollow"
 )
 
 // The init function reads all schema descriptors with runtime code
@@ -108,16 +105,6 @@ func init() {
 	articleDescID := articleFields[0].Descriptor()
 	// article.DefaultID holds the default value on creation for the id field.
 	article.DefaultID = articleDescID.Default.(func() uuid.UUID)
-	articletagFields := schema.ArticleTag{}.Fields()
-	_ = articletagFields
-	// articletagDescCreatedAt is the schema descriptor for created_at field.
-	articletagDescCreatedAt := articletagFields[3].Descriptor()
-	// articletag.DefaultCreatedAt holds the default value on creation for the created_at field.
-	articletag.DefaultCreatedAt = articletagDescCreatedAt.Default.(func() time.Time)
-	// articletagDescID is the schema descriptor for id field.
-	articletagDescID := articletagFields[0].Descriptor()
-	// articletag.DefaultID holds the default value on creation for the id field.
-	articletag.DefaultID = articletagDescID.Default.(func() uuid.UUID)
 	commentFields := schema.Comment{}.Fields()
 	_ = commentFields
 	// commentDescBody is the schema descriptor for body field.
@@ -202,24 +189,4 @@ func init() {
 	userDescID := userFields[0].Descriptor()
 	// user.DefaultID holds the default value on creation for the id field.
 	user.DefaultID = userDescID.Default.(func() uuid.UUID)
-	userfavoriteFields := schema.UserFavorite{}.Fields()
-	_ = userfavoriteFields
-	// userfavoriteDescCreatedAt is the schema descriptor for created_at field.
-	userfavoriteDescCreatedAt := userfavoriteFields[3].Descriptor()
-	// userfavorite.DefaultCreatedAt holds the default value on creation for the created_at field.
-	userfavorite.DefaultCreatedAt = userfavoriteDescCreatedAt.Default.(func() time.Time)
-	// userfavoriteDescID is the schema descriptor for id field.
-	userfavoriteDescID := userfavoriteFields[0].Descriptor()
-	// userfavorite.DefaultID holds the default value on creation for the id field.
-	userfavorite.DefaultID = userfavoriteDescID.Default.(func() uuid.UUID)
-	userfollowFields := schema.UserFollow{}.Fields()
-	_ = userfollowFields
-	// userfollowDescCreatedAt is the schema descriptor for created_at field.
-	userfollowDescCreatedAt := userfollowFields[3].Descriptor()
-	// userfollow.DefaultCreatedAt holds the default value on creation for the created_at field.
-	userfollow.DefaultCreatedAt = userfollowDescCreatedAt.Default.(func() time.Time)
-	// userfollowDescID is the schema descriptor for id field.
-	userfollowDescID := userfollowFields[0].Descriptor()
-	// userfollow.DefaultID holds the default value on creation for the id field.
-	userfollow.DefaultID = userfollowDescID.Default.(func() uuid.UUID)
 }

@@ -19,24 +19,15 @@ const (
 	FieldDescription = "description"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
-	// EdgeArticle holds the string denoting the article edge name in mutations.
-	EdgeArticle = "article"
-	// EdgeTagArticle holds the string denoting the tag_article edge name in mutations.
-	EdgeTagArticle = "tag_article"
+	// EdgeArticles holds the string denoting the articles edge name in mutations.
+	EdgeArticles = "articles"
 	// Table holds the table name of the tag in the database.
 	Table = "tags"
-	// ArticleTable is the table that holds the article relation/edge. The primary key declared below.
-	ArticleTable = "article_tags"
-	// ArticleInverseTable is the table name for the Article entity.
+	// ArticlesTable is the table that holds the articles relation/edge. The primary key declared below.
+	ArticlesTable = "article_tags"
+	// ArticlesInverseTable is the table name for the Article entity.
 	// It exists in this package in order to avoid circular dependency with the "article" package.
-	ArticleInverseTable = "articles"
-	// TagArticleTable is the table that holds the tag_article relation/edge.
-	TagArticleTable = "article_tags"
-	// TagArticleInverseTable is the table name for the ArticleTag entity.
-	// It exists in this package in order to avoid circular dependency with the "articletag" package.
-	TagArticleInverseTable = "article_tags"
-	// TagArticleColumn is the table column denoting the tag_article relation/edge.
-	TagArticleColumn = "tag_id"
+	ArticlesInverseTable = "articles"
 )
 
 // Columns holds all SQL columns for tag fields.
@@ -47,9 +38,9 @@ var Columns = []string{
 }
 
 var (
-	// ArticlePrimaryKey and ArticleColumn2 are the table columns denoting the
-	// primary key for the article relation (M2M).
-	ArticlePrimaryKey = []string{"article_id", "tag_id"}
+	// ArticlesPrimaryKey and ArticlesColumn2 are the table columns denoting the
+	// primary key for the articles relation (M2M).
+	ArticlesPrimaryKey = []string{"article_id", "tag_id"}
 )
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -89,44 +80,23 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
 }
 
-// ByArticleCount orders the results by article count.
-func ByArticleCount(opts ...sql.OrderTermOption) OrderOption {
+// ByArticlesCount orders the results by articles count.
+func ByArticlesCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newArticleStep(), opts...)
+		sqlgraph.OrderByNeighborsCount(s, newArticlesStep(), opts...)
 	}
 }
 
-// ByArticle orders the results by article terms.
-func ByArticle(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+// ByArticles orders the results by articles terms.
+func ByArticles(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newArticleStep(), append([]sql.OrderTerm{term}, terms...)...)
+		sqlgraph.OrderByNeighborTerms(s, newArticlesStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
-
-// ByTagArticleCount orders the results by tag_article count.
-func ByTagArticleCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newTagArticleStep(), opts...)
-	}
-}
-
-// ByTagArticle orders the results by tag_article terms.
-func ByTagArticle(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newTagArticleStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-func newArticleStep() *sqlgraph.Step {
+func newArticlesStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(ArticleInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2M, true, ArticleTable, ArticlePrimaryKey...),
-	)
-}
-func newTagArticleStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(TagArticleInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, true, TagArticleTable, TagArticleColumn),
+		sqlgraph.To(ArticlesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, true, ArticlesTable, ArticlesPrimaryKey...),
 	)
 }

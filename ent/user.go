@@ -10,6 +10,8 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
+	"github.com/k0kishima/golang-realworld-example-app/ent/article"
+	"github.com/k0kishima/golang-realworld-example-app/ent/comment"
 	"github.com/k0kishima/golang-realworld-example-app/ent/user"
 )
 
@@ -35,69 +37,63 @@ type User struct {
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the UserQuery when eager-loading is set.
 	Edges        UserEdges `json:"edges"`
+	author_id    *uuid.UUID
 	selectValues sql.SelectValues
 }
 
 // UserEdges holds the relations/edges for other nodes in the graph.
 type UserEdges struct {
-	// Follows holds the value of the follows edge.
-	Follows []*UserFollow `json:"follows,omitempty"`
 	// Articles holds the value of the articles edge.
-	Articles []*Article `json:"articles,omitempty"`
+	Articles *Article `json:"articles,omitempty"`
 	// Comments holds the value of the comments edge.
-	Comments []*Comment `json:"comments,omitempty"`
-	// FavariteArticle holds the value of the favariteArticle edge.
-	FavariteArticle []*Article `json:"favariteArticle,omitempty"`
-	// UserFavorites holds the value of the user_favorites edge.
-	UserFavorites []*UserFavorite `json:"user_favorites,omitempty"`
+	Comments *Comment `json:"comments,omitempty"`
+	// FavoriteArticles holds the value of the favoriteArticles edge.
+	FavoriteArticles []*Article `json:"favoriteArticles,omitempty"`
+	// Following holds the value of the following edge.
+	Following []*User `json:"following,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [5]bool
-}
-
-// FollowsOrErr returns the Follows value or an error if the edge
-// was not loaded in eager-loading.
-func (e UserEdges) FollowsOrErr() ([]*UserFollow, error) {
-	if e.loadedTypes[0] {
-		return e.Follows, nil
-	}
-	return nil, &NotLoadedError{edge: "follows"}
+	loadedTypes [4]bool
 }
 
 // ArticlesOrErr returns the Articles value or an error if the edge
-// was not loaded in eager-loading.
-func (e UserEdges) ArticlesOrErr() ([]*Article, error) {
-	if e.loadedTypes[1] {
+// was not loaded in eager-loading, or loaded but was not found.
+func (e UserEdges) ArticlesOrErr() (*Article, error) {
+	if e.Articles != nil {
 		return e.Articles, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: article.Label}
 	}
 	return nil, &NotLoadedError{edge: "articles"}
 }
 
 // CommentsOrErr returns the Comments value or an error if the edge
-// was not loaded in eager-loading.
-func (e UserEdges) CommentsOrErr() ([]*Comment, error) {
-	if e.loadedTypes[2] {
+// was not loaded in eager-loading, or loaded but was not found.
+func (e UserEdges) CommentsOrErr() (*Comment, error) {
+	if e.Comments != nil {
 		return e.Comments, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: comment.Label}
 	}
 	return nil, &NotLoadedError{edge: "comments"}
 }
 
-// FavariteArticleOrErr returns the FavariteArticle value or an error if the edge
+// FavoriteArticlesOrErr returns the FavoriteArticles value or an error if the edge
 // was not loaded in eager-loading.
-func (e UserEdges) FavariteArticleOrErr() ([]*Article, error) {
-	if e.loadedTypes[3] {
-		return e.FavariteArticle, nil
+func (e UserEdges) FavoriteArticlesOrErr() ([]*Article, error) {
+	if e.loadedTypes[2] {
+		return e.FavoriteArticles, nil
 	}
-	return nil, &NotLoadedError{edge: "favariteArticle"}
+	return nil, &NotLoadedError{edge: "favoriteArticles"}
 }
 
-// UserFavoritesOrErr returns the UserFavorites value or an error if the edge
+// FollowingOrErr returns the Following value or an error if the edge
 // was not loaded in eager-loading.
-func (e UserEdges) UserFavoritesOrErr() ([]*UserFavorite, error) {
-	if e.loadedTypes[4] {
-		return e.UserFavorites, nil
+func (e UserEdges) FollowingOrErr() ([]*User, error) {
+	if e.loadedTypes[3] {
+		return e.Following, nil
 	}
-	return nil, &NotLoadedError{edge: "user_favorites"}
+	return nil, &NotLoadedError{edge: "following"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -111,6 +107,8 @@ func (*User) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullTime)
 		case user.FieldID:
 			values[i] = new(uuid.UUID)
+		case user.ForeignKeys[0]: // author_id
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -174,6 +172,13 @@ func (u *User) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				u.UpdatedAt = value.Time
 			}
+		case user.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field author_id", values[i])
+			} else if value.Valid {
+				u.author_id = new(uuid.UUID)
+				*u.author_id = *value.S.(*uuid.UUID)
+			}
 		default:
 			u.selectValues.Set(columns[i], values[i])
 		}
@@ -187,11 +192,6 @@ func (u *User) Value(name string) (ent.Value, error) {
 	return u.selectValues.Get(name)
 }
 
-// QueryFollows queries the "follows" edge of the User entity.
-func (u *User) QueryFollows() *UserFollowQuery {
-	return NewUserClient(u.config).QueryFollows(u)
-}
-
 // QueryArticles queries the "articles" edge of the User entity.
 func (u *User) QueryArticles() *ArticleQuery {
 	return NewUserClient(u.config).QueryArticles(u)
@@ -202,14 +202,14 @@ func (u *User) QueryComments() *CommentQuery {
 	return NewUserClient(u.config).QueryComments(u)
 }
 
-// QueryFavariteArticle queries the "favariteArticle" edge of the User entity.
-func (u *User) QueryFavariteArticle() *ArticleQuery {
-	return NewUserClient(u.config).QueryFavariteArticle(u)
+// QueryFavoriteArticles queries the "favoriteArticles" edge of the User entity.
+func (u *User) QueryFavoriteArticles() *ArticleQuery {
+	return NewUserClient(u.config).QueryFavoriteArticles(u)
 }
 
-// QueryUserFavorites queries the "user_favorites" edge of the User entity.
-func (u *User) QueryUserFavorites() *UserFavoriteQuery {
-	return NewUserClient(u.config).QueryUserFavorites(u)
+// QueryFollowing queries the "following" edge of the User entity.
+func (u *User) QueryFollowing() *UserQuery {
+	return NewUserClient(u.config).QueryFollowing(u)
 }
 
 // Update returns a builder for updating this User.
