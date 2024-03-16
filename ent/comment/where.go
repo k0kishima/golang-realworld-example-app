@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
-	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/predicate"
 )
@@ -56,11 +55,6 @@ func IDLTE(id uuid.UUID) predicate.Comment {
 	return predicate.Comment(sql.FieldLTE(FieldID, id))
 }
 
-// ArticleID applies equality check predicate on the "article_id" field. It's identical to ArticleIDEQ.
-func ArticleID(v uuid.UUID) predicate.Comment {
-	return predicate.Comment(sql.FieldEQ(FieldArticleID, v))
-}
-
 // AuthorID applies equality check predicate on the "author_id" field. It's identical to AuthorIDEQ.
 func AuthorID(v uuid.UUID) predicate.Comment {
 	return predicate.Comment(sql.FieldEQ(FieldAuthorID, v))
@@ -79,46 +73,6 @@ func CreatedAt(v time.Time) predicate.Comment {
 // UpdatedAt applies equality check predicate on the "updated_at" field. It's identical to UpdatedAtEQ.
 func UpdatedAt(v time.Time) predicate.Comment {
 	return predicate.Comment(sql.FieldEQ(FieldUpdatedAt, v))
-}
-
-// ArticleIDEQ applies the EQ predicate on the "article_id" field.
-func ArticleIDEQ(v uuid.UUID) predicate.Comment {
-	return predicate.Comment(sql.FieldEQ(FieldArticleID, v))
-}
-
-// ArticleIDNEQ applies the NEQ predicate on the "article_id" field.
-func ArticleIDNEQ(v uuid.UUID) predicate.Comment {
-	return predicate.Comment(sql.FieldNEQ(FieldArticleID, v))
-}
-
-// ArticleIDIn applies the In predicate on the "article_id" field.
-func ArticleIDIn(vs ...uuid.UUID) predicate.Comment {
-	return predicate.Comment(sql.FieldIn(FieldArticleID, vs...))
-}
-
-// ArticleIDNotIn applies the NotIn predicate on the "article_id" field.
-func ArticleIDNotIn(vs ...uuid.UUID) predicate.Comment {
-	return predicate.Comment(sql.FieldNotIn(FieldArticleID, vs...))
-}
-
-// ArticleIDGT applies the GT predicate on the "article_id" field.
-func ArticleIDGT(v uuid.UUID) predicate.Comment {
-	return predicate.Comment(sql.FieldGT(FieldArticleID, v))
-}
-
-// ArticleIDGTE applies the GTE predicate on the "article_id" field.
-func ArticleIDGTE(v uuid.UUID) predicate.Comment {
-	return predicate.Comment(sql.FieldGTE(FieldArticleID, v))
-}
-
-// ArticleIDLT applies the LT predicate on the "article_id" field.
-func ArticleIDLT(v uuid.UUID) predicate.Comment {
-	return predicate.Comment(sql.FieldLT(FieldArticleID, v))
-}
-
-// ArticleIDLTE applies the LTE predicate on the "article_id" field.
-func ArticleIDLTE(v uuid.UUID) predicate.Comment {
-	return predicate.Comment(sql.FieldLTE(FieldArticleID, v))
 }
 
 // AuthorIDEQ applies the EQ predicate on the "author_id" field.
@@ -304,29 +258,6 @@ func UpdatedAtLT(v time.Time) predicate.Comment {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.Comment {
 	return predicate.Comment(sql.FieldLTE(FieldUpdatedAt, v))
-}
-
-// HasArticle applies the HasEdge predicate on the "article" edge.
-func HasArticle() predicate.Comment {
-	return predicate.Comment(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, ArticleTable, ArticleColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasArticleWith applies the HasEdge predicate on the "article" edge with a given conditions (other predicates).
-func HasArticleWith(preds ...predicate.Article) predicate.Comment {
-	return predicate.Comment(func(s *sql.Selector) {
-		step := newArticleStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
 }
 
 // And groups predicates with the AND operator between them.

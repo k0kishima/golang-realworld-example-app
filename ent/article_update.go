@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/article"
+	"github.com/k0kishima/golang-realworld-example-app/ent/comment"
 	"github.com/k0kishima/golang-realworld-example-app/ent/predicate"
 	"github.com/k0kishima/golang-realworld-example-app/ent/tag"
 )
@@ -107,6 +108,21 @@ func (au *ArticleUpdate) AddTags(t ...*Tag) *ArticleUpdate {
 	return au.AddTagIDs(ids...)
 }
 
+// AddCommentIDs adds the "comments" edge to the Comment entity by IDs.
+func (au *ArticleUpdate) AddCommentIDs(ids ...uuid.UUID) *ArticleUpdate {
+	au.mutation.AddCommentIDs(ids...)
+	return au
+}
+
+// AddComments adds the "comments" edges to the Comment entity.
+func (au *ArticleUpdate) AddComments(c ...*Comment) *ArticleUpdate {
+	ids := make([]uuid.UUID, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return au.AddCommentIDs(ids...)
+}
+
 // Mutation returns the ArticleMutation object of the builder.
 func (au *ArticleUpdate) Mutation() *ArticleMutation {
 	return au.mutation
@@ -131,6 +147,27 @@ func (au *ArticleUpdate) RemoveTags(t ...*Tag) *ArticleUpdate {
 		ids[i] = t[i].ID
 	}
 	return au.RemoveTagIDs(ids...)
+}
+
+// ClearComments clears all "comments" edges to the Comment entity.
+func (au *ArticleUpdate) ClearComments() *ArticleUpdate {
+	au.mutation.ClearComments()
+	return au
+}
+
+// RemoveCommentIDs removes the "comments" edge to Comment entities by IDs.
+func (au *ArticleUpdate) RemoveCommentIDs(ids ...uuid.UUID) *ArticleUpdate {
+	au.mutation.RemoveCommentIDs(ids...)
+	return au
+}
+
+// RemoveComments removes "comments" edges to Comment entities.
+func (au *ArticleUpdate) RemoveComments(c ...*Comment) *ArticleUpdate {
+	ids := make([]uuid.UUID, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return au.RemoveCommentIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -266,6 +303,51 @@ func (au *ArticleUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if au.mutation.CommentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   article.CommentsTable,
+			Columns: []string{article.CommentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(comment.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := au.mutation.RemovedCommentsIDs(); len(nodes) > 0 && !au.mutation.CommentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   article.CommentsTable,
+			Columns: []string{article.CommentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(comment.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := au.mutation.CommentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   article.CommentsTable,
+			Columns: []string{article.CommentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(comment.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, au.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{article.Label}
@@ -363,6 +445,21 @@ func (auo *ArticleUpdateOne) AddTags(t ...*Tag) *ArticleUpdateOne {
 	return auo.AddTagIDs(ids...)
 }
 
+// AddCommentIDs adds the "comments" edge to the Comment entity by IDs.
+func (auo *ArticleUpdateOne) AddCommentIDs(ids ...uuid.UUID) *ArticleUpdateOne {
+	auo.mutation.AddCommentIDs(ids...)
+	return auo
+}
+
+// AddComments adds the "comments" edges to the Comment entity.
+func (auo *ArticleUpdateOne) AddComments(c ...*Comment) *ArticleUpdateOne {
+	ids := make([]uuid.UUID, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return auo.AddCommentIDs(ids...)
+}
+
 // Mutation returns the ArticleMutation object of the builder.
 func (auo *ArticleUpdateOne) Mutation() *ArticleMutation {
 	return auo.mutation
@@ -387,6 +484,27 @@ func (auo *ArticleUpdateOne) RemoveTags(t ...*Tag) *ArticleUpdateOne {
 		ids[i] = t[i].ID
 	}
 	return auo.RemoveTagIDs(ids...)
+}
+
+// ClearComments clears all "comments" edges to the Comment entity.
+func (auo *ArticleUpdateOne) ClearComments() *ArticleUpdateOne {
+	auo.mutation.ClearComments()
+	return auo
+}
+
+// RemoveCommentIDs removes the "comments" edge to Comment entities by IDs.
+func (auo *ArticleUpdateOne) RemoveCommentIDs(ids ...uuid.UUID) *ArticleUpdateOne {
+	auo.mutation.RemoveCommentIDs(ids...)
+	return auo
+}
+
+// RemoveComments removes "comments" edges to Comment entities.
+func (auo *ArticleUpdateOne) RemoveComments(c ...*Comment) *ArticleUpdateOne {
+	ids := make([]uuid.UUID, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return auo.RemoveCommentIDs(ids...)
 }
 
 // Where appends a list predicates to the ArticleUpdate builder.
@@ -545,6 +663,51 @@ func (auo *ArticleUpdateOne) sqlSave(ctx context.Context) (_node *Article, err e
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(tag.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if auo.mutation.CommentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   article.CommentsTable,
+			Columns: []string{article.CommentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(comment.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := auo.mutation.RemovedCommentsIDs(); len(nodes) > 0 && !auo.mutation.CommentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   article.CommentsTable,
+			Columns: []string{article.CommentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(comment.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := auo.mutation.CommentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   article.CommentsTable,
+			Columns: []string{article.CommentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(comment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

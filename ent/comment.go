@@ -18,8 +18,6 @@ type Comment struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
-	// ArticleID holds the value of the "article_id" field.
-	ArticleID uuid.UUID `json:"article_id,omitempty"`
 	// AuthorID holds the value of the "author_id" field.
 	AuthorID uuid.UUID `json:"author_id,omitempty"`
 	// Body holds the value of the "body" field.
@@ -27,29 +25,9 @@ type Comment struct {
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt time.Time `json:"updated_at,omitempty"`
-	// Edges holds the relations/edges for other nodes in the graph.
-	// The values are being populated by the CommentQuery when eager-loading is set.
-	Edges        CommentEdges `json:"edges"`
+	UpdatedAt    time.Time `json:"updated_at,omitempty"`
+	article_id   *uuid.UUID
 	selectValues sql.SelectValues
-}
-
-// CommentEdges holds the relations/edges for other nodes in the graph.
-type CommentEdges struct {
-	// Article holds the value of the article edge.
-	Article []*Article `json:"article,omitempty"`
-	// loadedTypes holds the information for reporting if a
-	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
-}
-
-// ArticleOrErr returns the Article value or an error if the edge
-// was not loaded in eager-loading.
-func (e CommentEdges) ArticleOrErr() ([]*Article, error) {
-	if e.loadedTypes[0] {
-		return e.Article, nil
-	}
-	return nil, &NotLoadedError{edge: "article"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -61,8 +39,10 @@ func (*Comment) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case comment.FieldCreatedAt, comment.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
-		case comment.FieldID, comment.FieldArticleID, comment.FieldAuthorID:
+		case comment.FieldID, comment.FieldAuthorID:
 			values[i] = new(uuid.UUID)
+		case comment.ForeignKeys[0]: // article_id
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -83,12 +63,6 @@ func (c *Comment) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
 				c.ID = *value
-			}
-		case comment.FieldArticleID:
-			if value, ok := values[i].(*uuid.UUID); !ok {
-				return fmt.Errorf("unexpected type %T for field article_id", values[i])
-			} else if value != nil {
-				c.ArticleID = *value
 			}
 		case comment.FieldAuthorID:
 			if value, ok := values[i].(*uuid.UUID); !ok {
@@ -114,6 +88,13 @@ func (c *Comment) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				c.UpdatedAt = value.Time
 			}
+		case comment.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field article_id", values[i])
+			} else if value.Valid {
+				c.article_id = new(uuid.UUID)
+				*c.article_id = *value.S.(*uuid.UUID)
+			}
 		default:
 			c.selectValues.Set(columns[i], values[i])
 		}
@@ -125,11 +106,6 @@ func (c *Comment) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (c *Comment) Value(name string) (ent.Value, error) {
 	return c.selectValues.Get(name)
-}
-
-// QueryArticle queries the "article" edge of the Comment entity.
-func (c *Comment) QueryArticle() *ArticleQuery {
-	return NewCommentClient(c.config).QueryArticle(c)
 }
 
 // Update returns a builder for updating this Comment.
@@ -155,9 +131,6 @@ func (c *Comment) String() string {
 	var builder strings.Builder
 	builder.WriteString("Comment(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", c.ID))
-	builder.WriteString("article_id=")
-	builder.WriteString(fmt.Sprintf("%v", c.ArticleID))
-	builder.WriteString(", ")
 	builder.WriteString("author_id=")
 	builder.WriteString(fmt.Sprintf("%v", c.AuthorID))
 	builder.WriteString(", ")

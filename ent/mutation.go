@@ -51,7 +51,8 @@ type ArticleMutation struct {
 	tags            map[uuid.UUID]struct{}
 	removedtags     map[uuid.UUID]struct{}
 	clearedtags     bool
-	comments        *uuid.UUID
+	comments        map[uuid.UUID]struct{}
+	removedcomments map[uuid.UUID]struct{}
 	clearedcomments bool
 	users           map[uuid.UUID]struct{}
 	removedusers    map[uuid.UUID]struct{}
@@ -471,9 +472,14 @@ func (m *ArticleMutation) ResetTags() {
 	m.removedtags = nil
 }
 
-// SetCommentsID sets the "comments" edge to the Comment entity by id.
-func (m *ArticleMutation) SetCommentsID(id uuid.UUID) {
-	m.comments = &id
+// AddCommentIDs adds the "comments" edge to the Comment entity by ids.
+func (m *ArticleMutation) AddCommentIDs(ids ...uuid.UUID) {
+	if m.comments == nil {
+		m.comments = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.comments[ids[i]] = struct{}{}
+	}
 }
 
 // ClearComments clears the "comments" edge to the Comment entity.
@@ -486,20 +492,29 @@ func (m *ArticleMutation) CommentsCleared() bool {
 	return m.clearedcomments
 }
 
-// CommentsID returns the "comments" edge ID in the mutation.
-func (m *ArticleMutation) CommentsID() (id uuid.UUID, exists bool) {
-	if m.comments != nil {
-		return *m.comments, true
+// RemoveCommentIDs removes the "comments" edge to the Comment entity by IDs.
+func (m *ArticleMutation) RemoveCommentIDs(ids ...uuid.UUID) {
+	if m.removedcomments == nil {
+		m.removedcomments = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.comments, ids[i])
+		m.removedcomments[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedComments returns the removed IDs of the "comments" edge to the Comment entity.
+func (m *ArticleMutation) RemovedCommentsIDs() (ids []uuid.UUID) {
+	for id := range m.removedcomments {
+		ids = append(ids, id)
 	}
 	return
 }
 
 // CommentsIDs returns the "comments" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// CommentsID instead. It exists only for internal usage by the builders.
 func (m *ArticleMutation) CommentsIDs() (ids []uuid.UUID) {
-	if id := m.comments; id != nil {
-		ids = append(ids, *id)
+	for id := range m.comments {
+		ids = append(ids, id)
 	}
 	return
 }
@@ -508,6 +523,7 @@ func (m *ArticleMutation) CommentsIDs() (ids []uuid.UUID) {
 func (m *ArticleMutation) ResetComments() {
 	m.comments = nil
 	m.clearedcomments = false
+	m.removedcomments = nil
 }
 
 // AddUserIDs adds the "users" edge to the User entity by ids.
@@ -823,9 +839,11 @@ func (m *ArticleMutation) AddedIDs(name string) []ent.Value {
 		}
 		return ids
 	case article.EdgeComments:
-		if id := m.comments; id != nil {
-			return []ent.Value{*id}
+		ids := make([]ent.Value, 0, len(m.comments))
+		for id := range m.comments {
+			ids = append(ids, id)
 		}
+		return ids
 	case article.EdgeUsers:
 		ids := make([]ent.Value, 0, len(m.users))
 		for id := range m.users {
@@ -842,6 +860,9 @@ func (m *ArticleMutation) RemovedEdges() []string {
 	if m.removedtags != nil {
 		edges = append(edges, article.EdgeTags)
 	}
+	if m.removedcomments != nil {
+		edges = append(edges, article.EdgeComments)
+	}
 	if m.removedusers != nil {
 		edges = append(edges, article.EdgeUsers)
 	}
@@ -855,6 +876,12 @@ func (m *ArticleMutation) RemovedIDs(name string) []ent.Value {
 	case article.EdgeTags:
 		ids := make([]ent.Value, 0, len(m.removedtags))
 		for id := range m.removedtags {
+			ids = append(ids, id)
+		}
+		return ids
+	case article.EdgeComments:
+		ids := make([]ent.Value, 0, len(m.removedcomments))
+		for id := range m.removedcomments {
 			ids = append(ids, id)
 		}
 		return ids
@@ -901,9 +928,6 @@ func (m *ArticleMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *ArticleMutation) ClearEdge(name string) error {
 	switch name {
-	case article.EdgeComments:
-		m.ClearComments()
-		return nil
 	}
 	return fmt.Errorf("unknown Article unique edge %s", name)
 }
@@ -928,21 +952,17 @@ func (m *ArticleMutation) ResetEdge(name string) error {
 // CommentMutation represents an operation that mutates the Comment nodes in the graph.
 type CommentMutation struct {
 	config
-	op             Op
-	typ            string
-	id             *uuid.UUID
-	article_id     *uuid.UUID
-	author_id      *uuid.UUID
-	body           *string
-	created_at     *time.Time
-	updated_at     *time.Time
-	clearedFields  map[string]struct{}
-	article        map[uuid.UUID]struct{}
-	removedarticle map[uuid.UUID]struct{}
-	clearedarticle bool
-	done           bool
-	oldValue       func(context.Context) (*Comment, error)
-	predicates     []predicate.Comment
+	op            Op
+	typ           string
+	id            *uuid.UUID
+	author_id     *uuid.UUID
+	body          *string
+	created_at    *time.Time
+	updated_at    *time.Time
+	clearedFields map[string]struct{}
+	done          bool
+	oldValue      func(context.Context) (*Comment, error)
+	predicates    []predicate.Comment
 }
 
 var _ ent.Mutation = (*CommentMutation)(nil)
@@ -1047,42 +1067,6 @@ func (m *CommentMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
-}
-
-// SetArticleID sets the "article_id" field.
-func (m *CommentMutation) SetArticleID(u uuid.UUID) {
-	m.article_id = &u
-}
-
-// ArticleID returns the value of the "article_id" field in the mutation.
-func (m *CommentMutation) ArticleID() (r uuid.UUID, exists bool) {
-	v := m.article_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldArticleID returns the old "article_id" field's value of the Comment entity.
-// If the Comment object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CommentMutation) OldArticleID(ctx context.Context) (v uuid.UUID, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldArticleID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldArticleID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldArticleID: %w", err)
-	}
-	return oldValue.ArticleID, nil
-}
-
-// ResetArticleID resets all changes to the "article_id" field.
-func (m *CommentMutation) ResetArticleID() {
-	m.article_id = nil
 }
 
 // SetAuthorID sets the "author_id" field.
@@ -1229,60 +1213,6 @@ func (m *CommentMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
-// AddArticleIDs adds the "article" edge to the Article entity by ids.
-func (m *CommentMutation) AddArticleIDs(ids ...uuid.UUID) {
-	if m.article == nil {
-		m.article = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		m.article[ids[i]] = struct{}{}
-	}
-}
-
-// ClearArticle clears the "article" edge to the Article entity.
-func (m *CommentMutation) ClearArticle() {
-	m.clearedarticle = true
-}
-
-// ArticleCleared reports if the "article" edge to the Article entity was cleared.
-func (m *CommentMutation) ArticleCleared() bool {
-	return m.clearedarticle
-}
-
-// RemoveArticleIDs removes the "article" edge to the Article entity by IDs.
-func (m *CommentMutation) RemoveArticleIDs(ids ...uuid.UUID) {
-	if m.removedarticle == nil {
-		m.removedarticle = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		delete(m.article, ids[i])
-		m.removedarticle[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedArticle returns the removed IDs of the "article" edge to the Article entity.
-func (m *CommentMutation) RemovedArticleIDs() (ids []uuid.UUID) {
-	for id := range m.removedarticle {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ArticleIDs returns the "article" edge IDs in the mutation.
-func (m *CommentMutation) ArticleIDs() (ids []uuid.UUID) {
-	for id := range m.article {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetArticle resets all changes to the "article" edge.
-func (m *CommentMutation) ResetArticle() {
-	m.article = nil
-	m.clearedarticle = false
-	m.removedarticle = nil
-}
-
 // Where appends a list predicates to the CommentMutation builder.
 func (m *CommentMutation) Where(ps ...predicate.Comment) {
 	m.predicates = append(m.predicates, ps...)
@@ -1317,10 +1247,7 @@ func (m *CommentMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CommentMutation) Fields() []string {
-	fields := make([]string, 0, 5)
-	if m.article_id != nil {
-		fields = append(fields, comment.FieldArticleID)
-	}
+	fields := make([]string, 0, 4)
 	if m.author_id != nil {
 		fields = append(fields, comment.FieldAuthorID)
 	}
@@ -1341,8 +1268,6 @@ func (m *CommentMutation) Fields() []string {
 // schema.
 func (m *CommentMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case comment.FieldArticleID:
-		return m.ArticleID()
 	case comment.FieldAuthorID:
 		return m.AuthorID()
 	case comment.FieldBody:
@@ -1360,8 +1285,6 @@ func (m *CommentMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *CommentMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case comment.FieldArticleID:
-		return m.OldArticleID(ctx)
 	case comment.FieldAuthorID:
 		return m.OldAuthorID(ctx)
 	case comment.FieldBody:
@@ -1379,13 +1302,6 @@ func (m *CommentMutation) OldField(ctx context.Context, name string) (ent.Value,
 // type.
 func (m *CommentMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case comment.FieldArticleID:
-		v, ok := value.(uuid.UUID)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetArticleID(v)
-		return nil
 	case comment.FieldAuthorID:
 		v, ok := value.(uuid.UUID)
 		if !ok {
@@ -1463,9 +1379,6 @@ func (m *CommentMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *CommentMutation) ResetField(name string) error {
 	switch name {
-	case comment.FieldArticleID:
-		m.ResetArticleID()
-		return nil
 	case comment.FieldAuthorID:
 		m.ResetAuthorID()
 		return nil
@@ -1484,85 +1397,49 @@ func (m *CommentMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *CommentMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.article != nil {
-		edges = append(edges, comment.EdgeArticle)
-	}
+	edges := make([]string, 0, 0)
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *CommentMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case comment.EdgeArticle:
-		ids := make([]ent.Value, 0, len(m.article))
-		for id := range m.article {
-			ids = append(ids, id)
-		}
-		return ids
-	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *CommentMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.removedarticle != nil {
-		edges = append(edges, comment.EdgeArticle)
-	}
+	edges := make([]string, 0, 0)
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *CommentMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	case comment.EdgeArticle:
-		ids := make([]ent.Value, 0, len(m.removedarticle))
-		for id := range m.removedarticle {
-			ids = append(ids, id)
-		}
-		return ids
-	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *CommentMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.clearedarticle {
-		edges = append(edges, comment.EdgeArticle)
-	}
+	edges := make([]string, 0, 0)
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *CommentMutation) EdgeCleared(name string) bool {
-	switch name {
-	case comment.EdgeArticle:
-		return m.clearedarticle
-	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *CommentMutation) ClearEdge(name string) error {
-	switch name {
-	}
 	return fmt.Errorf("unknown Comment unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *CommentMutation) ResetEdge(name string) error {
-	switch name {
-	case comment.EdgeArticle:
-		m.ResetArticle()
-		return nil
-	}
 	return fmt.Errorf("unknown Comment edge %s", name)
 }
 

@@ -11,7 +11,6 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/k0kishima/golang-realworld-example-app/ent/article"
-	"github.com/k0kishima/golang-realworld-example-app/ent/comment"
 )
 
 // Article is the model entity for the Article schema.
@@ -35,9 +34,8 @@ type Article struct {
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ArticleQuery when eager-loading is set.
-	Edges            ArticleEdges `json:"edges"`
-	article_comments *uuid.UUID
-	selectValues     sql.SelectValues
+	Edges        ArticleEdges `json:"edges"`
+	selectValues sql.SelectValues
 }
 
 // ArticleEdges holds the relations/edges for other nodes in the graph.
@@ -45,7 +43,7 @@ type ArticleEdges struct {
 	// Tags holds the value of the tags edge.
 	Tags []*Tag `json:"tags,omitempty"`
 	// Comments holds the value of the comments edge.
-	Comments *Comment `json:"comments,omitempty"`
+	Comments []*Comment `json:"comments,omitempty"`
 	// Users holds the value of the users edge.
 	Users []*User `json:"users,omitempty"`
 	// loadedTypes holds the information for reporting if a
@@ -63,12 +61,10 @@ func (e ArticleEdges) TagsOrErr() ([]*Tag, error) {
 }
 
 // CommentsOrErr returns the Comments value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e ArticleEdges) CommentsOrErr() (*Comment, error) {
-	if e.Comments != nil {
+// was not loaded in eager-loading.
+func (e ArticleEdges) CommentsOrErr() ([]*Comment, error) {
+	if e.loadedTypes[1] {
 		return e.Comments, nil
-	} else if e.loadedTypes[1] {
-		return nil, &NotFoundError{label: comment.Label}
 	}
 	return nil, &NotLoadedError{edge: "comments"}
 }
@@ -93,8 +89,6 @@ func (*Article) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullTime)
 		case article.FieldID, article.FieldAuthorID:
 			values[i] = new(uuid.UUID)
-		case article.ForeignKeys[0]: // article_comments
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -157,13 +151,6 @@ func (a *Article) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
 				a.UpdatedAt = value.Time
-			}
-		case article.ForeignKeys[0]:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field article_comments", values[i])
-			} else if value.Valid {
-				a.article_comments = new(uuid.UUID)
-				*a.article_comments = *value.S.(*uuid.UUID)
 			}
 		default:
 			a.selectValues.Set(columns[i], values[i])
