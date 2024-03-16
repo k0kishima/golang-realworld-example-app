@@ -735,41 +735,24 @@ func authorResponse(client *ent.Client, author *ent.User, currentUser *ent.User)
 	}, nil
 }
 
-func getTagList(article *ent.Article) []string {
-	tags, err := article.QueryTags().All(context.Background())
-	if err != nil {
-		return nil
-	}
-	tagList := make([]string, len(tags))
-	for i, tag := range tags {
-		tagList[i] = tag.Description
-	}
-	return tagList
-}
-
-func isArticleFavoritedByUser(client *ent.Client, article *ent.Article, user *ent.User) (bool, error) {
-	count, err := client.UserFavorite.Query().
-		Where(userfavorite.And(
-			userfavorite.UserIDEQ(user.ID),
-			userfavorite.ArticleIDEQ(article.ID),
-		)).
-		Count(context.Background())
-	return count > 0, err
-}
-
 func getArticleFavoritedAndCount(client *ent.Client, article *ent.Article, currentUser *ent.User) (bool, int, error) {
 	if currentUser == nil {
 		return false, 0, nil
 	}
 
-	favorited, err := isArticleFavoritedByUser(client, article, currentUser)
+	favorited, err := client.UserFavorite.Query().
+		Where(
+			userfavorite.And(
+				userfavorite.UserIDEQ(currentUser.ID),
+				userfavorite.ArticleIDEQ(article.ID),
+			),
+		).
+		Exist(context.Background())
 	if err != nil {
 		return false, 0, err
 	}
 
-	favoritesCount, err := client.UserFavorite.Query().
-		Where(userfavorite.ArticleIDEQ(article.ID)).
-		Count(context.Background())
+	favoritesCount, err := article.QueryFavoritedUsers().Count(context.Background())
 	if err != nil {
 		return false, 0, err
 	}
