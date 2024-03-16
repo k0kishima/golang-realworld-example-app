@@ -99,7 +99,7 @@ func ListArticles(client *ent.Client) gin.HandlerFunc {
 
 		currentUser, _ := getCurrentUser(client, c)
 
-		var articlesResponse []gin.H
+		articlesResponse := []gin.H{}
 		for _, article := range articles {
 			tagList := make([]string, len(article.Edges.Tags))
 			for i, tag := range article.Edges.Tags {
@@ -381,7 +381,7 @@ func GetFeed(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		articlesResponse := make([]gin.H, 0)
+		articlesResponse := []gin.H{}
 		for _, article := range articles {
 			tagList := make([]string, len(article.Edges.Tags))
 			for i, tag := range article.Edges.Tags {
