@@ -108,7 +108,7 @@ func init() {
 	commentFields := schema.Comment{}.Fields()
 	_ = commentFields
 	// commentDescBody is the schema descriptor for body field.
-	commentDescBody := commentFields[3].Descriptor()
+	commentDescBody := commentFields[2].Descriptor()
 	// comment.BodyValidator is a validator for the "body" field. It is called by the builders before save.
 	comment.BodyValidator = func() func(string) error {
 		validators := commentDescBody.Validators
@@ -126,11 +126,11 @@ func init() {
 		}
 	}()
 	// commentDescCreatedAt is the schema descriptor for created_at field.
-	commentDescCreatedAt := commentFields[4].Descriptor()
+	commentDescCreatedAt := commentFields[3].Descriptor()
 	// comment.DefaultCreatedAt holds the default value on creation for the created_at field.
 	comment.DefaultCreatedAt = commentDescCreatedAt.Default.(func() time.Time)
 	// commentDescUpdatedAt is the schema descriptor for updated_at field.
-	commentDescUpdatedAt := commentFields[5].Descriptor()
+	commentDescUpdatedAt := commentFields[4].Descriptor()
 	// comment.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	comment.DefaultUpdatedAt = commentDescUpdatedAt.Default.(func() time.Time)
 	// comment.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

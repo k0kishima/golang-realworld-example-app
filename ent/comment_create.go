@@ -11,7 +11,6 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/k0kishima/golang-realworld-example-app/ent/article"
 	"github.com/k0kishima/golang-realworld-example-app/ent/comment"
 )
 
@@ -20,12 +19,6 @@ type CommentCreate struct {
 	config
 	mutation *CommentMutation
 	hooks    []Hook
-}
-
-// SetArticleID sets the "article_id" field.
-func (cc *CommentCreate) SetArticleID(u uuid.UUID) *CommentCreate {
-	cc.mutation.SetArticleID(u)
-	return cc
 }
 
 // SetAuthorID sets the "author_id" field.
@@ -82,21 +75,6 @@ func (cc *CommentCreate) SetNillableID(u *uuid.UUID) *CommentCreate {
 	return cc
 }
 
-// AddArticleIDs adds the "article" edge to the Article entity by IDs.
-func (cc *CommentCreate) AddArticleIDs(ids ...uuid.UUID) *CommentCreate {
-	cc.mutation.AddArticleIDs(ids...)
-	return cc
-}
-
-// AddArticle adds the "article" edges to the Article entity.
-func (cc *CommentCreate) AddArticle(a ...*Article) *CommentCreate {
-	ids := make([]uuid.UUID, len(a))
-	for i := range a {
-		ids[i] = a[i].ID
-	}
-	return cc.AddArticleIDs(ids...)
-}
-
 // Mutation returns the CommentMutation object of the builder.
 func (cc *CommentCreate) Mutation() *CommentMutation {
 	return cc.mutation
@@ -148,9 +126,6 @@ func (cc *CommentCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (cc *CommentCreate) check() error {
-	if _, ok := cc.mutation.ArticleID(); !ok {
-		return &ValidationError{Name: "article_id", err: errors.New(`ent: missing required field "Comment.article_id"`)}
-	}
 	if _, ok := cc.mutation.AuthorID(); !ok {
 		return &ValidationError{Name: "author_id", err: errors.New(`ent: missing required field "Comment.author_id"`)}
 	}
@@ -203,10 +178,6 @@ func (cc *CommentCreate) createSpec() (*Comment, *sqlgraph.CreateSpec) {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := cc.mutation.ArticleID(); ok {
-		_spec.SetField(comment.FieldArticleID, field.TypeUUID, value)
-		_node.ArticleID = value
-	}
 	if value, ok := cc.mutation.AuthorID(); ok {
 		_spec.SetField(comment.FieldAuthorID, field.TypeUUID, value)
 		_node.AuthorID = value
@@ -222,22 +193,6 @@ func (cc *CommentCreate) createSpec() (*Comment, *sqlgraph.CreateSpec) {
 	if value, ok := cc.mutation.UpdatedAt(); ok {
 		_spec.SetField(comment.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
-	}
-	if nodes := cc.mutation.ArticleIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: true,
-			Table:   comment.ArticleTable,
-			Columns: []string{comment.ArticleColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(article.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

@@ -499,7 +499,7 @@ func HasComments() predicate.Article {
 	return predicate.Article(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, CommentsTable, CommentsColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, CommentsTable, CommentsColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})

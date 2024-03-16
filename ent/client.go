@@ -360,7 +360,7 @@ func (c *ArticleClient) QueryComments(a *Article) *CommentQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(article.Table, article.FieldID, id),
 			sqlgraph.To(comment.Table, comment.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, article.CommentsTable, article.CommentsColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, article.CommentsTable, article.CommentsColumn),
 		)
 		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
 		return fromV, nil
@@ -515,22 +515,6 @@ func (c *CommentClient) GetX(ctx context.Context, id uuid.UUID) *Comment {
 		panic(err)
 	}
 	return obj
-}
-
-// QueryArticle queries the article edge of a Comment.
-func (c *CommentClient) QueryArticle(co *Comment) *ArticleQuery {
-	query := (&ArticleClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := co.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(comment.Table, comment.FieldID, id),
-			sqlgraph.To(article.Table, article.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, true, comment.ArticleTable, comment.ArticleColumn),
-		)
-		fromV = sqlgraph.Neighbors(co.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
 }
 
 // Hooks returns the client hooks.

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
-	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -15,8 +14,6 @@ const (
 	Label = "comment"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
-	// FieldArticleID holds the string denoting the article_id field in the database.
-	FieldArticleID = "article_id"
 	// FieldAuthorID holds the string denoting the author_id field in the database.
 	FieldAuthorID = "author_id"
 	// FieldBody holds the string denoting the body field in the database.
@@ -25,33 +22,34 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
-	// EdgeArticle holds the string denoting the article edge name in mutations.
-	EdgeArticle = "article"
 	// Table holds the table name of the comment in the database.
 	Table = "comments"
-	// ArticleTable is the table that holds the article relation/edge.
-	ArticleTable = "articles"
-	// ArticleInverseTable is the table name for the Article entity.
-	// It exists in this package in order to avoid circular dependency with the "article" package.
-	ArticleInverseTable = "articles"
-	// ArticleColumn is the table column denoting the article relation/edge.
-	ArticleColumn = "article_comments"
 )
 
 // Columns holds all SQL columns for comment fields.
 var Columns = []string{
 	FieldID,
-	FieldArticleID,
 	FieldAuthorID,
 	FieldBody,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 }
 
+// ForeignKeys holds the SQL foreign-keys that are owned by the "comments"
+// table and are not defined as standalone fields in the schema.
+var ForeignKeys = []string{
+	"article_id",
+}
+
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
+			return true
+		}
+	}
+	for i := range ForeignKeys {
+		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -79,11 +77,6 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
 }
 
-// ByArticleID orders the results by the article_id field.
-func ByArticleID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldArticleID, opts...).ToFunc()
-}
-
 // ByAuthorID orders the results by the author_id field.
 func ByAuthorID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAuthorID, opts...).ToFunc()
@@ -102,25 +95,4 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
-}
-
-// ByArticleCount orders the results by article count.
-func ByArticleCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newArticleStep(), opts...)
-	}
-}
-
-// ByArticle orders the results by article terms.
-func ByArticle(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newArticleStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-func newArticleStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(ArticleInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, true, ArticleTable, ArticleColumn),
-	)
 }

@@ -36,7 +36,7 @@ func (Article) Indexes() []ent.Index {
 func (Article) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("tags", Tag.Type),
-		edge.To("comments", Comment.Type).Immutable().Unique(),
+		edge.To("comments", Comment.Type).StorageKey(edge.Column("article_id")),
 		edge.From("users", User.Type).
 			Ref("favoriteArticles").Immutable(),
 	}

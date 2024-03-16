@@ -111,23 +111,19 @@ func (ac *ArticleCreate) AddTags(t ...*Tag) *ArticleCreate {
 	return ac.AddTagIDs(ids...)
 }
 
-// SetCommentsID sets the "comments" edge to the Comment entity by ID.
-func (ac *ArticleCreate) SetCommentsID(id uuid.UUID) *ArticleCreate {
-	ac.mutation.SetCommentsID(id)
+// AddCommentIDs adds the "comments" edge to the Comment entity by IDs.
+func (ac *ArticleCreate) AddCommentIDs(ids ...uuid.UUID) *ArticleCreate {
+	ac.mutation.AddCommentIDs(ids...)
 	return ac
 }
 
-// SetNillableCommentsID sets the "comments" edge to the Comment entity by ID if the given value is not nil.
-func (ac *ArticleCreate) SetNillableCommentsID(id *uuid.UUID) *ArticleCreate {
-	if id != nil {
-		ac = ac.SetCommentsID(*id)
+// AddComments adds the "comments" edges to the Comment entity.
+func (ac *ArticleCreate) AddComments(c ...*Comment) *ArticleCreate {
+	ids := make([]uuid.UUID, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
 	}
-	return ac
-}
-
-// SetComments sets the "comments" edge to the Comment entity.
-func (ac *ArticleCreate) SetComments(c *Comment) *ArticleCreate {
-	return ac.SetCommentsID(c.ID)
+	return ac.AddCommentIDs(ids...)
 }
 
 // AddUserIDs adds the "users" edge to the User entity by IDs.
@@ -318,7 +314,7 @@ func (ac *ArticleCreate) createSpec() (*Article, *sqlgraph.CreateSpec) {
 	}
 	if nodes := ac.mutation.CommentsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
 			Table:   article.CommentsTable,
 			Columns: []string{article.CommentsColumn},
@@ -330,7 +326,6 @@ func (ac *ArticleCreate) createSpec() (*Article, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.article_comments = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := ac.mutation.UsersIDs(); len(nodes) > 0 {
