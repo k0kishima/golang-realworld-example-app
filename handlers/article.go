@@ -66,14 +66,9 @@ func ListArticles(client *ent.Client) gin.HandlerFunc {
 		}
 
 		if authorName := c.Query("author"); authorName != "" {
-			author, err := client.User.Query().Where(user.UsernameEQ(authorName)).Only(c.Request.Context())
+			author, err := getUserByUsername(client, c, authorName)
 			if err == nil {
 				query.Where(article.AuthorIDEQ(author.ID))
-			} else {
-				c.JSON(http.StatusOK, gin.H{
-					"articles":      []gin.H{},
-					"articlesCount": 0,
-				})
 			}
 		}
 
@@ -218,11 +213,7 @@ func UpdateArticle(client *ent.Client) gin.HandlerFunc {
 		slug := c.Param("slug")
 		article, err := client.Article.Query().Where(article.SlugEQ(slug)).Only(c.Request.Context())
 		if err != nil {
-			if ent.IsNotFound(err) {
-				c.JSON(http.StatusNotFound, gin.H{"message": "Article not found"})
-			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
-			}
+			handleCommonErrors(c, err)
 			return
 		}
 
@@ -279,11 +270,7 @@ func DeleteArticle(client *ent.Client) gin.HandlerFunc {
 
 		targetArticle, err := client.Article.Query().Where(article.SlugEQ(slug)).Only(c.Request.Context())
 		if err != nil {
-			if ent.IsNotFound(err) {
-				c.JSON(http.StatusNotFound, gin.H{"message": "Article not found"})
-			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
-			}
+			handleCommonErrors(c, err)
 			return
 		}
 
@@ -397,11 +384,7 @@ func FavoriteArticle(client *ent.Client) gin.HandlerFunc {
 
 		targetArticle, err := client.Article.Query().Where(article.SlugEQ(slug)).Only(c.Request.Context())
 		if err != nil {
-			if ent.IsNotFound(err) {
-				c.JSON(http.StatusNotFound, gin.H{"message": "Article not found"})
-			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
-			}
+			handleCommonErrors(c, err)
 			return
 		}
 
@@ -450,11 +433,7 @@ func UnfavoriteArticle(client *ent.Client) gin.HandlerFunc {
 
 		targetArticle, err := client.Article.Query().Where(article.SlugEQ(slug)).Only(c.Request.Context())
 		if err != nil {
-			if ent.IsNotFound(err) {
-				c.JSON(http.StatusNotFound, gin.H{"message": "Article not found"})
-			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
-			}
+			handleCommonErrors(c, err)
 			return
 		}
 

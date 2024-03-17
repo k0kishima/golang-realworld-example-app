@@ -18,11 +18,7 @@ func GetComments(client *ent.Client) gin.HandlerFunc {
 
 		targetArticle, err := client.Article.Query().Where(article.SlugEQ(slug)).Only(c.Request.Context())
 		if err != nil {
-			if ent.IsNotFound(err) {
-				c.JSON(http.StatusNotFound, gin.H{"message": "Article not found"})
-			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
-			}
+			handleCommonErrors(c, err)
 			return
 		}
 
@@ -98,11 +94,7 @@ func PostComment(client *ent.Client) gin.HandlerFunc {
 		slug := c.Param("slug")
 		targetArticle, err := client.Article.Query().Where(article.SlugEQ(slug)).Only(c.Request.Context())
 		if err != nil {
-			if ent.IsNotFound(err) {
-				c.JSON(http.StatusNotFound, gin.H{"message": "Article not found"})
-			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
-			}
+			handleCommonErrors(c, err)
 			return
 		}
 
@@ -153,11 +145,7 @@ func DeleteComment(client *ent.Client) gin.HandlerFunc {
 		slug := c.Param("slug")
 		_, err := client.Article.Query().Where(article.SlugEQ(slug)).Only(c.Request.Context())
 		if err != nil {
-			if ent.IsNotFound(err) {
-				c.JSON(http.StatusNotFound, gin.H{"message": "Article not found"})
-			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
-			}
+			handleCommonErrors(c, err)
 			return
 		}
 
@@ -168,11 +156,7 @@ func DeleteComment(client *ent.Client) gin.HandlerFunc {
 		}
 		targetComment, err := client.Comment.Query().Where(comment.IDEQ(commentID)).Only(c.Request.Context())
 		if err != nil {
-			if ent.IsNotFound(err) {
-				c.JSON(http.StatusNotFound, gin.H{"message": "Comment not found"})
-			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching comment"})
-			}
+			handleCommonErrors(c, err)
 			return
 		}
 

@@ -13,11 +13,7 @@ func GetProfile(client *ent.Client) gin.HandlerFunc {
 
 		targetUser, err := getUserByUsername(client, c, username)
 		if err != nil {
-			if ent.IsNotFound(err) {
-				respondWithError(c, http.StatusNotFound, "Profile not found")
-			} else {
-				respondWithError(c, http.StatusInternalServerError, "Internal server error")
-			}
+			handleCommonErrors(c, err)
 			return
 		}
 
@@ -55,10 +51,12 @@ func FollowUser(client *ent.Client) gin.HandlerFunc {
 		username := c.Param("username")
 		targetUser, err := getUserByUsername(client, c, username)
 		if err != nil {
+			handleCommonErrors(c, err)
 			return
 		}
 
 		if err := followUser(c, currentUserEntity, targetUser); err != nil {
+			handleCommonErrors(c, err)
 			return
 		}
 
