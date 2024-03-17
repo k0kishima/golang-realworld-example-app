@@ -25,6 +25,15 @@ func formatTimeForAPI(t time.Time) string {
 	return t.Format("2006-01-02T15:04:05.000Z")
 }
 
+func GetCurrentUserFromContext(c *gin.Context) (*ent.User, bool) {
+	currentUser, exists := c.Get("currentUser")
+	if !exists {
+		return nil, false
+	}
+	currentUserEntity, ok := currentUser.(*ent.User)
+	return currentUserEntity, ok
+}
+
 func getUserByUsername(client *ent.Client, c *gin.Context, username string) (*ent.User, error) {
 	return client.User.Query().Where(user.UsernameEQ(username)).Only(c.Request.Context())
 }

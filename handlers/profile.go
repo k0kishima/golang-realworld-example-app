@@ -17,11 +17,10 @@ func GetProfile(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		currentUser, _ := c.Get("currentUser")
-		currentUserEntity, ok := currentUser.(*ent.User)
+		currentUser, ok := GetCurrentUserFromContext(c)
 		following := false
 		if ok {
-			isFollowing, err := isFollowing(c, currentUserEntity, targetUser)
+			isFollowing, err := isFollowing(c, currentUser, targetUser)
 			if err != nil {
 				respondWithError(c, http.StatusInternalServerError, "Error checking if user is following")
 			}
@@ -41,10 +40,9 @@ func GetProfile(client *ent.Client) gin.HandlerFunc {
 
 func FollowUser(client *ent.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		currentUser, _ := c.Get("currentUser")
-		currentUserEntity, ok := currentUser.(*ent.User)
+		currentUser, ok := GetCurrentUserFromContext(c)
 		if !ok {
-			respondWithError(c, http.StatusInternalServerError, "Error asserting user type")
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "error asserting user type"})
 			return
 		}
 
@@ -55,7 +53,7 @@ func FollowUser(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		if err := followUser(c, currentUserEntity, targetUser); err != nil {
+		if err := followUser(c, currentUser, targetUser); err != nil {
 			handleCommonErrors(c, err)
 			return
 		}
@@ -73,10 +71,9 @@ func FollowUser(client *ent.Client) gin.HandlerFunc {
 
 func UnfollowUser(client *ent.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		currentUser, _ := c.Get("currentUser")
-		currentUserEntity, ok := currentUser.(*ent.User)
+		currentUser, ok := GetCurrentUserFromContext(c)
 		if !ok {
-			respondWithError(c, http.StatusInternalServerError, "Error asserting user type")
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "error asserting user type"})
 			return
 		}
 
@@ -86,7 +83,7 @@ func UnfollowUser(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		if err := unfollowUser(c, currentUserEntity, targetUser); err != nil {
+		if err := unfollowUser(c, currentUser, targetUser); err != nil {
 			return
 		}
 
@@ -101,8 +98,8 @@ func UnfollowUser(client *ent.Client) gin.HandlerFunc {
 	}
 }
 
-func followUser(c *gin.Context, currentUserEntity, targetUser *ent.User) error {
-	err := currentUserEntity.Update().AddFollowing(targetUser).Exec(c.Request.Context())
+func followUser(c *gin.Context, currentUser, targetUser *ent.User) error {
+	err := currentUser.Update().AddFollowing(targetUser).Exec(c.Request.Context())
 	if err != nil {
 		if ent.IsConstraintError(err) {
 			respondWithError(c, http.StatusConflict, "User is already followed")
@@ -114,8 +111,8 @@ func followUser(c *gin.Context, currentUserEntity, targetUser *ent.User) error {
 	return nil
 }
 
-func unfollowUser(c *gin.Context, currentUserEntity, targetUser *ent.User) error {
-	err := currentUserEntity.Update().RemoveFollowing(targetUser).Exec(c.Request.Context())
+func unfollowUser(c *gin.Context, currentUser, targetUser *ent.User) error {
+	err := currentUser.Update().RemoveFollowing(targetUser).Exec(c.Request.Context())
 	if err != nil {
 		respondWithError(c, http.StatusInternalServerError, "Error unfollowing user")
 		return err

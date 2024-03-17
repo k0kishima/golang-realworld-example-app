@@ -37,11 +37,10 @@ func GetComments(client *ent.Client) gin.HandlerFunc {
 				return
 			}
 
-			currentUser, _ := c.Get("currentUser")
-			currentUserEntity, ok := currentUser.(*ent.User)
+			currentUser, ok := GetCurrentUserFromContext(c)
 			following := false
 			if ok {
-				isFollowing, err := isFollowing(c, currentUserEntity, author)
+				isFollowing, err := isFollowing(c, currentUser, author)
 				if err != nil {
 					respondWithError(c, http.StatusInternalServerError, "Error checking if user is following")
 				}
@@ -84,8 +83,7 @@ func PostComment(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		currentUser, _ := c.Get("currentUser")
-		currentUserEntity, ok := currentUser.(*ent.User)
+		currentUser, ok := GetCurrentUserFromContext(c)
 		if !ok {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "error asserting user type"})
 			return
@@ -98,7 +96,7 @@ func PostComment(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		following, err := currentUserEntity.QueryFollowing().Where(user.IDEQ(targetArticle.AuthorID)).Exist(c.Request.Context())
+		following, err := currentUser.QueryFollowing().Where(user.IDEQ(targetArticle.AuthorID)).Exist(c.Request.Context())
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error checking if user is following"})
 			return
@@ -106,7 +104,7 @@ func PostComment(client *ent.Client) gin.HandlerFunc {
 
 		comment, err := client.Comment.Create().
 			SetBody(req.Comment.Body).
-			SetAuthorID(currentUserEntity.ID).
+			SetAuthorID(currentUser.ID).
 			Save(c.Request.Context())
 		targetArticle.Update().AddComments(comment).Save(c.Request.Context())
 
@@ -123,9 +121,9 @@ func PostComment(client *ent.Client) gin.HandlerFunc {
 				"createdAt": formatTimeForAPI(comment.CreatedAt),
 				"updatedAt": formatTimeForAPI(comment.UpdatedAt),
 				"author": gin.H{
-					"username":  currentUserEntity.Username,
-					"bio":       currentUserEntity.Bio,
-					"image":     currentUserEntity.Image,
+					"username":  currentUser.Username,
+					"bio":       currentUser.Bio,
+					"image":     currentUser.Image,
 					"following": following,
 				},
 			},
@@ -135,8 +133,7 @@ func PostComment(client *ent.Client) gin.HandlerFunc {
 
 func DeleteComment(client *ent.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		currentUser, _ := c.Get("currentUser")
-		currentUserEntity, ok := currentUser.(*ent.User)
+		currentUser, ok := GetCurrentUserFromContext(c)
 		if !ok {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error asserting user type"})
 			return
@@ -160,7 +157,7 @@ func DeleteComment(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		if targetComment.AuthorID != currentUserEntity.ID {
+		if targetComment.AuthorID != currentUser.ID {
 			c.JSON(http.StatusForbidden, gin.H{"message": "You are not authorized to delete this comment"})
 			return
 		}
