@@ -119,16 +119,19 @@ func Login(client *ent.Client) gin.HandlerFunc {
 
 func GetCurrentUser(client *ent.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		currentUser, _ := c.Get("currentUser")
-		u := currentUser.(*ent.User)
+		currentUser, ok := GetCurrentUserFromContext(c)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "error asserting user type"})
+			return
+		}
 
-		token, err := auth.CreateToken(u)
+		token, err := auth.CreateToken(currentUser)
 		if err != nil {
 			respondWithError(c, http.StatusInternalServerError, "Error creating token")
 			return
 		}
 
-		c.JSON(http.StatusOK, userResponse(u, token))
+		c.JSON(http.StatusOK, userResponse(currentUser, token))
 	}
 }
 
@@ -145,10 +148,13 @@ func UpdateUser(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		currentUser, _ := c.Get("currentUser")
-		u := currentUser.(*ent.User)
+		currentUser, ok := GetCurrentUserFromContext(c)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "error asserting user type"})
+			return
+		}
 
-		update := u.Update()
+		update := currentUser.Update()
 		if req.User.Username != nil {
 			update.SetUsername(*req.User.Username)
 		}

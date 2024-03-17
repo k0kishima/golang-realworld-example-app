@@ -66,14 +66,9 @@ func ListArticles(client *ent.Client) gin.HandlerFunc {
 		}
 
 		if authorName := c.Query("author"); authorName != "" {
-			author, err := client.User.Query().Where(user.UsernameEQ(authorName)).Only(c.Request.Context())
+			author, err := getUserByUsername(client, c, authorName)
 			if err == nil {
 				query.Where(article.AuthorIDEQ(author.ID))
-			} else {
-				c.JSON(http.StatusOK, gin.H{
-					"articles":      []gin.H{},
-					"articlesCount": 0,
-				})
 			}
 		}
 
@@ -157,8 +152,7 @@ func CreateArticle(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		currentUser, _ := c.Get("currentUser")
-		currentUserEntity, ok := currentUser.(*ent.User)
+		currentUser, ok := GetCurrentUserFromContext(c)
 		if !ok {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "error asserting user type"})
 			return
@@ -171,7 +165,7 @@ func CreateArticle(client *ent.Client) gin.HandlerFunc {
 		}
 
 		currentArticle, err := client.Article.Create().
-			SetAuthorID(currentUserEntity.ID).
+			SetAuthorID(currentUser.ID).
 			SetSlug(req.Article.Title).
 			SetTitle(req.Article.Title).
 			SetDescription(req.Article.Description).
@@ -190,7 +184,7 @@ func CreateArticle(client *ent.Client) gin.HandlerFunc {
 
 		favorited := false
 		favoritesCount := 0
-		response, err := articleResponse(client, currentArticle, req.Article.TagList, favorited, favoritesCount, currentUserEntity)
+		response, err := articleResponse(client, currentArticle, req.Article.TagList, favorited, favoritesCount, currentUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error creating article response"})
 			return
@@ -218,11 +212,7 @@ func UpdateArticle(client *ent.Client) gin.HandlerFunc {
 		slug := c.Param("slug")
 		article, err := client.Article.Query().Where(article.SlugEQ(slug)).Only(c.Request.Context())
 		if err != nil {
-			if ent.IsNotFound(err) {
-				c.JSON(http.StatusNotFound, gin.H{"message": "Article not found"})
-			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
-			}
+			handleCommonErrors(c, err)
 			return
 		}
 
@@ -250,20 +240,19 @@ func UpdateArticle(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		currentUser, _ := c.Get("currentUser")
-		currentUserEntity, ok := currentUser.(*ent.User)
+		currentUser, ok := GetCurrentUserFromContext(c)
 		if !ok {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "error asserting user type"})
 			return
 		}
 
-		favorited, favoritesCount, err := getArticleFavoritedAndCount(updatedArticle, currentUserEntity)
+		favorited, favoritesCount, err := getArticleFavoritedAndCount(updatedArticle, currentUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching favorites information"})
 			return
 		}
 
-		response, err := articleResponse(client, updatedArticle, tagList, favorited, favoritesCount, currentUserEntity)
+		response, err := articleResponse(client, updatedArticle, tagList, favorited, favoritesCount, currentUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error creating article response"})
 			return
@@ -279,22 +268,17 @@ func DeleteArticle(client *ent.Client) gin.HandlerFunc {
 
 		targetArticle, err := client.Article.Query().Where(article.SlugEQ(slug)).Only(c.Request.Context())
 		if err != nil {
-			if ent.IsNotFound(err) {
-				c.JSON(http.StatusNotFound, gin.H{"message": "Article not found"})
-			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
-			}
+			handleCommonErrors(c, err)
 			return
 		}
 
-		currentUser, _ := c.Get("currentUser")
-		currentUserEntity, ok := currentUser.(*ent.User)
+		currentUser, ok := GetCurrentUserFromContext(c)
 		if !ok {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "error asserting user type"})
 			return
 		}
 
-		if targetArticle.AuthorID != currentUserEntity.ID {
+		if targetArticle.AuthorID != currentUser.ID {
 			c.JSON(http.StatusForbidden, gin.H{"message": "You are not authorized to delete this article"})
 			return
 		}
@@ -312,7 +296,7 @@ func DeleteArticle(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		err = tx.User.UpdateOneID(currentUserEntity.ID).RemoveFavoriteArticles(targetArticle).Exec(c.Request.Context())
+		err = tx.User.UpdateOneID(currentUser.ID).RemoveFavoriteArticles(targetArticle).Exec(c.Request.Context())
 		if err != nil {
 			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error deleting article favorites"})
@@ -338,14 +322,13 @@ func DeleteArticle(client *ent.Client) gin.HandlerFunc {
 
 func GetFeed(client *ent.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		currentUser, _ := c.Get("currentUser")
-		currentUserEntity, ok := currentUser.(*ent.User)
+		currentUser, ok := GetCurrentUserFromContext(c)
 		if !ok {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "error asserting user type"})
 			return
 		}
 
-		articles, err := currentUserEntity.QueryArticles().
+		articles, err := currentUser.QueryArticles().
 			Order(ent.Desc(article.FieldCreatedAt)).
 			WithTags().
 			All(c.Request.Context())
@@ -362,13 +345,13 @@ func GetFeed(client *ent.Client) gin.HandlerFunc {
 				tagList[i] = tag.Description
 			}
 
-			favorited, favoritesCount, err := getArticleFavoritedAndCount(article, currentUserEntity)
+			favorited, favoritesCount, err := getArticleFavoritedAndCount(article, currentUser)
 			if err != nil {
 				respondWithError(c, http.StatusInternalServerError, "Error fetching favorites information")
 				return
 			}
 
-			response, err := articleResponse(client, article, tagList, favorited, favoritesCount, currentUserEntity)
+			response, err := articleResponse(client, article, tagList, favorited, favoritesCount, currentUser)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"message": "Error creating article response"})
 				return
@@ -388,8 +371,7 @@ func FavoriteArticle(client *ent.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		slug := c.Param("slug")
 
-		currentUser, _ := c.Get("currentUser")
-		currentUserEntity, ok := currentUser.(*ent.User)
+		currentUser, ok := GetCurrentUserFromContext(c)
 		if !ok {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "error asserting user type"})
 			return
@@ -397,15 +379,11 @@ func FavoriteArticle(client *ent.Client) gin.HandlerFunc {
 
 		targetArticle, err := client.Article.Query().Where(article.SlugEQ(slug)).Only(c.Request.Context())
 		if err != nil {
-			if ent.IsNotFound(err) {
-				c.JSON(http.StatusNotFound, gin.H{"message": "Article not found"})
-			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
-			}
+			handleCommonErrors(c, err)
 			return
 		}
 
-		err = currentUserEntity.Update().AddFavoriteArticles(targetArticle).Exec(c.Request.Context())
+		err = currentUser.Update().AddFavoriteArticles(targetArticle).Exec(c.Request.Context())
 		if err != nil {
 			if ent.IsConstraintError(err) {
 				c.JSON(http.StatusConflict, gin.H{"message": "Article is already favorited"})
@@ -427,7 +405,7 @@ func FavoriteArticle(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		response, err := articleResponse(client, targetArticle, tagList, true, favoritesCount, currentUserEntity)
+		response, err := articleResponse(client, targetArticle, tagList, true, favoritesCount, currentUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error creating article response"})
 			return
@@ -441,8 +419,7 @@ func UnfavoriteArticle(client *ent.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		slug := c.Param("slug")
 
-		currentUser, _ := c.Get("currentUser")
-		currentUserEntity, ok := currentUser.(*ent.User)
+		currentUser, ok := GetCurrentUserFromContext(c)
 		if !ok {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "error asserting user type"})
 			return
@@ -450,15 +427,11 @@ func UnfavoriteArticle(client *ent.Client) gin.HandlerFunc {
 
 		targetArticle, err := client.Article.Query().Where(article.SlugEQ(slug)).Only(c.Request.Context())
 		if err != nil {
-			if ent.IsNotFound(err) {
-				c.JSON(http.StatusNotFound, gin.H{"message": "Article not found"})
-			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
-			}
+			handleCommonErrors(c, err)
 			return
 		}
 
-		err = currentUserEntity.Update().RemoveFavoriteArticles(targetArticle).Exec(c.Request.Context())
+		err = currentUser.Update().RemoveFavoriteArticles(targetArticle).Exec(c.Request.Context())
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error unfavoriting article"})
 			return
@@ -476,7 +449,7 @@ func UnfavoriteArticle(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		response, err := articleResponse(client, targetArticle, tagNameList, false, favoritesCount, currentUserEntity)
+		response, err := articleResponse(client, targetArticle, tagNameList, false, favoritesCount, currentUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error creating article response"})
 			return

@@ -13,21 +13,29 @@ func respondWithError(c *gin.Context, code int, message string) {
 	c.JSON(code, gin.H{"error": message})
 }
 
+func handleCommonErrors(c *gin.Context, err error) {
+	if ent.IsNotFound(err) {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Resource not found"})
+	} else {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Internal server error"})
+	}
+}
+
 func formatTimeForAPI(t time.Time) string {
 	return t.Format("2006-01-02T15:04:05.000Z")
 }
 
-func getUserByUsername(client *ent.Client, c *gin.Context, username string) (*ent.User, error) {
-	targetUser, err := client.User.Query().Where(user.UsernameEQ(username)).Only(c.Request.Context())
-	if err != nil {
-		if ent.IsNotFound(err) {
-			respondWithError(c, http.StatusNotFound, "User not found")
-		} else {
-			respondWithError(c, http.StatusInternalServerError, "Internal server error")
-		}
-		return nil, err
+func GetCurrentUserFromContext(c *gin.Context) (*ent.User, bool) {
+	currentUser, exists := c.Get("currentUser")
+	if !exists {
+		return nil, false
 	}
-	return targetUser, nil
+	currentUserEntity, ok := currentUser.(*ent.User)
+	return currentUserEntity, ok
+}
+
+func getUserByUsername(client *ent.Client, c *gin.Context, username string) (*ent.User, error) {
+	return client.User.Query().Where(user.UsernameEQ(username)).Only(c.Request.Context())
 }
 
 func isFollowing(c *gin.Context, follower *ent.User, followee *ent.User) (bool, error) {
