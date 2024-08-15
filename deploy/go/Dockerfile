@@ -14,8 +14,6 @@ FROM alpine:latest
 
 COPY --from=builder /go-api /go-api
 
-COPY .env .env
-
 EXPOSE 8080
 
 CMD ["/go-api"]
