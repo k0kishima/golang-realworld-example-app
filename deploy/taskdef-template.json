@@ -1,0 +1,73 @@
+{
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+
+  "containerDefinitions": [
+    {
+      "name": "nginx",
+      "image": "${PROXY_IMAGE_URI}",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 80,
+          "hostPort": 80
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/${PROJECT}-${APP_ENV}",
+          "awslogs-region": "ap-northeast-1",
+          "awslogs-stream-prefix": "nginx"
+        }
+      }
+    },
+    {
+      "name": "backend",
+      "image": "${APP_IMAGE_URI}",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "hostPort": 8080
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/${PROJECT}-${APP_ENV}",
+          "awslogs-region": "ap-northeast-1",
+          "awslogs-stream-prefix": "backend"
+        }
+      },
+      "environment": [
+        {
+          "name": "DB_HOST",
+          "value": "${DB_HOST}"
+        },
+        {
+          "name": "DB_USER",
+          "value": "${DB_USER}"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "value": "${DB_PASSWORD}"
+        },
+        {
+          "name": "DB_NAME",
+          "value": "${DB_NAME}"
+        },
+        {
+          "name": "JWT_SECRET",
+          "value": "${JWT_SECRET}"
+        },
+        {
+          "name": "ALLOWED_ORIGINS",
+          "value": "${ALLOWED_ORIGINS}"
+        }
+      ]
+    }
+  ]
+}
