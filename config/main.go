@@ -16,6 +16,12 @@ type DBConfig struct {
 }
 
 func LoadEnv() {
+	// NOTE: If you set it when creating the container, .env is not necessarily required.
+	if _, err := os.Stat(".env"); os.IsNotExist(err) {
+		log.Println(".env file not found, skipping loading from file")
+		return
+	}
+
 	if err := godotenv.Load(); err != nil {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
