@@ -42,7 +42,7 @@ jobs:
           context: .
           file: ./deploy/go/Dockerfile
           push: true
-          tags: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/realworld-example-staging-backend-ecr-repo:latest
+          tags: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/realworld-example-staging-backend-app-ecr-repo:latest
 
       - name: Build and push Nginx Docker image
         id: build-nginx-image
