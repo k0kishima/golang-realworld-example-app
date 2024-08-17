@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
@@ -19,6 +20,12 @@ func main() {
 	r := gin.Default()
 
 	r.Use(middlewares.CORSMiddleware())
+
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status": "ok",
+		})
+	})
 
 	dataSourceName := db.GetDataSourceName()
 	client, err := ent.Open("mysql", dataSourceName)
